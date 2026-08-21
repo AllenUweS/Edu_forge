@@ -1,0 +1,590 @@
+import React, { useRef, useEffect, useState } from 'react';
+import {
+  DocumentBlock, QuestionBlock, TableBlock, ShapeBlock, WordArtBlock,
+  EquationBlock, ParagraphBlock, HeadingBlock, SectionHeaderBlock, TextRun
+} from '@eduforge/shared';
+import { KaTeXRenderer } from '../equation/KaTeXRenderer.js';
+import { OptionLayoutRenderer } from '../questions/OptionLayoutRenderer.js';
+import { Trash2, Copy, ArrowUp, ArrowDown, Edit3, Type, Wand2 } from 'lucide-react';
+import { FormattingState } from './EditorRibbon.js';
+
+interface BlockRendererProps {
+  block: DocumentBlock;
+  sectionId: string;
+  isSelected?: boolean;
+  isFormatPainterActive?: boolean;
+  showFormattingMarks?: boolean;
+  onSelect?: () => void;
+  onUpdateBlock?: (updated: DocumentBlock) => void;
+  onDeleteBlock?: () => void;
+  onDuplicateBlock?: () => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
+  onInsertNextParagraph?: (currentBlockId: string) => void;
+  onFocusPreviousBlock?: (currentBlockId: string) => void;
+  onApplyFormatPainter?: (targetBlock: DocumentBlock) => void;
+  onEditQuestion?: (question: QuestionBlock) => void;
+  onEditEquation?: (eq: EquationBlock) => void;
+  onTextSelectionChange?: (formatting: Partial<FormattingState>) => void;
+}
+
+export const BlockRenderer: React.FC<BlockRendererProps> = ({
+  block,
+  sectionId,
+  isSelected = false,
+  isFormatPainterActive = false,
+  showFormattingMarks = false,
+  onSelect,
+  onUpdateBlock,
+  onDeleteBlock,
+  onDuplicateBlock,
+  onMoveUp,
+  onMoveDown,
+  onInsertNextParagraph,
+  onFocusPreviousBlock,
+  onApplyFormatPainter,
+  onEditQuestion,
+  onEditEquation,
+  onTextSelectionChange
+}) => {
+  const editableRef = useRef<HTMLDivElement>(null);
+  const [isEditing, setIsEditing] = useState(false);
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isFormatPainterActive && onApplyFormatPainter) {
+      onApplyFormatPainter(block);
+      return;
+    }
+    onSelect && onSelect();
+  };
+
+  // Helper for border styling
+  const getBorderStyle = (borderType?: string, customBg?: string): React.CSSProperties => {
+    const style: React.CSSProperties = {};
+    if (customBg && customBg !== 'transparent') {
+      style.backgroundColor = customBg;
+      style.padding = '4px 8px';
+      style.borderRadius = '3px';
+    }
+    if (borderType === 'box' || borderType === 'all') {
+      style.border = '1px solid #cbd5e1';
+      style.padding = '6px 10px';
+      style.borderRadius = '4px';
+    } else if (borderType === 'left') {
+      style.borderLeft = '3px solid #0284c7';
+      style.paddingLeft = '10px';
+    } else if (borderType === 'bottom') {
+      style.borderBottom = '1px solid #cbd5e1';
+      style.paddingBottom = '4px';
+    } else if (borderType === 'top') {
+      style.borderTop = '1px solid #cbd5e1';
+      style.paddingTop = '4px';
+    }
+    return style;
+  };
+
+  return (
+    <div
+      onClick={handleClick}
+      className={`relative group rounded-sm transition-all p-1 -m-1 border ${
+        isSelected
+          ? 'border-sky-500 bg-sky-50/20 ring-2 ring-sky-400/20'
+          : 'border-transparent hover:border-slate-300/80 hover:bg-slate-50/40'
+      } ${isFormatPainterActive ? 'cursor-crosshair hover:ring-2 hover:ring-amber-400/60' : ''}`}
+    >
+      {/* Action Toolbar on Hover/Select */}
+      <div className={`absolute right-1 -top-4 z-30 flex items-center gap-0.5 bg-slate-900 text-white text-xs px-1.5 py-0.5 rounded shadow-lg no-print transition-opacity ${
+        isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto'
+      }`}>
+        {block.type === 'question' && (
+          <button
+            type="button"
+            onClick={e => {
+              e.stopPropagation();
+              onEditQuestion && onEditQuestion(block as QuestionBlock);
+            }}
+            className="p-1 hover:text-sky-400 transition-colors"
+            title="Edit MCQ Question"
+          >
+            <Edit3 className="w-3 h-3" />
+          </button>
+        )}
+        {block.type === 'equation' && (
+          <button
+            type="button"
+            onClick={e => {
+              e.stopPropagation();
+              onEditEquation && onEditEquation(block as EquationBlock);
+            }}
+            className="p-1 hover:text-sky-400 transition-colors"
+            title="Edit Math Equation"
+          >
+            <Edit3 className="w-3 h-3" />
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={e => {
+            e.stopPropagation();
+            onMoveUp && onMoveUp();
+          }}
+          className="p-1 hover:text-sky-400 transition-colors"
+          title="Move Up"
+        >
+          <ArrowUp className="w-3 h-3" />
+        </button>
+        <button
+          type="button"
+          onClick={e => {
+            e.stopPropagation();
+            onMoveDown && onMoveDown();
+          }}
+          className="p-1 hover:text-sky-400 transition-colors"
+          title="Move Down"
+        >
+          <ArrowDown className="w-3 h-3" />
+        </button>
+        <button
+          type="button"
+          onClick={e => {
+            e.stopPropagation();
+            onDuplicateBlock && onDuplicateBlock();
+          }}
+          className="p-1 hover:text-sky-400 transition-colors"
+          title="Duplicate Block"
+        >
+          <Copy className="w-3 h-3" />
+        </button>
+        <button
+          type="button"
+          onClick={e => {
+            e.stopPropagation();
+            onDeleteBlock && onDeleteBlock();
+          }}
+          className="p-1 hover:text-red-400 transition-colors"
+          title="Delete Block"
+        >
+          <Trash2 className="w-3 h-3" />
+        </button>
+      </div>
+
+      {/* Render actual block content with MS Word-like inline editing */}
+      {renderBlockContent(
+        block,
+        isSelected,
+        showFormattingMarks,
+        onUpdateBlock,
+        onInsertNextParagraph,
+        onFocusPreviousBlock,
+        onEditEquation,
+        onEditQuestion,
+        onTextSelectionChange,
+        getBorderStyle
+      )}
+    </div>
+  );
+};
+
+function renderBlockContent(
+  block: DocumentBlock,
+  isSelected: boolean,
+  showFormattingMarks: boolean,
+  onUpdateBlock?: (updated: DocumentBlock) => void,
+  onInsertNextParagraph?: (currentBlockId: string) => void,
+  onFocusPreviousBlock?: (currentBlockId: string) => void,
+  onEditEquation?: (eq: EquationBlock) => void,
+  onEditQuestion?: (q: QuestionBlock) => void,
+  onTextSelectionChange?: (formatting: Partial<FormattingState>) => void,
+  getBorderStyle?: (borderType?: string, customBg?: string) => React.CSSProperties
+) {
+  switch (block.type) {
+    case 'section_header': {
+      const sh = block as SectionHeaderBlock;
+      return (
+        <div className="my-3 text-center border-b-2 border-black pb-1">
+          <h3
+            contentEditable
+            suppressContentEditableWarning
+            onBlur={e => {
+              const newTitle = e.currentTarget.textContent || '';
+              onUpdateBlock && onUpdateBlock({ ...sh, title: newTitle });
+            }}
+            className="text-sm font-black uppercase tracking-wider text-black outline-hidden hover:bg-slate-100/50 rounded px-1"
+          >
+            {sh.title}
+          </h3>
+          {sh.totalMarks ? (
+            <span className="text-black font-bold text-xs">({sh.totalMarks} Marks)</span>
+          ) : null}
+          {sh.instructions && (
+            <p
+              contentEditable
+              suppressContentEditableWarning
+              onBlur={e => {
+                const newInst = e.currentTarget.textContent || '';
+                onUpdateBlock && onUpdateBlock({ ...sh, instructions: newInst });
+              }}
+              className="text-[11px] font-semibold italic text-black mt-0.5 outline-hidden hover:bg-slate-100/50 rounded px-1"
+            >
+              {sh.instructions}
+            </p>
+          )}
+        </div>
+      );
+    }
+
+    case 'paragraph': {
+      const p = block as ParagraphBlock;
+      const primaryRun = p.runs?.[0];
+      const f = primaryRun?.formatting || {};
+      const fullText = p.runs?.map(r => r.text).join('') || '';
+
+      const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          onInsertNextParagraph && onInsertNextParagraph(p.id);
+        } else if (e.key === 'Backspace') {
+          const content = e.currentTarget.textContent || '';
+          if (content.length === 0 || content === '\n') {
+            e.preventDefault();
+            onFocusPreviousBlock && onFocusPreviousBlock(p.id);
+          }
+        } else if (e.key === 'Tab') {
+          e.preventDefault();
+          const currentIndent = p.indent || 0;
+          const newIndent = e.shiftKey ? Math.max(0, currentIndent - 15) : currentIndent + 15;
+          onUpdateBlock && onUpdateBlock({ ...p, indent: newIndent });
+        }
+      };
+
+      const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
+        const text = e.currentTarget.textContent || '';
+        onUpdateBlock && onUpdateBlock({
+          ...p,
+          runs: [{ id: `run-${Date.now()}`, text, formatting: f }]
+        });
+      };
+
+      // WordArt / Text shadow styling
+      let textShadow: string | undefined = undefined;
+      if (f.textEffect === 'shadow') textShadow = '2px 2px 4px rgba(0,0,0,0.4)';
+      else if (f.textEffect === 'glow') textShadow = '0 0 8px rgba(56,189,248,0.8)';
+      else if (f.textEffect === 'outline') textShadow = '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000';
+      else if (f.textEffect === 'reflection') textShadow = '0 8px 6px rgba(0,0,0,0.3)';
+
+      // Underline / Strikethrough
+      let textDecoration = 'none';
+      if (f.underline && f.strikethrough) textDecoration = 'underline line-through';
+      else if (f.underline) textDecoration = 'underline';
+      else if (f.strikethrough) textDecoration = 'line-through';
+
+      // List numbering or bullet rendering
+      const bulletPrefix = p.listType === 'bullet'
+        ? (p.listBulletStyle || '•')
+        : p.listType === 'number'
+        ? (p.listBulletStyle || '1.')
+        : p.listType === 'alpha'
+        ? (p.listBulletStyle || 'a.')
+        : p.listType === 'roman'
+        ? (p.listBulletStyle || 'i.')
+        : null;
+
+      const containerStyle: React.CSSProperties = {
+        textAlign: p.alignment || 'left',
+        lineHeight: p.lineSpacing || 1.25,
+        paddingLeft: p.indent ? `${p.indent}px` : undefined,
+        ...(getBorderStyle ? getBorderStyle(p.border, p.backgroundColor) : {})
+      };
+
+      return (
+        <div
+          style={containerStyle}
+          className="my-1 text-black group/para relative flex items-baseline"
+        >
+          {/* List bullet or numbering prefix */}
+          {bulletPrefix && (
+            <span
+              className="mr-2 font-black select-none text-black shrink-0"
+              style={{
+                fontFamily: f.fontFamily || undefined,
+                fontSize: f.fontSize ? `${f.fontSize}pt` : '10.5pt'
+              }}
+            >
+              {bulletPrefix}
+            </span>
+          )}
+
+          {/* Editable Text Area */}
+          <div
+            contentEditable
+            suppressContentEditableWarning
+            data-block-id={p.id}
+            onKeyDown={handleKeyDown}
+            onInput={handleInput}
+            onSelect={() => {
+              onTextSelectionChange && onTextSelectionChange({
+                ...f,
+                alignment: p.alignment,
+                lineSpacing: p.lineSpacing,
+                listType: p.listType,
+                indent: p.indent,
+                styleName: p.styleName
+              });
+            }}
+            style={{
+              fontWeight: f.bold ? 'bold' : 'normal',
+              fontStyle: f.italic ? 'italic' : 'normal',
+              textDecoration,
+              textDecorationStyle: f.underlineStyle === 'single' || !f.underlineStyle ? 'solid' : f.underlineStyle,
+              textDecorationColor: f.underlineColor || undefined,
+              verticalAlign: f.superscript ? 'super' : f.subscript ? 'sub' : 'baseline',
+              fontSize: f.superscript || f.subscript ? '0.75em' : f.fontSize ? `${f.fontSize}pt` : '10.5pt',
+              color: f.color || '#000000',
+              backgroundColor: f.backgroundColor && f.backgroundColor !== 'transparent' ? f.backgroundColor : undefined,
+              fontFamily: f.fontFamily || undefined,
+              border: f.characterBorder ? '1px solid #94a3b8' : undefined,
+              padding: f.characterBorder ? '1px 3px' : undefined,
+              textShadow,
+              minWidth: '10px'
+            }}
+            className="flex-1 outline-hidden cursor-text select-text empty:before:content-['Type_custom_text_here...'] empty:before:text-slate-400 empty:before:italic"
+          >
+            {fullText}
+          </div>
+
+          {/* Formatting Mark: Pilcrow ¶ */}
+          {showFormattingMarks && (
+            <span className="text-slate-400 select-none ml-0.5 text-xs font-mono">
+              ¶
+            </span>
+          )}
+        </div>
+      );
+    }
+
+    case 'heading': {
+      const h = block as HeadingBlock;
+      const fullText = h.runs?.map(r => r.text).join('') || '';
+      const f = h.runs?.[0]?.formatting || {};
+      const Tag = `h${h.level}` as keyof JSX.IntrinsicElements;
+      const sizeClass = h.level === 1 ? 'text-lg font-black' : h.level === 2 ? 'text-base font-bold' : 'text-sm font-bold';
+
+      return (
+        <div
+          style={{
+            textAlign: h.alignment || 'left',
+            ...(getBorderStyle ? getBorderStyle(h.border, h.backgroundColor) : {})
+          }}
+          className="my-2 text-black flex items-baseline"
+        >
+          <div
+            contentEditable
+            suppressContentEditableWarning
+            data-block-id={h.id}
+            onKeyDown={e => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                onInsertNextParagraph && onInsertNextParagraph(h.id);
+              }
+            }}
+            onInput={e => {
+              const text = e.currentTarget.textContent || '';
+              onUpdateBlock && onUpdateBlock({
+                ...h,
+                runs: [{ id: `run-${Date.now()}`, text, formatting: f }]
+              });
+            }}
+            style={{
+              fontFamily: f.fontFamily || undefined,
+              fontSize: f.fontSize ? `${f.fontSize}pt` : undefined,
+              color: f.color || '#000000'
+            }}
+            className={`${sizeClass} flex-1 outline-hidden cursor-text select-text empty:before:content-['Heading_text...'] empty:before:text-slate-400`}
+          >
+            {fullText}
+          </div>
+
+          {showFormattingMarks && (
+            <span className="text-slate-400 select-none ml-1 text-xs font-mono">
+              ¶
+            </span>
+          )}
+        </div>
+      );
+    }
+
+    case 'equation': {
+      const eq = block as EquationBlock;
+      return (
+        <div
+          onDoubleClick={() => onEditEquation && onEditEquation(eq)}
+          className="my-2 cursor-pointer p-1 rounded hover:bg-sky-50/50 border border-transparent hover:border-sky-300 transition-all text-black"
+          title="Double-click to edit equation in Math AST editor"
+        >
+          <KaTeXRenderer math={eq.rawLatex || 'E = mc^2'} block={eq.displayMode !== 'inline'} />
+        </div>
+      );
+    }
+
+    case 'question': {
+      const qb = block as QuestionBlock;
+      const q = qb.question;
+      return (
+        <div
+          onDoubleClick={() => onEditQuestion && onEditQuestion(qb)}
+          className="my-2 text-[10.5pt] leading-snug cursor-pointer select-text border border-transparent hover:border-sky-300 hover:bg-sky-50/20 p-1 rounded text-black"
+          title="Double-click to edit MCQ question in builder"
+        >
+          <div className="flex items-start gap-1.5">
+            <span className="font-black text-black min-w-[22px]">
+              {q.questionNumber ? `${q.questionNumber}.` : 'Q.'}
+            </span>
+            <div
+              contentEditable
+              suppressContentEditableWarning
+              onBlur={e => {
+                const newText = e.currentTarget.textContent || '';
+                onUpdateBlock && onUpdateBlock({
+                  ...qb,
+                  question: { ...q, rawText: newText }
+                });
+              }}
+              className="flex-1 font-semibold text-black outline-hidden hover:bg-slate-100/50 rounded px-0.5"
+            >
+              {q.rawText}
+            </div>
+            <span className="text-[9.5px] font-bold text-sky-800 whitespace-nowrap ml-1 px-1 bg-sky-50 rounded border border-sky-300">
+              [{q.marks}{q.negativeMarks ? `, -${q.negativeMarks}` : ''}M]
+            </span>
+          </div>
+
+          <OptionLayoutRenderer
+            options={q.options}
+            layoutType={q.optionLayout || 'grid_2x2'}
+            showAnswers={false}
+          />
+        </div>
+      );
+    }
+
+    case 'table': {
+      const tb = block as TableBlock;
+      return (
+        <div className="my-3 overflow-x-auto">
+          <table className="w-full border-collapse border border-slate-400 text-xs">
+            <tbody>
+              {tb.cells.map((row, rIdx) => (
+                <tr key={rIdx}>
+                  {row.map((cell, cIdx) => (
+                    <td
+                      key={cell.id || `${rIdx}-${cIdx}`}
+                      style={{
+                        backgroundColor: cell.backgroundColor || (rIdx === 0 ? '#f8fafc' : '#ffffff'),
+                        textAlign: cell.textAlign || 'left',
+                        padding: cell.padding ? `${cell.padding}px` : '6px 8px'
+                      }}
+                      className="border border-slate-300"
+                    >
+                      <div
+                        contentEditable
+                        suppressContentEditableWarning
+                        onBlur={e => {
+                          const val = e.currentTarget.textContent || '';
+                          const newCells = JSON.parse(JSON.stringify(tb.cells));
+                          newCells[rIdx][cIdx].content = [
+                            {
+                              id: `p-${Date.now()}`,
+                              type: 'paragraph',
+                              runs: [{ id: `r-${Date.now()}`, text: val }]
+                            }
+                          ];
+                          onUpdateBlock && onUpdateBlock({ ...tb, cells: newCells });
+                        }}
+                        className="outline-hidden min-h-[18px] cursor-text"
+                      >
+                        {cell.content?.[0]?.type === 'paragraph'
+                          ? (cell.content[0] as ParagraphBlock).runs?.map(r => r.text).join('') || `Cell ${rIdx + 1},${cIdx + 1}`
+                          : `Cell`}
+                      </div>
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
+    case 'image': {
+      return (
+        <div className="my-3 flex flex-col items-center">
+          <img
+            src={block.src}
+            alt={block.alt || 'Document asset'}
+            style={{ width: block.width ? `${block.width}px` : 'auto', maxHeight: '350px' }}
+            className="rounded shadow-xs border border-slate-200"
+          />
+          {block.caption && (
+            <span className="text-[10px] text-slate-500 italic mt-1">{block.caption}</span>
+          )}
+        </div>
+      );
+    }
+
+    case 'shape': {
+      const sb = block as ShapeBlock;
+      return (
+        <div className="my-3 flex justify-center">
+          <div
+            style={{
+              width: `${sb.width || 140}px`,
+              height: `${sb.height || 70}px`,
+              backgroundColor: sb.fill || '#e0f2fe',
+              borderColor: sb.stroke || '#0284c7',
+              borderWidth: `${sb.strokeWidth || 2}px`,
+              borderRadius: sb.shapeType === 'circle' ? '9999px' : '6px'
+            }}
+            className="border flex items-center justify-center text-xs font-bold text-sky-900 shadow-xs"
+          >
+            {sb.labelText || sb.shapeType.toUpperCase()}
+          </div>
+        </div>
+      );
+    }
+
+    case 'wordart': {
+      const wa = block as WordArtBlock;
+      return (
+        <div className="my-3 text-center">
+          <span
+            style={{ fontSize: `${wa.fontSize || 22}pt`, fontFamily: wa.fontFamily || undefined }}
+            className={`wordart-${wa.style} inline-block`}
+          >
+            {wa.text}
+          </span>
+        </div>
+      );
+    }
+
+    case 'horizontal_line': {
+      return <hr className="my-3 border-t border-slate-300" />;
+    }
+
+    case 'page_break': {
+      return (
+        <div className="my-2 flex items-center gap-2 text-slate-400 no-print">
+          <div className="flex-1 border-t border-dashed border-slate-300" />
+          <span className="text-[10px] font-mono uppercase bg-slate-100 px-2 py-0.5 rounded">
+            --- Page Break ---
+          </span>
+          <div className="flex-1 border-t border-dashed border-slate-300" />
+        </div>
+      );
+    }
+
+    default:
+      return null;
+  }
+}

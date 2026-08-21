@@ -1,0 +1,238 @@
+[
+  {
+    "id": "a4-two-column",
+    "name": "A4 Two Column MCQ",
+    "description": "Standard high-density two-column layout ideal for entrance tests and objective question papers with column divider line.",
+    "category": "generic",
+    "isSystem": true,
+    "settings": {
+      "pageSize": "A4",
+      "orientation": "portrait",
+      "margins": { "top": 15, "bottom": 15, "left": 15, "right": 15 },
+      "columns": 2,
+      "columnGap": 8,
+      "columnDivider": true,
+      "defaultFont": "Inter",
+      "defaultFontSize": 10.5,
+      "questionSpacing": 12,
+      "optionSpacing": 4,
+      "lineSpacing": 1.25,
+      "paragraphSpacing": 6,
+      "headerHeightMm": 32,
+      "footerHeightMm": 12,
+      "showPageNumbers": true,
+      "pageNumberPosition": "bottom_center"
+    },
+    "defaultMetadata": {
+      "instituteName": "APEX INSTITUTE OF SCIENCE & TECHNOLOGY",
+      "examName": "ALL INDIA MOCK TEST SERIES — 2026",
+      "subject": "PHYSICS & CHEMISTRY",
+      "timeAllowedMinutes": 180,
+      "maxMarks": 180,
+      "headerTemplate": "boxed",
+      "generalInstructions": [
+        "The test contains 45 objective questions with 4 choices each.",
+        "Each correct response awards +4 marks; incorrect response deducts -1 mark.",
+        "Use of scientific calculators and electronic devices is strictly prohibited."
+      ]
+    },
+    "defaultSections": [
+      {
+        "defaultTitle": "SECTION A: PHYSICS",
+        "defaultInstructions": "Questions 1 to 25 carry 4 marks each with -1 negative marking.",
+        "defaultMarks": 100
+      },
+      {
+        "defaultTitle": "SECTION B: CHEMISTRY",
+        "defaultInstructions": "Questions 26 to 45 carry 4 marks each with -1 negative marking.",
+        "defaultMarks": 80
+      }
+    ],
+    "defaultOptionLayout": "grid_2x2",
+    "createdAt": "2026-08-21T00:00:00.000Z",
+    "updatedAt": "2026-08-21T00:00:00.000Z"
+  },
+  {
+    "id": "a4-single-column",
+    "name": "A4 Single Column MCQ",
+    "description": "Clean, spacious single-column format with ample space for diagrams, comprehensive tables, and detailed question explanations.",
+    "category": "generic",
+    "isSystem": true,
+    "settings": {
+      "pageSize": "A4",
+      "orientation": "portrait",
+      "margins": { "top": 20, "bottom": 20, "left": 20, "right": 20 },
+      "columns": 1,
+      "columnGap": 0,
+      "columnDivider": false,
+      "defaultFont": "Inter",
+      "defaultFontSize": 11,
+      "questionSpacing": 16,
+      "optionSpacing": 6,
+      "lineSpacing": 1.3,
+      "paragraphSpacing": 8,
+      "headerHeightMm": 35,
+      "footerHeightMm": 14,
+      "showPageNumbers": true,
+      "pageNumberPosition": "bottom_center"
+    },
+    "defaultMetadata": {
+      "instituteName": "NATIONAL ACADEMY OF HIGHER EDUCATION",
+      "examName": "MID-TERM ASSESSMENT EXAMINATION",
+      "subject": "PHYSICS",
+      "timeAllowedMinutes": 120,
+      "maxMarks": 70,
+      "headerTemplate": "classic",
+      "generalInstructions": [
+        "All questions are compulsory.",
+        "Read each question carefully before attempting.",
+        "Write your answers clearly in the space provided."
+      ]
+    },
+    "defaultSections": [
+      {
+        "defaultTitle": "PART I: MULTIPLE CHOICE QUESTIONS",
+        "defaultInstructions": "Choose the most appropriate option for each question.",
+        "defaultMarks": 35
+      }
+    ],
+    "defaultOptionLayout": "vertical",
+    "createdAt": "2026-08-21T00:00:00.000Z",
+    "updatedAt": "2026-08-21T00:00:00.000Z"
+  },
+  {
+    "id": "competitive-exam",
+    "name": "Competitive Exam (JEE / NEET Format)",
+    "description": "Standard national competitive examination paper format with dual columns, negative marking indicators, and boxed instructions.",
+    "category": "competitive",
+    "isSystem": true,
+    "settings": {
+      "pageSize": "A4",
+      "orientation": "portrait",
+      "margins": { "top": 12, "bottom": 12, "left": 12, "right": 12 },
+      "columns": 2,
+      "columnGap": 7,
+      "columnDivider": true,
+      "defaultFont": "Times New Roman",
+      "defaultFontSize": 10,
+      "questionSpacing": 10,
+      "optionSpacing": 3,
+      "lineSpacing": 1.2,
+      "paragraphSpacing": 4,
+      "headerHeightMm": 38,
+      "footerHeightMm": 10,
+      "showPageNumbers": true,
+      "pageNumberPosition": "bottom_right"
+    },
+    "defaultMetadata": {
+      "instituteName": "NATIONAL TESTING SERVICES",
+      "examName": "ENGINEERING & MEDICAL ENTRANCE EXAMINATION",
+      "subject": "PHYSICS, CHEMISTRY & MATHEMATICS",
+      "timeAllowedMinutes": 180,
+      "maxMarks": 300,
+      "headerTemplate": "boxed",
+      "generalInstructions": [
+        "Total duration of this paper is 3 Hours (180 Minutes).",
+        "Section A contains 20 Multiple Choice Questions (+4, -1).",
+        "Section B contains 10 Numerical Value Questions (+4, 0)."
+      ]
+    },
+    "defaultSections": [
+      { "defaultTitle": "PHYSICS — SECTION A (MCQs)", "defaultMarks": 80 },
+      { "defaultTitle": "CHEMISTRY — SECTION A (MCQs)", "defaultMarks": 80 },
+      { "defaultTitle": "MATHEMATICS — SECTION A (MCQs)", "defaultMarks": 80 }
+    ],
+    "defaultOptionLayout": "grid_2x2",
+    "createdAt": "2026-08-21T00:00:00.000Z",
+    "updatedAt": "2026-08-21T00:00:00.000Z"
+  },
+  {
+    "id": "school-exam",
+    "name": "School Examination (CBSE / ICSE)",
+    "description": "Classic board examination layout with formal header, candidate roll number fields, and structured sectional breakdown.",
+    "category": "school",
+    "isSystem": true,
+    "settings": {
+      "pageSize": "A4",
+      "orientation": "portrait",
+      "margins": { "top": 18, "bottom": 18, "left": 18, "right": 18 },
+      "columns": 1,
+      "columnGap": 0,
+      "columnDivider": false,
+      "defaultFont": "Arial",
+      "defaultFontSize": 11,
+      "questionSpacing": 14,
+      "optionSpacing": 5,
+      "lineSpacing": 1.25,
+      "paragraphSpacing": 6,
+      "headerHeightMm": 40,
+      "footerHeightMm": 12,
+      "showPageNumbers": true,
+      "pageNumberPosition": "bottom_center"
+    },
+    "defaultMetadata": {
+      "instituteName": "ST. XAVIER'S SENIOR SECONDARY SCHOOL",
+      "examName": "ANNUAL BOARD PREPARATORY EXAMINATION 2026",
+      "subject": "SCIENCE (PHYSICS & CHEMISTRY)",
+      "timeAllowedMinutes": 180,
+      "maxMarks": 80,
+      "headerTemplate": "double_line",
+      "generalInstructions": [
+        "Please check that this question paper contains 5 printed pages.",
+        "15 minutes reading time will be allotted before writing starts.",
+        "Attempt all questions in Section A, B, and C."
+      ]
+    },
+    "defaultSections": [
+      { "defaultTitle": "SECTION A (Objective Type Questions - 1 Mark each)", "defaultMarks": 20 },
+      { "defaultTitle": "SECTION B (Short Answer Questions - 2 Marks each)", "defaultMarks": 20 },
+      { "defaultTitle": "SECTION C (Long Answer Questions - 5 Marks each)", "defaultMarks": 40 }
+    ],
+    "defaultOptionLayout": "vertical",
+    "createdAt": "2026-08-21T00:00:00.000Z",
+    "updatedAt": "2026-08-21T00:00:00.000Z"
+  },
+  {
+    "id": "generic-a4-mcq",
+    "name": "Generic A4 MCQ Paper",
+    "description": "Balanced multipurpose single column template suitable for quick quizzes, class tests, and weekly evaluations.",
+    "category": "generic",
+    "isSystem": true,
+    "settings": {
+      "pageSize": "A4",
+      "orientation": "portrait",
+      "margins": { "top": 16, "bottom": 16, "left": 16, "right": 16 },
+      "columns": 1,
+      "columnGap": 0,
+      "columnDivider": false,
+      "defaultFont": "Inter",
+      "defaultFontSize": 10.5,
+      "questionSpacing": 12,
+      "optionSpacing": 4,
+      "lineSpacing": 1.2,
+      "paragraphSpacing": 6,
+      "headerHeightMm": 28,
+      "footerHeightMm": 10,
+      "showPageNumbers": true,
+      "pageNumberPosition": "bottom_center"
+    },
+    "defaultMetadata": {
+      "instituteName": "EDUFORGE ACADEMY",
+      "examName": "WEEKLY ASSESSMENT TEST",
+      "subject": "GENERAL SCIENCE",
+      "timeAllowedMinutes": 60,
+      "maxMarks": 50,
+      "headerTemplate": "minimal",
+      "generalInstructions": [
+        "Select the single best answer for each question.",
+        "Total Questions: 25. Marks per question: 2."
+      ]
+    },
+    "defaultSections": [
+      { "defaultTitle": "SECTION 1", "defaultMarks": 50 }
+    ],
+    "defaultOptionLayout": "grid_2x2",
+    "createdAt": "2026-08-21T00:00:00.000Z",
+    "updatedAt": "2026-08-21T00:00:00.000Z"
+  }
+]

@@ -1,0 +1,200 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --primary: 2 132 199;
+    --primary-foreground: 255 255 255;
+    --app-bg: #0f172a;
+    --app-surface: #1e293b;
+    --app-border: #334155;
+    --app-text: #f8fafc;
+    --app-text-muted: #94a3b8;
+    --app-header-bg: #090d16;
+    --app-ribbon-bg: #181e29;
+    --app-canvas-bg: #1e293b;
+    --ui-title: #ffffff;
+  }
+
+  /* White Theme */
+  [data-theme="white"], .theme-white {
+    --app-bg: #f1f5f9;
+    --app-surface: #ffffff;
+    --app-border: #e2e8f0;
+    --app-text: #0f172a;
+    --app-text-muted: #64748b;
+    --app-header-bg: #1e293b;
+    --app-ribbon-bg: #ffffff;
+    --app-canvas-bg: #cbd5e1;
+    --ui-title: #0f172a;
+  }
+
+  /* Dark Theme */
+  [data-theme="dark"], .theme-dark {
+    --app-bg: #0f172a;
+    --app-surface: #1e293b;
+    --app-border: #334155;
+    --app-text: #f8fafc;
+    --app-text-muted: #94a3b8;
+    --app-header-bg: #090d16;
+    --app-ribbon-bg: #181e29;
+    --app-canvas-bg: #1e293b;
+    --ui-title: #ffffff;
+  }
+
+  /* Dark Blue Theme */
+  [data-theme="dark-blue"], .theme-dark-blue {
+    --app-bg: #070e1e;
+    --app-surface: #0f1e36;
+    --app-border: #1d3557;
+    --app-text: #f0f9ff;
+    --app-text-muted: #7dd3fc;
+    --app-header-bg: #050a17;
+    --app-ribbon-bg: #0b172a;
+    --app-canvas-bg: #0b172a;
+    --ui-title: #ffffff;
+  }
+}
+
+/* UI Default Font: Manrope applied to all UI elements */
+body, button, input, select, textarea, h1, h2, h3, h4, h5, h6, nav, header {
+  font-family: 'Manrope', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* High Refresh Rate (60Hz / 120Hz / 144Hz) & GPU Hardware Acceleration */
+*, *::before, *::after {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+html, body {
+  scroll-behavior: smooth;
+}
+
+.page-sheet, .canvas-container, [contenteditable] {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Modal and form control text colors - ensure crisp solid black on light containers */
+.bg-white input,
+.bg-white textarea,
+.bg-white select,
+.bg-slate-50 input,
+.bg-slate-50 textarea,
+.bg-slate-50 select {
+  color: #000000;
+}
+
+/* CRITICAL: The Paper Sheet MUST ALWAYS STAY PURE WHITE (#ffffff) with black/slate text & preserve document fonts */
+.page-sheet {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.25);
+}
+
+/* Ensure document paper blocks and math equations retain their specific fonts */
+.page-sheet, .page-sheet .katex, .page-sheet .katex * {
+  /* KaTeX uses Computer Modern / Latin Modern Math */
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.7);
+}
+
+/* Theme Adaptive Title Class */
+.theme-title {
+  color: var(--ui-title) !important;
+}
+
+/* WordArt special styling */
+.wordart-gradient_purple {
+  background: linear-gradient(135deg, #9333ea, #ec4899);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 900;
+  filter: drop-shadow(2px 2px 4px rgba(147, 51, 234, 0.25));
+}
+
+.wordart-gold_3d {
+  background: linear-gradient(180deg, #fef08a 0%, #ca8a04 50%, #854d0e 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 900;
+  text-shadow: 1px 1px 0px #713f12, 2px 2px 0px #581c87;
+}
+
+.wordart-neon_blue {
+  color: #0284c7;
+  text-shadow: 0 0 10px rgba(56, 189, 248, 0.6), 0 0 20px rgba(14, 165, 233, 0.4);
+  font-weight: 900;
+}
+
+.wordart-cyber_glow {
+  color: #059669;
+  text-shadow: 0 0 8px rgba(52, 211, 153, 0.5), 0 0 16px rgba(16, 185, 129, 0.3);
+  font-weight: 900;
+}
+
+.wordart-metallic {
+  background: linear-gradient(180deg, #f8fafc 0%, #94a3b8 50%, #475569 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 900;
+  filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.3));
+}
+
+.wordart-outline_red {
+  color: #ffffff;
+  -webkit-text-stroke: 1.5px #dc2626;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+.wordart-sunset {
+  background: linear-gradient(135deg, #ea580c, #db2777);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 900;
+}
+
+.wordart-rainbow {
+  background: linear-gradient(90deg, #ef4444, #f59e0b, #10b981, #3b82f6, #8b5cf6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 900;
+}
+
+/* Print CSS */
+@media print {
+  body {
+    background: transparent !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .page-sheet {
+    box-shadow: none !important;
+    margin: 0 !important;
+    border: none !important;
+    page-break-after: always;
+    break-after: page;
+  }
+}
