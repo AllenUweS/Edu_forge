@@ -12,7 +12,10 @@
     "dev:shared": "npm run dev --workspace=packages/shared",
     "dev:server": "npm run dev --workspace=apps/server",
     "dev:web": "npm run dev --workspace=apps/web",
-    "build": "npm run build --workspaces --if-present",
+    "build:shared": "npm run build --workspace=packages/shared",
+    "build:web": "npm run build --workspace=apps/web",
+    "build:server": "npm run build --workspace=apps/server",
+    "build": "npm run build:shared && npm run build:web",
     "test": "npm run test --workspaces --if-present"
   },
   "keywords": [
