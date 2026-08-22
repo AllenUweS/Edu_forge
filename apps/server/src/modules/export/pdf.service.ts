@@ -1,4 +1,4 @@
-import { DocumentModel, DocumentBlock, QuestionBlock } from '@eduforge/shared';
+import { DocumentModel, DocumentBlock, QuestionBlock, TextRun } from '@eduforge/shared';
 
 export class PdfExportService {
   public static generatePrintableHtml(docModel: DocumentModel): string {
@@ -254,7 +254,7 @@ export class PdfExportService {
       <div class="instructions-box">
         <div class="instructions-title">General Instructions:</div>
         <ol class="instructions-list">
-          ${docModel.metadata.generalInstructions.map(i => `<li>${PdfExportService.escapeHtml(i)}</li>`).join('')}
+          ${docModel.metadata.generalInstructions.map((i: string) => `<li>${PdfExportService.escapeHtml(i)}</li>`).join('')}
         </ol>
       </div>
     `
@@ -288,7 +288,7 @@ export class PdfExportService {
     switch (block.type) {
       case 'paragraph': {
         const runs = block.runs
-          .map(r => {
+          .map((r: TextRun) => {
             let t = PdfExportService.escapeHtml(r.text);
             const f = r.formatting || {};
             if (f.bold) t = `<strong>${t}</strong>`;
@@ -304,7 +304,7 @@ export class PdfExportService {
       }
 
       case 'heading': {
-        const text = block.runs.map(r => r.text).join('');
+        const text = block.runs.map((r: TextRun) => r.text).join('');
         return `<h${block.level} style="margin: 8px 0; text-align: ${block.alignment || 'left'};">${PdfExportService.escapeHtml(text)}</h${block.level}>`;
       }
 
@@ -323,7 +323,7 @@ export class PdfExportService {
           const isGrid = q.optionLayout === 'grid_2x2' && q.options.length === 4;
           const optItems = q.options
             .map(
-              (o, idx) => `
+              (o: any, idx: number) => `
             <div class="option-item">
               <span class="option-key">(${o.key || String.fromCharCode(97 + idx)})</span>
               <span class="option-text">${o.rawText ? (o.rawText.startsWith('\\') || o.rawText.includes('\\frac') ? `$${o.rawText}$` : PdfExportService.escapeHtml(o.rawText)) : ''}</span>
