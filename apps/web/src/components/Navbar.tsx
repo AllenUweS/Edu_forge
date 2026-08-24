@@ -1,8 +1,7 @@
 import React from 'react';
 import {
-  FileText, Database, LayoutTemplate, Atom, Settings, Layers, Plus, Compass
+  Database, LayoutTemplate, Atom, Settings, Plus, Compass
 } from 'lucide-react';
-import { useTheme } from '../state/ThemeContext.js';
 
 export type PageView =
   | 'dashboard'
@@ -23,8 +22,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   setCurrentPage,
   onNewPaper
 }) => {
-  const { theme } = useTheme();
-
   const navLinks: { id: PageView; label: string; icon: any }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: Compass },
     { id: 'question_bank', label: 'Question Bank', icon: Database },
@@ -33,19 +30,8 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'settings', label: 'Settings', icon: Settings }
   ];
 
-  const getHeaderBg = () => {
-    if (theme === 'white') return 'bg-white border-slate-200 text-slate-900 shadow-xs';
-    if (theme === 'dark-blue') return 'bg-[#060e1d] border-[#1d3557] text-white shadow-md';
-    return 'bg-[#0f172a] border-slate-800 text-white shadow-md';
-  };
-
-  const getLogoText = () => {
-    if (theme === 'white') return 'text-slate-900';
-    return 'text-white';
-  };
-
   return (
-    <header className={`h-14 border-b px-6 flex items-center justify-between transition-colors sticky top-0 z-40 ${getHeaderBg()}`}>
+    <header className="h-14 bg-white border-b border-slate-200 px-6 flex items-center justify-between sticky top-0 z-40 shadow-xs">
       
       {/* Brand / Logo */}
       <div className="flex items-center gap-8">
@@ -59,10 +45,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="w-7 h-7 object-contain group-hover:scale-105 transition-transform"
           />
           <div className="flex flex-col">
-            <span className={`font-black text-base tracking-tight leading-none group-hover:text-sky-400 transition-colors ${getLogoText()}`}>
+            <span className="font-black text-base tracking-tight leading-none text-slate-900 group-hover:text-sky-600 transition-colors">
               EduForge
             </span>
-            <span className="text-[10px] text-slate-400 font-medium tracking-wide">
+            <span className="text-[10px] text-slate-500 font-medium tracking-wide">
               Scientific Exam Publishing
             </span>
           </div>
@@ -74,31 +60,18 @@ export const Navbar: React.FC<NavbarProps> = ({
             const Icon = link.icon;
             const isActive = currentPage === link.id;
 
-            let activeClass = '';
-            if (isActive) {
-              if (theme === 'white') {
-                activeClass = 'bg-sky-50 text-sky-700 font-bold border border-sky-200';
-              } else if (theme === 'dark-blue') {
-                activeClass = 'bg-sky-500/15 text-sky-400 font-bold border border-sky-500/30';
-              } else {
-                activeClass = 'bg-slate-800 text-sky-400 font-bold border border-slate-700';
-              }
-            } else {
-              if (theme === 'white') {
-                activeClass = 'text-slate-600 hover:text-slate-950 hover:bg-slate-100';
-              } else {
-                activeClass = 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60';
-              }
-            }
-
             return (
               <button
                 key={link.id}
                 type="button"
                 onClick={() => setCurrentPage(link.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${activeClass}`}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                  isActive
+                    ? 'bg-sky-50 text-sky-700 font-bold border border-sky-200 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100'
+                }`}
               >
-                <Icon className="w-3.5 h-3.5" />
+                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-sky-600' : 'text-slate-500'}`} />
                 {link.label}
               </button>
             );
@@ -112,7 +85,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             type="button"
             onClick={onNewPaper}
-            className="px-3.5 py-1.5 bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-bold rounded-lg flex items-center gap-1.5 shadow-sm transition-all active:scale-95"
+            className="px-3.5 py-1.5 bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 shadow-sm transition-all active:scale-95"
           >
             <Plus className="w-4 h-4" /> New Paper
           </button>

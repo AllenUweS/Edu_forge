@@ -10,7 +10,7 @@ export interface AppSettings {
   defaultOptionStyle: OptionLayoutType;
   defaultEquationSize: number;
   autosaveIntervalMs: number; // e.g. 2000
-  theme: 'dark' | 'white' | 'dark-blue' | 'light';
+  theme: 'dark' | 'white' | 'dark-blue' | 'light' | 'system';
   exportSettings: {
     pdfDpi: number;
     embedFonts: boolean;

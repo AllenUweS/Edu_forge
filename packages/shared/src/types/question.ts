@@ -43,6 +43,8 @@ export interface Question {
   optionLayout: OptionLayoutType;
   explanation?: DocumentBlock[];
   explanationText?: string;
+  diagramUrl?: string;
+  diagramSvg?: string;
   isSystem?: boolean;
   createdAt: string;
   updatedAt: string;

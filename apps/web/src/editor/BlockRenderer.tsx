@@ -4,6 +4,7 @@ import {
   EquationBlock, ParagraphBlock, HeadingBlock, SectionHeaderBlock, TextRun
 } from '@eduforge/shared';
 import { KaTeXRenderer } from '../equation/KaTeXRenderer.js';
+import { MathTextRenderer } from '../equation/MathTextRenderer.js';
 import { OptionLayoutRenderer } from '../questions/OptionLayoutRenderer.js';
 import { Trash2, Copy, ArrowUp, ArrowDown, Edit3, Type, Wand2 } from 'lucide-react';
 import { FormattingState } from './EditorRibbon.js';
@@ -186,6 +187,126 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
   );
 };
 
+const QuestionBlockItem: React.FC<{
+  qb: QuestionBlock;
+  onUpdateBlock?: (updated: DocumentBlock) => void;
+}> = ({ qb, onUpdateBlock }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const q = qb.question;
+
+  return (
+    <div className="my-2 text-[10.5pt] leading-snug select-text border border-transparent hover:border-sky-300 hover:bg-sky-50/20 p-1.5 rounded text-black transition-all">
+      <div className="flex items-start gap-1.5">
+        <span
+          contentEditable
+          suppressContentEditableWarning
+          onBlur={e => {
+            const val = parseInt(e.currentTarget.textContent?.replace(/\D/g, '') || '1', 10);
+            onUpdateBlock && onUpdateBlock({
+              ...qb,
+              question: { ...q, questionNumber: isNaN(val) ? 1 : val }
+            });
+          }}
+          className="font-black text-black min-w-[22px] outline-hidden hover:bg-slate-100 rounded px-0.5 cursor-text select-text"
+        >
+          {q.questionNumber ? `${q.questionNumber}.` : 'Q.'}
+        </span>
+
+        {isEditing ? (
+          <input
+            type="text"
+            autoFocus
+            defaultValue={q.rawText || ''}
+            onBlur={e => {
+              setIsEditing(false);
+              onUpdateBlock && onUpdateBlock({
+                ...qb,
+                question: { ...q, rawText: e.target.value }
+              });
+            }}
+            onKeyDown={e => {
+              if (e.key === 'Enter') {
+                setIsEditing(false);
+                onUpdateBlock && onUpdateBlock({
+                  ...qb,
+                  question: { ...q, rawText: e.currentTarget.value }
+                });
+              }
+            }}
+            className="flex-1 font-semibold text-black px-1.5 py-0.5 border border-sky-400 rounded bg-white outline-hidden text-sm"
+          />
+        ) : (
+          <div
+            onClick={() => setIsEditing(true)}
+            className="flex-1 font-semibold text-black outline-hidden hover:bg-sky-50/40 rounded px-1 cursor-pointer"
+            title="Click to edit question statement / formula"
+          >
+            <MathTextRenderer text={q.rawText || ''} />
+          </div>
+        )}
+
+        <span
+          contentEditable
+          suppressContentEditableWarning
+          onBlur={e => {
+            const text = e.currentTarget.textContent || '';
+            const match = text.match(/\d+/);
+            const marksVal = match ? parseInt(match[0], 10) : q.marks;
+            onUpdateBlock && onUpdateBlock({
+              ...qb,
+              question: { ...q, marks: marksVal }
+            });
+          }}
+          className="text-[9.5px] font-bold text-sky-800 whitespace-nowrap ml-1 px-1.5 py-0.5 bg-sky-50 rounded border border-sky-300 outline-hidden cursor-text"
+        >
+          [{q.marks}{q.negativeMarks ? `, -${q.negativeMarks}` : ''}M]
+        </span>
+      </div>
+
+      {/* Render Diagram if present */}
+      {q.diagramSvg && (
+        <div className="my-2 p-2 bg-slate-50 rounded-lg flex items-center justify-center border border-slate-200 overflow-hidden relative group/diag">
+          <div dangerouslySetInnerHTML={{ __html: q.diagramSvg }} />
+          <button
+            type="button"
+            onClick={e => {
+              e.stopPropagation();
+              onUpdateBlock && onUpdateBlock({
+                ...qb,
+                question: { ...q, diagramSvg: undefined }
+              });
+            }}
+            className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded text-[10px] opacity-0 group-hover/diag:opacity-100 transition-opacity"
+            title="Remove Diagram"
+          >
+            ✕ Remove
+          </button>
+        </div>
+      )}
+
+      {q.diagramUrl && !q.diagramSvg && (
+        <div className="my-2 flex items-center justify-center relative group/diag">
+          <img src={q.diagramUrl} alt="Question diagram" className="max-h-40 rounded border border-slate-200" />
+        </div>
+      )}
+
+      <OptionLayoutRenderer
+        options={q.options}
+        layoutType={q.optionLayout || 'grid_2x2'}
+        showAnswers={false}
+        isEditable={true}
+        onUpdateOptionText={(optId, newText) => {
+          const updatedOptions = q.options.map(o => (o.id === optId ? { ...o, rawText: newText } : o));
+          onUpdateBlock && onUpdateBlock({
+            ...qb,
+            question: { ...q, options: updatedOptions }
+          });
+        }}
+      />
+    </div>
+  );
+};
+
 function renderBlockContent(
   block: DocumentBlock,
   isSelected: boolean,
@@ -199,6 +320,9 @@ function renderBlockContent(
   getBorderStyle?: (borderType?: string, customBg?: string) => React.CSSProperties
 ) {
   switch (block.type) {
+    case 'question':
+      return <QuestionBlockItem qb={block as QuestionBlock} onUpdateBlock={onUpdateBlock} />;
+
     case 'section_header': {
       const sh = block as SectionHeaderBlock;
       return (
@@ -207,16 +331,16 @@ function renderBlockContent(
             contentEditable
             suppressContentEditableWarning
             onBlur={e => {
-              const newTitle = e.currentTarget.textContent || '';
-              onUpdateBlock && onUpdateBlock({ ...sh, title: newTitle });
+              const text = e.currentTarget.textContent || '';
+              onUpdateBlock && onUpdateBlock({
+                ...sh,
+                title: text
+              });
             }}
-            className="text-sm font-black uppercase tracking-wider text-black outline-hidden hover:bg-slate-100/50 rounded px-1"
+            className="text-base font-black tracking-wider uppercase text-black outline-hidden"
           >
-            {sh.title}
+            {sh.title || 'SECTION'}
           </h3>
-          {sh.totalMarks ? (
-            <span className="text-black font-bold text-xs">({sh.totalMarks} Marks)</span>
-          ) : null}
           {sh.instructions && (
             <p
               contentEditable
@@ -423,47 +547,6 @@ function renderBlockContent(
           title="Double-click to edit equation in Math AST editor"
         >
           <KaTeXRenderer math={eq.rawLatex || 'E = mc^2'} block={eq.displayMode !== 'inline'} />
-        </div>
-      );
-    }
-
-    case 'question': {
-      const qb = block as QuestionBlock;
-      const q = qb.question;
-      return (
-        <div
-          onDoubleClick={() => onEditQuestion && onEditQuestion(qb)}
-          className="my-2 text-[10.5pt] leading-snug cursor-pointer select-text border border-transparent hover:border-sky-300 hover:bg-sky-50/20 p-1 rounded text-black"
-          title="Double-click to edit MCQ question in builder"
-        >
-          <div className="flex items-start gap-1.5">
-            <span className="font-black text-black min-w-[22px]">
-              {q.questionNumber ? `${q.questionNumber}.` : 'Q.'}
-            </span>
-            <div
-              contentEditable
-              suppressContentEditableWarning
-              onBlur={e => {
-                const newText = e.currentTarget.textContent || '';
-                onUpdateBlock && onUpdateBlock({
-                  ...qb,
-                  question: { ...q, rawText: newText }
-                });
-              }}
-              className="flex-1 font-semibold text-black outline-hidden hover:bg-slate-100/50 rounded px-0.5"
-            >
-              {q.rawText}
-            </div>
-            <span className="text-[9.5px] font-bold text-sky-800 whitespace-nowrap ml-1 px-1 bg-sky-50 rounded border border-sky-300">
-              [{q.marks}{q.negativeMarks ? `, -${q.negativeMarks}` : ''}M]
-            </span>
-          </div>
-
-          <OptionLayoutRenderer
-            options={q.options}
-            layoutType={q.optionLayout || 'grid_2x2'}
-            showAnswers={false}
-          />
         </div>
       );
     }

@@ -106,7 +106,7 @@ export class DocxExportService {
           spacing: { before: 100, after: 60 }
         })
       );
-      docModel.metadata.generalInstructions.forEach((inst: string, idx: number) => {
+      docModel.metadata.generalInstructions.forEach((inst, idx) => {
         children.push(
           new Paragraph({
             children: [new TextRun({ text: `${idx + 1}. ${inst}`, size: 19 })],
@@ -208,7 +208,7 @@ export class DocxExportService {
   private static convertBlockToDocx(block: DocumentBlock, container: (Paragraph | Table)[]) {
     switch (block.type) {
       case 'paragraph': {
-        const runs = block.runs.map((r: SharedTextRun) => DocxExportService.convertRun(r));
+        const runs = block.runs.map(r => DocxExportService.convertRun(r));
         container.push(
           new Paragraph({
             children: runs,
@@ -220,7 +220,7 @@ export class DocxExportService {
       }
 
       case 'heading': {
-        const runs = block.runs.map((r: SharedTextRun) => DocxExportService.convertRun(r));
+        const runs = block.runs.map(r => DocxExportService.convertRun(r));
         container.push(
           new Paragraph({
             children: runs,
@@ -389,7 +389,7 @@ export class DocxExportService {
         );
       } else {
         // Vertical stack
-        q.options.forEach((opt: any, idx: number) => {
+        q.options.forEach((opt, idx) => {
           const optKey = opt.key ? `(${opt.key}) ` : `(${String.fromCharCode(97 + idx)}) `;
           container.push(
             new Paragraph({

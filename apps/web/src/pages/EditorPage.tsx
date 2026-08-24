@@ -17,6 +17,7 @@ import { QuestionBuilderModal } from '../questions/QuestionBuilderModal.js';
 import { QuestionBankModal } from '../questions/QuestionBankModal.js';
 import { TemplateGalleryModal } from '../templates/TemplateGalleryModal.js';
 import { FindReplaceModal } from '../editor/FindReplaceModal.js';
+import { ScienceDrawer } from '../editor/ScienceDrawer.js';
 import { preloadCoreFonts, ensureFontLoaded } from '../editor/fonts.js';
 import { useTheme } from '../state/ThemeContext.js';
 
@@ -78,6 +79,7 @@ export const EditorPage: React.FC<EditorPageProps> = ({
   const [isQuestionBankOpen, setIsQuestionBankOpen] = useState(false);
   const [isTemplateGalleryOpen, setIsTemplateGalleryOpen] = useState(false);
   const [isFindReplaceOpen, setIsFindReplaceOpen] = useState(false);
+  const [isScienceDrawerOpen, setIsScienceDrawerOpen] = useState<boolean>(true);
 
   // Preload top fonts on mount
   useEffect(() => {
@@ -87,14 +89,91 @@ export const EditorPage: React.FC<EditorPageProps> = ({
 
   const loadDoc = async () => {
     try {
-      const data = await api.getDocument(documentId);
+      let data = await api.getDocument(documentId);
+      if (!data) throw new Error('Document not found');
+      if (!data.sections || data.sections.length === 0) {
+        data = {
+          ...data,
+          sections: [
+            {
+              id: `sec-${Date.now()}`,
+              title: 'SECTION A: GENERAL QUESTIONS',
+              instructions: 'Answer all questions according to instructions.',
+              marks: 50,
+              blocks: [
+                {
+                  id: `p-${Date.now()}`,
+                  type: 'paragraph',
+                  runs: [
+                    {
+                      id: `r-${Date.now()}`,
+                      text: 'Type question here or use Insert > Drop from Question Bank...',
+                      formatting: { fontSize: 10.5 }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        };
+      }
       setDoc(data);
-      setLastSavedAt(new Date(data.updatedAt));
-      if (data.settings.defaultFont) {
+      setLastSavedAt(new Date(data.updatedAt || Date.now()));
+      if (data.settings?.defaultFont) {
         ensureFontLoaded(data.settings.defaultFont);
       }
     } catch (err) {
-      console.error('Failed to load document:', err);
+      console.error('Failed to load document, initializing new paper:', err);
+      const fallbackDoc: DocumentModel = {
+        id: documentId,
+        title: 'New Examination Paper',
+        settings: {
+          pageSize: 'A4',
+          orientation: 'portrait',
+          margins: { top: 15, bottom: 15, left: 15, right: 15 },
+          columns: 2,
+          columnGap: 8,
+          columnDivider: true,
+          defaultFont: 'Calibri, sans-serif',
+          defaultFontSize: 10.5,
+          questionSpacing: 6,
+          optionSpacing: 4,
+          lineSpacing: 1.15,
+          paragraphSpacing: 4
+        },
+        metadata: {
+          instituteName: 'ACADEMIC EXAMINATION BOARD',
+          examName: 'ANNUAL SCHOLASTIC ASSESSMENT',
+          subject: 'Physics & Chemistry',
+          timeAllowedMinutes: 180,
+          maxMarks: 100,
+          headerTemplate: 'boxed'
+        },
+        sections: [
+          {
+            id: `sec-${Date.now()}`,
+            title: 'SECTION A: OBJECTIVE QUESTIONS',
+            instructions: 'Each question carries 4 marks.',
+            marks: 50,
+            blocks: [
+              {
+                id: `p-${Date.now()}`,
+                type: 'paragraph',
+                runs: [
+                  {
+                    id: `r-${Date.now()}`,
+                    text: 'Type question here or use Insert > Drop from Question Bank...',
+                    formatting: { fontSize: 10.5 }
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      setDoc(fallbackDoc);
     }
   };
 
@@ -242,6 +321,35 @@ export const EditorPage: React.FC<EditorPageProps> = ({
     });
     pushState({ ...doc, sections: updatedSections });
     setSelectedBlockId(block.id);
+  };
+
+  const handleInsertQuestion = (q: Question, afterBlockId?: string) => {
+    if (!doc) return;
+    const sec = doc.sections[0];
+    if (!sec) return;
+
+    const qBlock: QuestionBlock = {
+      id: `qblk-${q.id}-${Date.now()}`,
+      type: 'question',
+      question: q
+    };
+
+    const targetId = afterBlockId || selectedBlockId;
+    const idx = targetId ? sec.blocks.findIndex(b => b.id === targetId) : -1;
+    const newBlocks = [...sec.blocks];
+
+    if (idx >= 0) {
+      newBlocks.splice(idx + 1, 0, qBlock);
+    } else {
+      newBlocks.push(qBlock);
+    }
+
+    pushState({
+      ...doc,
+      sections: doc.sections.map(s => (s.id === sec.id ? { ...s, blocks: newBlocks } : s))
+    });
+
+    setSelectedBlockId(qBlock.id);
   };
 
   const handleUpdateBlock = (secId: string, updated: DocumentBlock) => {
@@ -710,9 +818,7 @@ export const EditorPage: React.FC<EditorPageProps> = ({
   const { words, questions: questionCount } = calculateMetrics();
 
   const getWorkspaceBg = () => {
-    if (theme === 'white') return 'bg-[#cbd5e1]';
-    if (theme === 'dark-blue') return 'bg-[#060c18]';
-    return 'bg-[#121418]';
+    return 'bg-[#cbd5e1]';
   };
 
   return (
@@ -742,6 +848,7 @@ export const EditorPage: React.FC<EditorPageProps> = ({
           setIsQuestionBuilderOpen(true);
         }}
         onOpenQuestionBank={() => setIsQuestionBankOpen(true)}
+        onDropQuestionFromBank={(q) => handleInsertQuestion(q)}
         onOpenEquationModal={() => {
           setEditingEquationBlock(null);
           setIsEquationModalOpen(true);
@@ -921,6 +1028,45 @@ export const EditorPage: React.FC<EditorPageProps> = ({
               if (el) el.focus();
             }, 50);
           }}
+          onDropQuestion={(q, targetBlockId) => handleInsertQuestion(q, targetBlockId)}
+          onDropItemOnSection={(secId, item) => {
+            if (item.category === 'questions' || item.type === 'question') {
+              handleInsertQuestion(item.questionData || item.data);
+              return;
+            }
+            if (item.type === 'formula' || item.category === 'physics' || item.type === 'reaction' || item.category === 'chemistry' || item.category === 'constants') {
+              const latex = item.latex || item.formula || '';
+              if (latex) {
+                const eqBlock: EquationBlock = {
+                  id: `eq-${Date.now()}`,
+                  type: 'equation',
+                  rawLatex: latex
+                };
+                handleAddBlockToSection(eqBlock, secId);
+              }
+            } else if (item.type === 'unit' || item.category === 'units') {
+              const p: ParagraphBlock = {
+                id: `p-${Date.now()}`,
+                type: 'paragraph',
+                runs: [{ id: `r-${Date.now()}`, text: `${item.name} (${item.symbol})` }]
+              };
+              handleAddBlockToSection(p, secId);
+            }
+          }}
+        />
+
+        {/* Science & Question Bank Draggable Side Drawer */}
+        <ScienceDrawer
+          isOpen={isScienceDrawerOpen}
+          onToggle={() => setIsScienceDrawerOpen(!isScienceDrawerOpen)}
+          onInsertFormula={(latex) => {
+            handleAddBlockToSection({
+              id: `eq-${Date.now()}`,
+              type: 'equation',
+              rawLatex: latex
+            });
+          }}
+          onInsertQuestion={(q) => handleInsertQuestion(q)}
         />
       </main>
 
@@ -1051,14 +1197,7 @@ export const EditorPage: React.FC<EditorPageProps> = ({
       <QuestionBankModal
         isOpen={isQuestionBankOpen}
         onClose={() => setIsQuestionBankOpen(false)}
-        onInsertQuestion={q => {
-          const qBlock: QuestionBlock = {
-            id: `qblk-${q.id}-${Date.now()}`,
-            type: 'question',
-            question: q
-          };
-          handleAddBlockToSection(qBlock);
-        }}
+        onInsertQuestion={q => handleInsertQuestion(q)}
       />
 
       <TemplateGalleryModal

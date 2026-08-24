@@ -8,27 +8,23 @@ import {
   Database, HelpCircle as HelpIcon, FileSpreadsheet, PaintBucket, Highlighter,
   Scissors, Copy, Clipboard, Eraser, ArrowDownAZ, ChevronDown, Type,
   BookOpen, CheckSquare, Layers, Wand2, RefreshCw, SlidersHorizontal, Maximize2,
-  Moon, Sun, Palette as PaletteIcon
+  Plus, ArrowRight, Dices, X
 } from 'lucide-react';
 import {
   DocumentModel, Alignment, OptionLayoutType, WordArtStyle, ShapeType,
-  TextFormatting, ParagraphBlock
+  TextFormatting, ParagraphBlock, Question
 } from '@eduforge/shared';
 import { FontDropdown } from './FontDropdown.js';
 import { ColorPickerPopover } from './ColorPickerPopover.js';
 import { StyleGallery } from './StyleGallery.js';
 import { DocumentStylePreset } from './styles.js';
-import { useTheme } from '../state/ThemeContext.js';
+import { api } from '../services/api.js';
+import { MathTextRenderer } from '../equation/MathTextRenderer.js';
 
 export type RibbonTab =
   | 'File'
   | 'Home'
   | 'Insert'
-  | 'Page Layout'
-  | 'References'
-  | 'Review'
-  | 'View'
-  | 'Tools'
   | 'Equation'
   | 'Symbols'
   | 'Physics'
@@ -79,6 +75,7 @@ interface EditorRibbonProps {
   // Insert actions
   onOpenQuestionBuilder?: () => void;
   onOpenQuestionBank?: () => void;
+  onDropQuestionFromBank?: (question: Question) => void;
   onOpenEquationModal?: () => void;
   onOpenSymbolsModal?: () => void;
   onOpenPhysicsModal?: () => void;
@@ -134,6 +131,7 @@ export const EditorRibbon: React.FC<EditorRibbonProps> = ({
   onNavigateHome,
   onOpenQuestionBuilder,
   onOpenQuestionBank,
+  onDropQuestionFromBank,
   onOpenEquationModal,
   onOpenSymbolsModal,
   onOpenPhysicsModal,
@@ -175,22 +173,22 @@ export const EditorRibbon: React.FC<EditorRibbonProps> = ({
   const [isNumberingMenuOpen, setIsNumberingMenuOpen] = useState(false);
   const [isLineSpacingMenuOpen, setIsLineSpacingMenuOpen] = useState(false);
   const [isBordersMenuOpen, setIsBordersMenuOpen] = useState(false);
-  const [isPasteMenuOpen, setIsPasteMenuOpen] = useState(false);
   const [isTextEffectsMenuOpen, setIsTextEffectsMenuOpen] = useState(false);
 
-  const { theme, setTheme } = useTheme();
+  // Question Bank Quick Drop Popover State in Insert Tab
+  const [isQuestionBankDropdownOpen, setIsQuestionBankDropdownOpen] = useState(false);
+  const [bankQuestions, setBankQuestions] = useState<Question[]>([]);
+  const [bankSearch, setBankSearch] = useState('');
+  const [bankSubject, setBankSubject] = useState<string>('all');
+  const [loadingBank, setLoadingBank] = useState(false);
+  const questionBankMenuRef = useRef<HTMLDivElement>(null);
 
-  const activeFontFamily = currentFormatting.fontFamily || doc.settings.defaultFont || 'Calibri (Body)';
+  const activeFontFamily = currentFormatting.fontFamily || doc.settings.defaultFont || 'Calibri, Inter, sans-serif';
   const activeFontSize = currentFormatting.fontSize || doc.settings.defaultFontSize || 10.5;
 
   const tabs: { id: RibbonTab; label: string; icon?: any }[] = [
     { id: 'Home', label: 'Home' },
     { id: 'Insert', label: 'Insert' },
-    { id: 'Page Layout', label: 'Page Layout' },
-    { id: 'References', label: 'References' },
-    { id: 'Review', label: 'Review' },
-    { id: 'View', label: 'View' },
-    { id: 'Tools', label: 'Tools' },
     { id: 'Equation', label: 'Math Equation' },
     { id: 'Physics', label: 'Physics' },
     { id: 'Chemistry', label: 'Chemistry' }
@@ -198,6 +196,36 @@ export const EditorRibbon: React.FC<EditorRibbonProps> = ({
 
   // Font size options
   const fontSizePresets = [8, 9, 10, 10.5, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 36, 48, 72];
+
+  // Close Quick Question Bank Dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (questionBankMenuRef.current && !questionBankMenuRef.current.contains(e.target as Node)) {
+        setIsQuestionBankDropdownOpen(false);
+      }
+    };
+    if (isQuestionBankDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isQuestionBankDropdownOpen]);
+
+  // Load questions when Question Bank dropdown is open or search/filter changes
+  useEffect(() => {
+    if (isQuestionBankDropdownOpen) {
+      setLoadingBank(true);
+      const params: any = {};
+      if (bankSearch) params.search = bankSearch;
+      if (bankSubject !== 'all') params.subject = bankSubject;
+
+      api.getQuestions(params)
+        .then(data => {
+          setBankQuestions(data);
+          setLoadingBank(false);
+        })
+        .catch(() => setLoadingBank(false));
+    }
+  }, [isQuestionBankDropdownOpen, bankSearch, bankSubject]);
 
   // Grow / Shrink Font
   const handleGrowFont = () => {
@@ -214,29 +242,38 @@ export const EditorRibbon: React.FC<EditorRibbonProps> = ({
   // Change Case Handler
   const handleChangeCase = (mode: 'sentence' | 'lower' | 'upper' | 'capitalize' | 'toggle') => {
     setIsCaseMenuOpen(false);
-    // Custom case transform trigger
     onApplyFormat({ textEffect: mode as any });
   };
 
-  const getRibbonBgClass = () => {
-    if (theme === 'white') return 'bg-[#ffffff] text-slate-800 border-slate-300';
-    if (theme === 'dark-blue') return 'bg-[#0d1f3c] text-slate-100 border-[#1e3a8a]/60';
-    return 'bg-[#242830] text-slate-200 border-slate-700/60';
+  const handleQuickDropQuestion = (q: Question) => {
+    if (onDropQuestionFromBank) {
+      onDropQuestionFromBank(q);
+    }
+    setIsQuestionBankDropdownOpen(false);
   };
 
-  const getTopBarBgClass = () => {
-    if (theme === 'white') return 'bg-[#f1f5f9] border-slate-300 text-slate-800';
-    if (theme === 'dark-blue') return 'bg-[#060e1d] border-[#1d3557] text-slate-100';
-    return 'bg-[#181a1f] border-slate-800 text-slate-200';
+  const handleDropRandomQuestion = async () => {
+    if (bankQuestions.length > 0) {
+      const rand = bankQuestions[Math.floor(Math.random() * bankQuestions.length)];
+      handleQuickDropQuestion(rand);
+    } else {
+      try {
+        const all = await api.getQuestions();
+        if (all.length > 0) {
+          const rand = all[Math.floor(Math.random() * all.length)];
+          handleQuickDropQuestion(rand);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
   };
 
   return (
-    <div className={`border-b shadow-md select-none no-print sticky top-0 z-40 transition-colors ${
-      theme === 'white' ? 'bg-white border-slate-300' : theme === 'dark-blue' ? 'bg-[#0a1528] border-[#1d3557]' : 'bg-[#1f2227] border-slate-700/80'
-    }`}>
+    <div className="border-b border-slate-300 bg-white shadow-xs select-none no-print sticky top-0 z-40">
       
       {/* ================= 1. Top Bar: File & Quick Access & Tabs ================= */}
-      <div className={`flex items-center justify-between px-3 py-1 border-b text-xs transition-colors ${getTopBarBgClass()}`}>
+      <div className="flex items-center justify-between px-3 py-1 border-b border-slate-200 bg-slate-100 text-xs text-slate-800">
         
         {/* Left: File button + Quick Access Icons + Tabs */}
         <div className="flex items-center gap-1">
@@ -244,25 +281,23 @@ export const EditorRibbon: React.FC<EditorRibbonProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab(activeTab === 'File' ? 'Home' : 'File')}
-            className={`flex items-center gap-1 px-3 py-1 rounded text-xs font-bold transition-all ${
+            className={`flex items-center gap-1 px-3 py-1 rounded text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'File'
                 ? 'bg-sky-600 text-white'
-                : theme === 'white'
-                ? 'bg-slate-200 hover:bg-slate-300 text-slate-800'
-                : 'bg-slate-800 hover:bg-slate-700 text-slate-100 hover:text-white'
+                : 'bg-white hover:bg-slate-200 text-slate-800 border border-slate-300 shadow-2xs'
             }`}
           >
             <span className="text-sm leading-none">≡</span>
             <span>File</span>
           </button>
 
-          <div className="h-4 w-px bg-slate-700/50 mx-1" />
+          <div className="h-4 w-px bg-slate-300 mx-1" />
 
           {/* Quick Access Toolbar Icons */}
           <button
             type="button"
             onClick={onSave}
-            className="p-1 hover:bg-slate-700/50 text-slate-400 hover:text-sky-400 rounded transition-colors"
+            className="p-1 hover:bg-slate-200 text-slate-600 hover:text-sky-600 rounded transition-colors cursor-pointer"
             title="Save Document (Ctrl+S)"
           >
             <Save className="w-3.5 h-3.5" />
@@ -271,10 +306,10 @@ export const EditorRibbon: React.FC<EditorRibbonProps> = ({
           <button
             type="button"
             onClick={onToggleFormatPainter}
-            className={`p-1 rounded transition-colors ${
+            className={`p-1 rounded transition-colors cursor-pointer ${
               isFormatPainterActive
                 ? 'bg-amber-400 text-slate-900 ring-2 ring-amber-300 font-bold'
-                : 'hover:bg-slate-700/50 text-slate-400 hover:text-amber-400'
+                : 'hover:bg-slate-200 text-slate-600 hover:text-amber-600'
             }`}
             title="Format Painter (Click to copy & apply text style)"
           >
@@ -284,7 +319,7 @@ export const EditorRibbon: React.FC<EditorRibbonProps> = ({
           <button
             type="button"
             onClick={onExportPdf}
-            className="p-1 hover:bg-slate-700/50 text-slate-400 hover:text-emerald-400 rounded transition-colors"
+            className="p-1 hover:bg-slate-200 text-slate-600 hover:text-emerald-600 rounded transition-colors cursor-pointer"
             title="Quick Print / PDF"
           >
             <Printer className="w-3.5 h-3.5" />
@@ -293,7 +328,7 @@ export const EditorRibbon: React.FC<EditorRibbonProps> = ({
           <button
             type="button"
             onClick={onPrintPreview}
-            className="p-1 hover:bg-slate-700/50 text-slate-400 hover:text-purple-400 rounded transition-colors"
+            className="p-1 hover:bg-slate-200 text-slate-600 hover:text-purple-600 rounded transition-colors cursor-pointer"
             title="Print Preview / Zoom"
           >
             <Eye className="w-3.5 h-3.5" />
@@ -303,7 +338,7 @@ export const EditorRibbon: React.FC<EditorRibbonProps> = ({
             type="button"
             onClick={onUndo}
             disabled={!canUndo}
-            className="p-1 hover:bg-slate-700/50 disabled:opacity-30 text-slate-400 hover:text-sky-400 rounded transition-colors"
+            className="p-1 hover:bg-slate-200 disabled:opacity-30 text-slate-600 hover:text-sky-600 rounded transition-colors cursor-pointer"
             title="Undo (Ctrl+Z)"
           >
             <Undo className="w-3.5 h-3.5" />
@@ -313,15 +348,15 @@ export const EditorRibbon: React.FC<EditorRibbonProps> = ({
             type="button"
             onClick={onRedo}
             disabled={!canRedo}
-            className="p-1 hover:bg-slate-700/50 disabled:opacity-30 text-slate-400 hover:text-sky-400 rounded transition-colors"
+            className="p-1 hover:bg-slate-200 disabled:opacity-30 text-slate-600 hover:text-sky-600 rounded transition-colors cursor-pointer"
             title="Redo (Ctrl+Y)"
           >
             <Redo className="w-3.5 h-3.5" />
           </button>
 
-          <div className="h-4 w-px bg-slate-700/50 mx-1" />
+          <div className="h-4 w-px bg-slate-300 mx-1" />
 
-          {/* Ribbon Tabs matching MS Word screenshot */}
+          {/* Ribbon Tabs matching MS Word standards */}
           <div className="flex items-center gap-0.5 ml-2">
             {tabs.map(tab => {
               const isActive = activeTab === tab.id;
@@ -330,21 +365,15 @@ export const EditorRibbon: React.FC<EditorRibbonProps> = ({
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
-                  className={`px-3 py-1 text-xs font-semibold rounded-t transition-all relative ${
+                  className={`px-3 py-1 text-xs font-semibold rounded-t transition-all relative cursor-pointer ${
                     isActive
-                      ? theme === 'white'
-                        ? 'text-sky-700 font-bold bg-white shadow-2xs'
-                        : theme === 'dark-blue'
-                        ? 'text-sky-300 font-bold bg-[#0d1f3c]'
-                        : 'text-sky-400 font-bold bg-[#242830]'
-                      : theme === 'white'
-                      ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
-                      : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                      ? 'text-sky-700 font-bold bg-white border-t-2 border-sky-600 shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
                   }`}
                 >
                   {tab.label}
                   {isActive && (
-                    <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-sky-400 rounded-full" />
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-sky-600" />
                   )}
                 </button>
               );
@@ -355,13 +384,13 @@ export const EditorRibbon: React.FC<EditorRibbonProps> = ({
         {/* Right: Document Title & Dashboard */}
         <div className="flex items-center gap-2">
           <img src="/logo.png" alt="EduForge" className="w-4 h-4 object-contain" />
-          <span className="text-xs font-semibold truncate max-w-[200px] opacity-90">
+          <span className="text-xs font-semibold truncate max-w-[200px] text-slate-800">
             {doc.title}
           </span>
           <button
             type="button"
             onClick={onNavigateHome}
-            className="flex items-center gap-1 px-2.5 py-1 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded transition-colors ml-1"
+            className="flex items-center gap-1 px-2.5 py-1 text-xs font-bold bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 rounded shadow-2xs transition-colors ml-1 cursor-pointer"
           >
             <ArrowLeft className="w-3.5 h-3.5" /> Dashboard
           </button>
@@ -369,38 +398,38 @@ export const EditorRibbon: React.FC<EditorRibbonProps> = ({
       </div>
 
       {/* ================= 2. Ribbon Content Toolbar ================= */}
-      <div className={`px-3 py-2 min-h-[76px] flex items-center gap-2 overflow-x-auto border-b transition-colors ${getRibbonBgClass()}`}>
+      <div className="px-3 py-2 min-h-[76px] flex items-center gap-2 overflow-x-auto bg-white border-b border-slate-200 text-slate-800">
         
         {/* ================= HOME TAB (MS WORD STYLE) ================= */}
         {activeTab === 'Home' && (
           <div className="flex items-center gap-3 w-full">
             
             {/* 1. CLIPBOARD GROUP */}
-            <div className="flex items-center gap-1.5 border-r border-slate-700/80 pr-2.5 shrink-0">
-              {/* Format Painter button (Large) */}
+            <div className="flex items-center gap-1.5 border-r border-slate-200 pr-2.5 shrink-0">
+              {/* Format Painter button */}
               <button
                 type="button"
                 onClick={onToggleFormatPainter}
-                className={`flex flex-col items-center justify-center p-1.5 rounded transition-all min-w-[50px] ${
+                className={`flex flex-col items-center justify-center p-1.5 rounded transition-all min-w-[50px] cursor-pointer ${
                   isFormatPainterActive
-                    ? 'bg-amber-400 text-slate-900 font-bold ring-2 ring-amber-300 shadow-md'
-                    : 'hover:bg-slate-700/70 text-slate-300 hover:text-white'
+                    ? 'bg-amber-100 text-amber-900 font-bold border border-amber-300 shadow-2xs'
+                    : 'hover:bg-slate-100 text-slate-700'
                 }`}
                 title="Format Painter (Copy formatting from one place and apply to another)"
               >
-                <Wand2 className={`w-5 h-5 mb-0.5 ${isFormatPainterActive ? 'text-slate-900' : 'text-amber-400'}`} />
+                <Wand2 className={`w-5 h-5 mb-0.5 ${isFormatPainterActive ? 'text-amber-700' : 'text-amber-600'}`} />
                 <span className="text-[9.5px] leading-tight text-center">Format<br/>Painter</span>
               </button>
 
-              {/* Paste button (Large + Dropdown) */}
+              {/* Paste button */}
               <div className="relative">
                 <button
                   type="button"
                   onClick={() => onPasteText && onPasteText('formatted')}
-                  className="flex flex-col items-center justify-center p-1.5 hover:bg-slate-700/70 rounded transition-colors min-w-[44px] text-slate-300 hover:text-white"
+                  className="flex flex-col items-center justify-center p-1.5 hover:bg-slate-100 rounded transition-colors min-w-[44px] text-slate-700 hover:text-slate-900 cursor-pointer"
                   title="Paste (Ctrl+V)"
                 >
-                  <Clipboard className="w-5 h-5 mb-0.5 text-sky-400" />
+                  <Clipboard className="w-5 h-5 mb-0.5 text-sky-600" />
                   <div className="flex items-center gap-0.5">
                     <span className="text-[9.5px]">Paste</span>
                     <ChevronDown className="w-2.5 h-2.5 text-slate-400" />
@@ -413,31 +442,31 @@ export const EditorRibbon: React.FC<EditorRibbonProps> = ({
                 <button
                   type="button"
                   onClick={onCutText}
-                  className="p-1 hover:bg-slate-700 text-slate-300 hover:text-white rounded flex items-center gap-1"
+                  className="p-1 hover:bg-slate-100 text-slate-600 hover:text-slate-900 rounded flex items-center gap-1 cursor-pointer"
                   title="Cut (Ctrl+X)"
                 >
-                  <Scissors className="w-3.5 h-3.5 text-slate-400" />
+                  <Scissors className="w-3.5 h-3.5" />
                 </button>
                 <button
                   type="button"
                   onClick={onCopyText}
-                  className="p-1 hover:bg-slate-700 text-slate-300 hover:text-white rounded flex items-center gap-1"
+                  className="p-1 hover:bg-slate-100 text-slate-600 hover:text-slate-900 rounded flex items-center gap-1 cursor-pointer"
                   title="Copy (Ctrl+C)"
                 >
-                  <Copy className="w-3.5 h-3.5 text-slate-400" />
+                  <Copy className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
 
             {/* 2. FONT GROUP (80+ FONTS & FORMATTING) */}
-            <div className="flex flex-col gap-1 border-r border-slate-700/80 pr-3 shrink-0">
+            <div className="flex flex-col gap-1 border-r border-slate-200 pr-3 shrink-0">
               
               {/* Row 1: Font Selector, Font Size, Grow/Shrink, Case, Clear Formatting */}
               <div className="flex items-center gap-1">
                 {/* 80+ Fonts Selector */}
                 <FontDropdown
                   currentFont={activeFontFamily}
-                  onSelectFont={(family, name) => {
+                  onSelectFont={(family) => {
                     onApplyFormat({ fontFamily: family });
                   }}
                 />
@@ -446,7 +475,7 @@ export const EditorRibbon: React.FC<EditorRibbonProps> = ({
                 <select
                   value={activeFontSize}
                   onChange={e => onApplyFormat({ fontSize: Number(e.target.value) })}
-                  className="text-xs h-7 px-1.5 bg-[#181a1f] border border-slate-600 rounded text-slate-200 font-medium w-16 focus:outline-hidden focus:border-sky-500"
+                  className="text-xs h-7 px-1.5 bg-white border border-slate-300 rounded text-slate-800 font-medium w-16 focus:outline-hidden focus:border-sky-500 cursor-pointer shadow-2xs"
                   title="Font Size (pt)"
                 >
                   {fontSizePresets.map(sz => (
@@ -454,74 +483,74 @@ export const EditorRibbon: React.FC<EditorRibbonProps> = ({
                   ))}
                 </select>
 
-                {/* Grow Font A+ */}
+                {/* Grow Font Button */}
                 <button
                   type="button"
                   onClick={handleGrowFont}
-                  className="p-1 hover:bg-slate-700 rounded text-slate-300 hover:text-white font-bold flex items-center"
-                  title="Increase Font Size (Ctrl+>)"
+                  className="p-1 hover:bg-slate-100 rounded text-slate-700 hover:text-slate-950 font-bold flex items-center cursor-pointer"
+                  title="Increase Font Size"
                 >
                   <span className="text-xs font-black">A</span>
-                  <span className="text-[8px] font-bold text-sky-400 ml-0.5">▲</span>
+                  <span className="text-[9px] font-bold text-sky-600">▲</span>
                 </button>
 
-                {/* Shrink Font A- */}
+                {/* Shrink Font Button */}
                 <button
                   type="button"
                   onClick={handleShrinkFont}
-                  className="p-1 hover:bg-slate-700 rounded text-slate-300 hover:text-white font-bold flex items-center"
-                  title="Decrease Font Size (Ctrl+<)"
+                  className="p-1 hover:bg-slate-100 rounded text-slate-700 hover:text-slate-950 font-bold flex items-center cursor-pointer"
+                  title="Decrease Font Size"
                 >
-                  <span className="text-xs font-black">A</span>
-                  <span className="text-[8px] font-bold text-sky-400 ml-0.5">▼</span>
+                  <span className="text-[10px] font-bold">A</span>
+                  <span className="text-[8px] font-bold text-sky-600">▼</span>
                 </button>
 
-                {/* Change Case Aa dropdown */}
+                {/* Change Case Dropdown */}
                 <div className="relative">
                   <button
                     type="button"
                     onClick={() => setIsCaseMenuOpen(!isCaseMenuOpen)}
-                    className="p-1 hover:bg-slate-700 rounded text-slate-300 hover:text-white flex items-center gap-0.5"
-                    title="Change Case"
+                    className="p-1 hover:bg-slate-100 rounded text-slate-700 hover:text-slate-950 flex items-center gap-0.5 cursor-pointer"
+                    title="Change Case (Sentence case, UPPERCASE, lowercase, etc.)"
                   >
-                    <span className="text-xs font-semibold">Aa</span>
-                    <ChevronDown className="w-2.5 h-2.5 text-slate-400" />
+                    <ArrowDownAZ className="w-3.5 h-3.5 text-sky-600" />
+                    <ChevronDown className="w-2.5 h-2.5" />
                   </button>
 
                   {isCaseMenuOpen && (
-                    <div className="absolute left-0 top-full mt-1 w-44 bg-white text-slate-800 border border-slate-300 rounded shadow-xl z-50 py-1 text-xs font-sans">
+                    <div className="absolute left-0 top-full mt-1 bg-white border border-slate-300 rounded-lg shadow-xl py-1 z-50 min-w-[150px] text-xs">
                       <button
                         type="button"
                         onClick={() => handleChangeCase('sentence')}
-                        className="w-full px-3 py-1 text-left hover:bg-slate-100"
+                        className="w-full text-left px-3 py-1.5 hover:bg-sky-50 text-slate-800"
                       >
                         Sentence case.
                       </button>
                       <button
                         type="button"
                         onClick={() => handleChangeCase('lower')}
-                        className="w-full px-3 py-1 text-left hover:bg-slate-100"
+                        className="w-full text-left px-3 py-1.5 hover:bg-sky-50 text-slate-800"
                       >
                         lowercase
                       </button>
                       <button
                         type="button"
                         onClick={() => handleChangeCase('upper')}
-                        className="w-full px-3 py-1 text-left hover:bg-slate-100 font-bold"
+                        className="w-full text-left px-3 py-1.5 hover:bg-sky-50 text-slate-800"
                       >
                         UPPERCASE
                       </button>
                       <button
                         type="button"
                         onClick={() => handleChangeCase('capitalize')}
-                        className="w-full px-3 py-1 text-left hover:bg-slate-100"
+                        className="w-full text-left px-3 py-1.5 hover:bg-sky-50 text-slate-800"
                       >
                         Capitalize Each Word
                       </button>
                       <button
                         type="button"
                         onClick={() => handleChangeCase('toggle')}
-                        className="w-full px-3 py-1 text-left hover:bg-slate-100"
+                        className="w-full text-left px-3 py-1.5 hover:bg-sky-50 text-slate-800"
                       >
                         tOGGLE cASE
                       </button>
@@ -540,81 +569,80 @@ export const EditorRibbon: React.FC<EditorRibbonProps> = ({
                     superscript: false,
                     subscript: false,
                     color: '#0f172a',
-                    backgroundColor: 'transparent',
-                    fontFamily: doc.settings.defaultFont || 'Inter',
-                    fontSize: 10.5,
-                    characterBorder: false
+                    backgroundColor: undefined,
+                    fontFamily: 'Calibri, Inter, sans-serif',
+                    fontSize: 10.5
                   })}
-                  className="p-1 hover:bg-slate-700 rounded text-slate-300 hover:text-white"
+                  className="p-1 hover:bg-slate-100 rounded text-slate-600 hover:text-rose-600 cursor-pointer"
                   title="Clear All Formatting"
                 >
-                  <Eraser className="w-3.5 h-3.5 text-amber-400" />
+                  <Eraser className="w-3.5 h-3.5 text-rose-500" />
                 </button>
               </div>
 
-              {/* Row 2: B, I, U, ab, X2, X^2, Typography Effects, Highlighter, Font Color, Character Border */}
+              {/* Row 2: Bold, Italic, Underline (w/ styles), Strikethrough, Subscript, Superscript, Text Color, Highlight Color */}
               <div className="flex items-center gap-0.5">
                 {/* Bold */}
                 <button
                   type="button"
                   onClick={() => onApplyFormat({ bold: !currentFormatting.bold })}
-                  className={`p-1 rounded font-bold transition-colors ${
+                  className={`p-1 rounded font-bold cursor-pointer ${
                     currentFormatting.bold
-                      ? 'bg-sky-600 text-white ring-1 ring-sky-300'
-                      : 'hover:bg-slate-700 text-slate-300 hover:text-white'
+                      ? 'bg-sky-100 text-sky-800 border border-sky-300 shadow-2xs'
+                      : 'hover:bg-slate-100 text-slate-700'
                   }`}
                   title="Bold (Ctrl+B)"
                 >
-                  <Bold className="w-3.5 h-3.5" />
+                  <Bold className="w-3.5 h-3.5 stroke-[2.8]" />
                 </button>
 
                 {/* Italic */}
                 <button
                   type="button"
                   onClick={() => onApplyFormat({ italic: !currentFormatting.italic })}
-                  className={`p-1 rounded italic transition-colors ${
+                  className={`p-1 rounded cursor-pointer ${
                     currentFormatting.italic
-                      ? 'bg-sky-600 text-white ring-1 ring-sky-300'
-                      : 'hover:bg-slate-700 text-slate-300 hover:text-white'
+                      ? 'bg-sky-100 text-sky-800 border border-sky-300 shadow-2xs'
+                      : 'hover:bg-slate-100 text-slate-700'
                   }`}
                   title="Italic (Ctrl+I)"
                 >
-                  <Italic className="w-3.5 h-3.5" />
+                  <Italic className="w-3.5 h-3.5 stroke-[2.5]" />
                 </button>
 
-                {/* Underline + Dropdown */}
+                {/* Underline with styles dropdown */}
                 <div className="relative flex items-center">
                   <button
                     type="button"
                     onClick={() => onApplyFormat({ underline: !currentFormatting.underline })}
-                    className={`p-1 rounded transition-colors ${
+                    className={`p-1 rounded-l cursor-pointer ${
                       currentFormatting.underline
-                        ? 'bg-sky-600 text-white ring-1 ring-sky-300'
-                        : 'hover:bg-slate-700 text-slate-300 hover:text-white'
+                        ? 'bg-sky-100 text-sky-800 border border-sky-300 shadow-2xs'
+                        : 'hover:bg-slate-100 text-slate-700'
                     }`}
                     title="Underline (Ctrl+U)"
                   >
-                    <Underline className="w-3.5 h-3.5" />
+                    <Underline className="w-3.5 h-3.5 stroke-[2.5]" />
                   </button>
                   <button
                     type="button"
                     onClick={() => setIsUnderlineMenuOpen(!isUnderlineMenuOpen)}
-                    className="p-0.5 hover:bg-slate-700 rounded text-slate-400"
+                    className="p-0.5 hover:bg-slate-100 rounded-r text-slate-500 cursor-pointer"
                   >
                     <ChevronDown className="w-2.5 h-2.5" />
                   </button>
 
                   {isUnderlineMenuOpen && (
-                    <div className="absolute left-0 top-full mt-1 w-44 bg-white text-slate-800 border border-slate-300 rounded shadow-xl z-50 p-2 text-xs">
+                    <div className="absolute left-0 top-full mt-1 bg-white border border-slate-300 rounded-lg shadow-xl py-1 z-50 min-w-[140px] text-xs">
                       <button
                         type="button"
                         onClick={() => {
                           onApplyFormat({ underline: true, underlineStyle: 'single' });
                           setIsUnderlineMenuOpen(false);
                         }}
-                        className="w-full py-1 px-2 text-left hover:bg-slate-100 border-b border-slate-900 mb-1"
+                        className="w-full text-left px-3 py-1.5 hover:bg-sky-50 flex items-center justify-between"
                       >
-                        Single Underline
+                        <span className="underline">Single</span>
                       </button>
                       <button
                         type="button"
@@ -622,19 +650,19 @@ export const EditorRibbon: React.FC<EditorRibbonProps> = ({
                           onApplyFormat({ underline: true, underlineStyle: 'double' });
                           setIsUnderlineMenuOpen(false);
                         }}
-                        className="w-full py-1 px-2 text-left hover:bg-slate-100 border-b-2 border-double border-slate-900 mb-1"
+                        className="w-full text-left px-3 py-1.5 hover:bg-sky-50 flex items-center justify-between"
                       >
-                        Double Underline
+                        <span className="underline underline-offset-2 decoration-double">Double</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => {
-                          onApplyFormat({ underline: true, underlineStyle: 'wavy' });
+                          onApplyFormat({ underline: true, underlineStyle: 'dotted' });
                           setIsUnderlineMenuOpen(false);
                         }}
-                        className="w-full py-1 px-2 text-left hover:bg-slate-100 underline decoration-wavy mb-1"
+                        className="w-full text-left px-3 py-1.5 hover:bg-sky-50 flex items-center justify-between"
                       >
-                        Wavy Underline
+                        <span className="underline decoration-dotted">Dotted</span>
                       </button>
                       <button
                         type="button"
@@ -642,9 +670,19 @@ export const EditorRibbon: React.FC<EditorRibbonProps> = ({
                           onApplyFormat({ underline: true, underlineStyle: 'dashed' });
                           setIsUnderlineMenuOpen(false);
                         }}
-                        className="w-full py-1 px-2 text-left hover:bg-slate-100 underline decoration-dashed"
+                        className="w-full text-left px-3 py-1.5 hover:bg-sky-50 flex items-center justify-between"
                       >
-                        Dashed Underline
+                        <span className="underline decoration-dashed">Dashed</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onApplyFormat({ underline: true, underlineStyle: 'wavy' });
+                          setIsUnderlineMenuOpen(false);
+                        }}
+                        className="w-full text-left px-3 py-1.5 hover:bg-sky-50 flex items-center justify-between"
+                      >
+                        <span className="underline decoration-wavy">Wavy</span>
                       </button>
                     </div>
                   )}
@@ -654,10 +692,10 @@ export const EditorRibbon: React.FC<EditorRibbonProps> = ({
                 <button
                   type="button"
                   onClick={() => onApplyFormat({ strikethrough: !currentFormatting.strikethrough })}
-                  className={`p-1 rounded transition-colors ${
+                  className={`p-1 rounded cursor-pointer ${
                     currentFormatting.strikethrough
-                      ? 'bg-sky-600 text-white'
-                      : 'hover:bg-slate-700 text-slate-300 hover:text-white'
+                      ? 'bg-sky-100 text-sky-800 border border-sky-300'
+                      : 'hover:bg-slate-100 text-slate-700'
                   }`}
                   title="Strikethrough"
                 >
@@ -668,12 +706,12 @@ export const EditorRibbon: React.FC<EditorRibbonProps> = ({
                 <button
                   type="button"
                   onClick={() => onApplyFormat({ subscript: !currentFormatting.subscript, superscript: false })}
-                  className={`p-1 rounded transition-colors ${
+                  className={`p-1 rounded cursor-pointer ${
                     currentFormatting.subscript
-                      ? 'bg-sky-600 text-white'
-                      : 'hover:bg-slate-700 text-slate-300 hover:text-white'
+                      ? 'bg-sky-100 text-sky-800 border border-sky-300'
+                      : 'hover:bg-slate-100 text-slate-700'
                   }`}
-                  title="Subscript (X₂)"
+                  title="Subscript (e.g. H₂O)"
                 >
                   <Subscript className="w-3.5 h-3.5" />
                 </button>
@@ -682,117 +720,89 @@ export const EditorRibbon: React.FC<EditorRibbonProps> = ({
                 <button
                   type="button"
                   onClick={() => onApplyFormat({ superscript: !currentFormatting.superscript, subscript: false })}
-                  className={`p-1 rounded transition-colors ${
+                  className={`p-1 rounded cursor-pointer ${
                     currentFormatting.superscript
-                      ? 'bg-sky-600 text-white'
-                      : 'hover:bg-slate-700 text-slate-300 hover:text-white'
+                      ? 'bg-sky-100 text-sky-800 border border-sky-300'
+                      : 'hover:bg-slate-100 text-slate-700'
                   }`}
-                  title="Superscript (X²)"
+                  title="Superscript (e.g. x²)"
                 >
                   <Superscript className="w-3.5 h-3.5" />
                 </button>
 
-                <div className="h-4 w-px bg-slate-700 mx-0.5" />
+                <div className="h-4 w-px bg-slate-300 mx-0.5" />
 
-                {/* Text Highlight Color */}
+                {/* Text Color Popover */}
                 <ColorPickerPopover
-                  currentColor={currentFormatting.backgroundColor}
-                  onSelectColor={color => onApplyFormat({ backgroundColor: color })}
-                  type="highlight"
-                >
-                  <div
-                    className="p-1 hover:bg-slate-700 rounded flex flex-col items-center justify-center cursor-pointer"
-                    title="Text Highlight Color"
-                  >
-                    <Highlighter className="w-3.5 h-3.5 text-yellow-300" />
-                    <div
-                      className="w-3.5 h-1 rounded-xs mt-0.5"
-                      style={{ backgroundColor: currentFormatting.backgroundColor || '#fef08a' }}
-                    />
-                  </div>
-                </ColorPickerPopover>
-
-                {/* Font Color */}
-                <ColorPickerPopover
-                  currentColor={currentFormatting.color}
-                  onSelectColor={color => onApplyFormat({ color })}
                   type="text"
+                  currentColor={currentFormatting.color || '#0f172a'}
+                  onSelectColor={hex => onApplyFormat({ color: hex })}
                 >
-                  <div
-                    className="p-1 hover:bg-slate-700 rounded flex flex-col items-center justify-center cursor-pointer"
-                    title="Font Color"
-                  >
-                    <span className="text-xs font-bold leading-none">A</span>
+                  <div className="p-1 hover:bg-slate-100 rounded flex flex-col items-center justify-center cursor-pointer" title="Font Color">
+                    <span className="font-black text-xs leading-none">A</span>
                     <div
-                      className="w-3.5 h-1 rounded-xs mt-0.5"
-                      style={{ backgroundColor: currentFormatting.color || '#38bdf8' }}
+                      className="w-3.5 h-1 rounded-xs mt-0.5 border border-slate-300"
+                      style={{ backgroundColor: currentFormatting.color || '#0f172a' }}
                     />
                   </div>
                 </ColorPickerPopover>
 
-                {/* Character Border / Box */}
-                <button
-                  type="button"
-                  onClick={() => onApplyFormat({ characterBorder: !currentFormatting.characterBorder })}
-                  className={`p-1 rounded transition-colors ${
-                    currentFormatting.characterBorder
-                      ? 'bg-sky-600 text-white'
-                      : 'hover:bg-slate-700 text-slate-300 hover:text-white'
-                  }`}
-                  title="Character Border / Enclose in Box"
+                {/* Text Highlight Color Popover */}
+                <ColorPickerPopover
+                  type="highlight"
+                  currentColor={currentFormatting.backgroundColor}
+                  onSelectColor={hex => onApplyFormat({ backgroundColor: hex })}
                 >
-                  <div className="w-4 h-4 border border-current rounded-xs flex items-center justify-center text-[9px] font-bold">
-                    A
+                  <div className="p-1 hover:bg-slate-100 rounded flex flex-col items-center justify-center cursor-pointer" title="Text Highlight Color">
+                    <Highlighter className="w-3.5 h-3.5 text-amber-600" />
+                    <div
+                      className="w-3.5 h-1 rounded-xs mt-0.5 border border-slate-300"
+                      style={{ backgroundColor: currentFormatting.backgroundColor || 'transparent' }}
+                    />
                   </div>
-                </button>
+                </ColorPickerPopover>
               </div>
-
             </div>
 
             {/* 3. PARAGRAPH GROUP */}
-            <div className="flex flex-col gap-1 border-r border-slate-700/80 pr-3 shrink-0">
-              
-              {/* Row 1: Bullets, Numbering, Multilevel, Indent Out/In, Sort, Formatting Marks */}
+            <div className="flex flex-col gap-1 border-r border-slate-200 pr-3 shrink-0">
+              {/* Row 1: Bullets, Numbering, Multilevel, Indent/Outdent */}
               <div className="flex items-center gap-0.5">
-                
                 {/* Bullets */}
                 <div className="relative flex items-center">
                   <button
                     type="button"
-                    onClick={() => onApplyFormat({
-                      listType: currentFormatting.listType === 'bullet' ? 'none' : 'bullet',
-                      listBulletStyle: '•'
-                    })}
-                    className={`p-1 rounded transition-colors ${
+                    onClick={() => onApplyFormat({ listType: currentFormatting.listType === 'bullet' ? 'none' : 'bullet', listBulletStyle: '•' })}
+                    className={`p-1 rounded-l cursor-pointer ${
                       currentFormatting.listType === 'bullet'
-                        ? 'bg-sky-600 text-white'
-                        : 'hover:bg-slate-700 text-slate-300'
+                        ? 'bg-sky-100 text-sky-800 border border-sky-300'
+                        : 'hover:bg-slate-100 text-slate-700'
                     }`}
-                    title="Bulleted List"
+                    title="Bullets"
                   >
                     <List className="w-3.5 h-3.5" />
                   </button>
                   <button
                     type="button"
                     onClick={() => setIsBulletsMenuOpen(!isBulletsMenuOpen)}
-                    className="p-0.5 hover:bg-slate-700 rounded text-slate-400"
+                    className="p-0.5 hover:bg-slate-100 rounded-r text-slate-500 cursor-pointer"
                   >
                     <ChevronDown className="w-2.5 h-2.5" />
                   </button>
 
                   {isBulletsMenuOpen && (
-                    <div className="absolute left-0 top-full mt-1 w-44 bg-white text-slate-800 border border-slate-300 rounded shadow-xl z-50 p-2 text-xs grid grid-cols-3 gap-1">
-                      {['•', '○', '■', '◆', '➢', '✓'].map(bullet => (
+                    <div className="absolute left-0 top-full mt-1 bg-white border border-slate-300 rounded-lg shadow-xl p-2 z-50 grid grid-cols-3 gap-1">
+                      {['•', '○', '■', '◆', '➢', '✔'].map(sym => (
                         <button
-                          key={bullet}
+                          key={sym}
                           type="button"
                           onClick={() => {
-                            onApplyFormat({ listType: 'bullet', listBulletStyle: bullet });
+                            onApplyFormat({ listType: 'bullet', listBulletStyle: sym });
                             setIsBulletsMenuOpen(false);
                           }}
-                          className="p-2 border hover:bg-sky-50 flex items-center justify-center text-base rounded"
+                          className="w-7 h-7 flex items-center justify-center hover:bg-sky-50 border border-slate-200 rounded text-sm text-slate-800"
                         >
-                          {bullet}
+                          {sym}
                         </button>
                       ))}
                     </div>
@@ -803,100 +813,88 @@ export const EditorRibbon: React.FC<EditorRibbonProps> = ({
                 <div className="relative flex items-center">
                   <button
                     type="button"
-                    onClick={() => onApplyFormat({
-                      listType: currentFormatting.listType === 'number' ? 'none' : 'number',
-                      listBulletStyle: '1.'
-                    })}
-                    className={`p-1 rounded transition-colors ${
-                      currentFormatting.listType === 'number'
-                        ? 'bg-sky-600 text-white'
-                        : 'hover:bg-slate-700 text-slate-300'
+                    onClick={() => onApplyFormat({ listType: currentFormatting.listType === 'number' ? 'none' : 'number', listBulletStyle: '1.' })}
+                    className={`p-1 rounded-l cursor-pointer ${
+                      currentFormatting.listType === 'number' || currentFormatting.listType === 'alpha' || currentFormatting.listType === 'roman'
+                        ? 'bg-sky-100 text-sky-800 border border-sky-300'
+                        : 'hover:bg-slate-100 text-slate-700'
                     }`}
-                    title="Numbered List"
+                    title="Numbering"
                   >
                     <ListOrdered className="w-3.5 h-3.5" />
                   </button>
                   <button
                     type="button"
                     onClick={() => setIsNumberingMenuOpen(!isNumberingMenuOpen)}
-                    className="p-0.5 hover:bg-slate-700 rounded text-slate-400"
+                    className="p-0.5 hover:bg-slate-100 rounded-r text-slate-500 cursor-pointer"
                   >
                     <ChevronDown className="w-2.5 h-2.5" />
                   </button>
 
                   {isNumberingMenuOpen && (
-                    <div className="absolute left-0 top-full mt-1 w-44 bg-white text-slate-800 border border-slate-300 rounded shadow-xl z-50 p-2 text-xs flex flex-col gap-1">
-                      {['1. 2. 3.', '1) 2) 3)', 'a. b. c.', 'a) b) c)', 'i. ii. iii.', 'A. B. C.'].map(numStyle => (
-                        <button
-                          key={numStyle}
-                          type="button"
-                          onClick={() => {
-                            onApplyFormat({ listType: 'number', listBulletStyle: numStyle.split(' ')[0] });
-                            setIsNumberingMenuOpen(false);
-                          }}
-                          className="px-2 py-1 hover:bg-sky-50 text-left font-mono rounded"
-                        >
-                          {numStyle}
-                        </button>
-                      ))}
+                    <div className="absolute left-0 top-full mt-1 bg-white border border-slate-300 rounded-lg shadow-xl py-1 z-50 min-w-[130px] text-xs">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onApplyFormat({ listType: 'number', listBulletStyle: '1.' });
+                          setIsNumberingMenuOpen(false);
+                        }}
+                        className="w-full text-left px-3 py-1.5 hover:bg-sky-50"
+                      >
+                        1. 2. 3.
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onApplyFormat({ listType: 'alpha', listBulletStyle: 'a)' });
+                          setIsNumberingMenuOpen(false);
+                        }}
+                        className="w-full text-left px-3 py-1.5 hover:bg-sky-50"
+                      >
+                        a) b) c)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onApplyFormat({ listType: 'roman', listBulletStyle: 'i.' });
+                          setIsNumberingMenuOpen(false);
+                        }}
+                        className="w-full text-left px-3 py-1.5 hover:bg-sky-50"
+                      >
+                        i. ii. iii.
+                      </button>
                     </div>
                   )}
                 </div>
 
-                {/* Decrease Indent */}
+                {/* Decrease & Increase Indent */}
                 <button
                   type="button"
-                  onClick={() => onApplyFormat({ indent: Math.max(0, (currentFormatting.indent || 0) - 15) })}
-                  className="p-1 hover:bg-slate-700 text-slate-300 hover:text-white rounded"
-                  title="Decrease Indent (Shift+Tab)"
+                  onClick={() => onApplyFormat({ indent: Math.max(0, (currentFormatting.indent || 0) - 20) })}
+                  className="p-1 hover:bg-slate-100 text-slate-700 hover:text-slate-950 rounded cursor-pointer"
+                  title="Decrease Indent"
                 >
                   <Outdent className="w-3.5 h-3.5" />
                 </button>
-
-                {/* Increase Indent */}
                 <button
                   type="button"
-                  onClick={() => onApplyFormat({ indent: (currentFormatting.indent || 0) + 15 })}
-                  className="p-1 hover:bg-slate-700 text-slate-300 hover:text-white rounded"
-                  title="Increase Indent (Tab)"
+                  onClick={() => onApplyFormat({ indent: (currentFormatting.indent || 0) + 20 })}
+                  className="p-1 hover:bg-slate-100 text-slate-700 hover:text-slate-950 rounded cursor-pointer"
+                  title="Increase Indent"
                 >
                   <Indent className="w-3.5 h-3.5" />
                 </button>
-
-                {/* Sort A-Z */}
-                <button
-                  type="button"
-                  onClick={() => onApplyFormat({ textEffect: 'none' })}
-                  className="p-1 hover:bg-slate-700 text-slate-300 hover:text-white rounded"
-                  title="Sort Paragraphs (A to Z)"
-                >
-                  <ArrowDownAZ className="w-3.5 h-3.5" />
-                </button>
-
-                {/* Show/Hide Formatting Marks (¶ Pilcrow) */}
-                <button
-                  type="button"
-                  onClick={() => setShowFormattingMarks(!showFormattingMarks)}
-                  className={`p-1 rounded transition-colors font-bold ${
-                    showFormattingMarks
-                      ? 'bg-sky-600 text-white'
-                      : 'hover:bg-slate-700 text-slate-300'
-                  }`}
-                  title="Show/Hide Formatting Marks (¶)"
-                >
-                  <span className="text-sm leading-none">¶</span>
-                </button>
               </div>
 
-              {/* Row 2: Align Left, Center, Right, Justify, Line Spacing, Shading, Borders */}
+              {/* Row 2: Alignment, Line Spacing, Shading, Borders */}
               <div className="flex items-center gap-0.5">
                 <button
                   type="button"
                   onClick={() => onApplyFormat({ alignment: 'left' })}
-                  className={`p-1 rounded transition-colors ${
-                    (currentFormatting.alignment || 'left') === 'left'
-                      ? 'bg-sky-600 text-white'
-                      : 'hover:bg-slate-700 text-slate-300'
+                  className={`p-1 rounded cursor-pointer ${
+                    currentFormatting.alignment === 'left' || !currentFormatting.alignment
+                      ? 'bg-sky-100 text-sky-800 border border-sky-300'
+                      : 'hover:bg-slate-100 text-slate-700'
                   }`}
                   title="Align Left (Ctrl+L)"
                 >
@@ -906,10 +904,10 @@ export const EditorRibbon: React.FC<EditorRibbonProps> = ({
                 <button
                   type="button"
                   onClick={() => onApplyFormat({ alignment: 'center' })}
-                  className={`p-1 rounded transition-colors ${
+                  className={`p-1 rounded cursor-pointer ${
                     currentFormatting.alignment === 'center'
-                      ? 'bg-sky-600 text-white'
-                      : 'hover:bg-slate-700 text-slate-300'
+                      ? 'bg-sky-100 text-sky-800 border border-sky-300'
+                      : 'hover:bg-slate-100 text-slate-700'
                   }`}
                   title="Align Center (Ctrl+E)"
                 >
@@ -919,10 +917,10 @@ export const EditorRibbon: React.FC<EditorRibbonProps> = ({
                 <button
                   type="button"
                   onClick={() => onApplyFormat({ alignment: 'right' })}
-                  className={`p-1 rounded transition-colors ${
+                  className={`p-1 rounded cursor-pointer ${
                     currentFormatting.alignment === 'right'
-                      ? 'bg-sky-600 text-white'
-                      : 'hover:bg-slate-700 text-slate-300'
+                      ? 'bg-sky-100 text-sky-800 border border-sky-300'
+                      : 'hover:bg-slate-100 text-slate-700'
                   }`}
                   title="Align Right (Ctrl+R)"
                 >
@@ -932,385 +930,409 @@ export const EditorRibbon: React.FC<EditorRibbonProps> = ({
                 <button
                   type="button"
                   onClick={() => onApplyFormat({ alignment: 'justify' })}
-                  className={`p-1 rounded transition-colors ${
+                  className={`p-1 rounded cursor-pointer ${
                     currentFormatting.alignment === 'justify'
-                      ? 'bg-sky-600 text-white'
-                      : 'hover:bg-slate-700 text-slate-300'
+                      ? 'bg-sky-100 text-sky-800 border border-sky-300'
+                      : 'hover:bg-slate-100 text-slate-700'
                   }`}
                   title="Justify (Ctrl+J)"
                 >
                   <AlignJustify className="w-3.5 h-3.5" />
                 </button>
 
-                <div className="h-4 w-px bg-slate-700 mx-0.5" />
+                <div className="h-4 w-px bg-slate-300 mx-0.5" />
 
-                {/* Line & Paragraph Spacing Dropdown */}
+                {/* Line Spacing */}
                 <div className="relative">
                   <button
                     type="button"
                     onClick={() => setIsLineSpacingMenuOpen(!isLineSpacingMenuOpen)}
-                    className="p-1 hover:bg-slate-700 rounded text-slate-300 flex items-center gap-0.5"
+                    className="p-1 hover:bg-slate-100 rounded text-slate-700 flex items-center gap-0.5 cursor-pointer"
                     title="Line and Paragraph Spacing"
                   >
-                    <SlidersHorizontal className="w-3.5 h-3.5 text-sky-400" />
-                    <ChevronDown className="w-2.5 h-2.5 text-slate-400" />
+                    <SlidersHorizontal className="w-3.5 h-3.5" />
+                    <ChevronDown className="w-2.5 h-2.5" />
                   </button>
 
                   {isLineSpacingMenuOpen && (
-                    <div className="absolute left-0 top-full mt-1 w-48 bg-white text-slate-800 border border-slate-300 rounded shadow-xl z-50 p-2 text-xs flex flex-col gap-0.5">
-                      {[1.0, 1.15, 1.5, 2.0, 2.5, 3.0].map(spacing => (
+                    <div className="absolute left-0 top-full mt-1 bg-white border border-slate-300 rounded-lg shadow-xl py-1 z-50 min-w-[120px] text-xs">
+                      {[1.0, 1.15, 1.5, 2.0, 2.5, 3.0].map(sp => (
                         <button
-                          key={spacing}
+                          key={sp}
                           type="button"
                           onClick={() => {
-                            onApplyFormat({ lineSpacing: spacing });
+                            onApplyFormat({ lineSpacing: sp });
                             setIsLineSpacingMenuOpen(false);
                           }}
-                          className={`px-2 py-1 hover:bg-sky-50 text-left flex items-center justify-between rounded ${
-                            (currentFormatting.lineSpacing || 1.15) === spacing ? 'font-bold text-sky-700' : ''
+                          className={`w-full text-left px-3 py-1 hover:bg-sky-50 flex items-center justify-between ${
+                            currentFormatting.lineSpacing === sp ? 'font-bold text-sky-700' : 'text-slate-800'
                           }`}
                         >
-                          <span>{spacing}</span>
-                          {(currentFormatting.lineSpacing || 1.15) === spacing && <Check className="w-3.5 h-3.5 text-sky-600" />}
+                          <span>{sp.toFixed(2)}</span>
+                          {currentFormatting.lineSpacing === sp && <Check className="w-3 h-3 text-sky-600" />}
                         </button>
                       ))}
                     </div>
                   )}
                 </div>
 
-                {/* Paragraph Background Shading */}
+                {/* Shading */}
                 <ColorPickerPopover
-                  currentColor={currentFormatting.backgroundColor}
-                  onSelectColor={color => onApplyFormat({ backgroundColor: color })}
                   type="shading"
+                  currentColor={currentFormatting.backgroundColor}
+                  onSelectColor={hex => onApplyFormat({ backgroundColor: hex })}
                 >
-                  <div className="p-1 hover:bg-slate-700 rounded cursor-pointer" title="Shading (Background Color)">
-                    <PaintBucket className="w-3.5 h-3.5 text-emerald-400" />
+                  <div className="p-1 hover:bg-slate-100 rounded cursor-pointer" title="Shading (Background Color)">
+                    <PaintBucket className="w-3.5 h-3.5 text-slate-600" />
                   </div>
                 </ColorPickerPopover>
-
-                {/* Paragraph Borders */}
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setIsBordersMenuOpen(!isBordersMenuOpen)}
-                    className="p-1 hover:bg-slate-700 rounded text-slate-300"
-                    title="Borders"
-                  >
-                    <Grid className="w-3.5 h-3.5" />
-                  </button>
-
-                  {isBordersMenuOpen && (
-                    <div className="absolute left-0 top-full mt-1 w-44 bg-white text-slate-800 border border-slate-300 rounded shadow-xl z-50 p-1 text-xs">
-                      {[
-                        { label: 'Bottom Border', value: 'bottom' },
-                        { label: 'Top Border', value: 'top' },
-                        { label: 'Left Border', value: 'left' },
-                        { label: 'All Borders', value: 'all' },
-                        { label: 'Outside Box', value: 'box' },
-                        { label: 'No Border', value: 'none' }
-                      ].map(b => (
-                        <button
-                          key={b.value}
-                          type="button"
-                          onClick={() => {
-                            onApplyFormat({ border: b.value as any });
-                            setIsBordersMenuOpen(false);
-                          }}
-                          className="w-full px-2 py-1 hover:bg-sky-50 text-left rounded"
-                        >
-                          {b.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
               </div>
             </div>
 
             {/* 4. STYLES GALLERY GROUP */}
-            <div className="flex items-center border-r border-slate-700/80 pr-3 shrink-0">
+            <div className="border-r border-slate-200 pr-3 shrink-0">
               <StyleGallery
                 currentStyleName={currentFormatting.styleName || 'Normal'}
-                onApplyStyle={(preset: DocumentStylePreset) => {
+                onApplyStyle={(stylePreset: DocumentStylePreset) => {
                   onApplyFormat({
-                    styleName: preset.name,
-                    fontSize: preset.formatting.fontSize,
-                    bold: preset.formatting.bold,
-                    italic: preset.formatting.italic,
-                    color: preset.formatting.color,
-                    fontFamily: preset.formatting.fontFamily,
-                    lineSpacing: preset.lineSpacing,
-                    alignment: preset.alignment,
-                    indent: preset.indent,
-                    border: preset.border
+                    styleName: stylePreset.name,
+                    fontFamily: stylePreset.formatting.fontFamily,
+                    fontSize: stylePreset.formatting.fontSize,
+                    bold: stylePreset.formatting.bold,
+                    italic: stylePreset.formatting.italic,
+                    color: stylePreset.formatting.color,
+                    lineSpacing: stylePreset.lineSpacing,
+                    alignment: stylePreset.alignment,
+                    indent: stylePreset.indent,
+                    backgroundColor: stylePreset.formatting.backgroundColor
                   });
                 }}
               />
             </div>
 
-            {/* 5. EDITING & ACTIONS GROUP */}
-            <div className="flex items-center gap-1.5 shrink-0">
+            {/* 5. EDITING GROUP */}
+            <div className="flex flex-col gap-1 pr-1 shrink-0">
               <button
                 type="button"
                 onClick={onOpenFindReplace}
-                className="flex flex-col items-center justify-center p-1.5 hover:bg-slate-700 rounded text-slate-300 hover:text-white transition-colors"
-                title="Find & Replace (Ctrl+F)"
+                className="flex items-center gap-1 px-2 py-1 hover:bg-slate-100 text-slate-700 hover:text-slate-900 rounded text-[11px] font-medium cursor-pointer"
               >
-                <Search className="w-4 h-4 text-sky-400 mb-0.5" />
-                <span className="text-[9.5px]">Find</span>
+                <Search className="w-3.5 h-3.5 text-sky-600" />
+                <span>Find</span>
               </button>
-
               <button
                 type="button"
-                onClick={onSelectAll}
-                className="flex flex-col items-center justify-center p-1.5 hover:bg-slate-700 rounded text-slate-300 hover:text-white transition-colors"
-                title="Select All (Ctrl+A)"
+                onClick={onOpenFindReplace}
+                className="flex items-center gap-1 px-2 py-1 hover:bg-slate-100 text-slate-700 hover:text-slate-900 rounded text-[11px] font-medium cursor-pointer"
               >
-                <Maximize2 className="w-4 h-4 text-purple-400 mb-0.5" />
-                <span className="text-[9.5px]">Select All</span>
+                <RefreshCw className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Replace</span>
               </button>
             </div>
 
           </div>
         )}
 
-        {/* ================= INSERT TAB ================= */}
+        {/* ================= INSERT TAB (QUESTION BANK & INSERTIONS) ================= */}
         {activeTab === 'Insert' && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full">
+            
+            {/* FEATURE: DROP FROM QUESTION BANK CENTERED POPUP MODAL & BUTTON */}
+            <div>
+              <div className="flex items-center bg-indigo-50 border border-indigo-200 rounded-lg p-0.5 shadow-xs">
+                <button
+                  type="button"
+                  onClick={() => setIsQuestionBankDropdownOpen(true)}
+                  className="flex flex-col items-center justify-center p-1.5 hover:bg-indigo-100 text-indigo-900 rounded transition-colors px-3 cursor-pointer"
+                  title="Drop verified objective questions from Question Bank"
+                >
+                  <Database className="w-5 h-5 mb-0.5 text-indigo-700" />
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] font-black tracking-tight">Drop from Bank</span>
+                    <ChevronDown className="w-2.5 h-2.5 text-indigo-700" />
+                  </div>
+                </button>
+              </div>
+
+              {/* Centered Popup Modal displaying all questions */}
+              {isQuestionBankDropdownOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+                  <div
+                    ref={questionBankMenuRef}
+                    className="bg-white text-slate-900 rounded-2xl shadow-2xl border border-slate-300 w-full max-w-4xl flex flex-col overflow-hidden max-h-[88vh] animate-in zoom-in-95 duration-150"
+                  >
+                    
+                    {/* Modal Header */}
+                    <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-xs">
+                          <Database className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-base font-black text-slate-900 tracking-tight">
+                              Drop from Question Bank
+                            </h3>
+                            <span className="text-xs font-bold px-2 py-0.5 bg-indigo-100 text-indigo-800 rounded-full border border-indigo-200">
+                              {bankQuestions.length} Questions Available
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-500 font-medium">
+                            Select any verified question from your repository to drop directly into the question paper
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handleDropRandomQuestion}
+                          className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                          title="Drop a random verified question"
+                        >
+                          <Dices className="w-4 h-4 text-indigo-600" />
+                          <span>Drop Random</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsQuestionBankDropdownOpen(false)}
+                          className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Search and Subject Filter Bar */}
+                    <div className="p-3.5 border-b border-slate-200 bg-white flex flex-col sm:flex-row gap-3 items-center justify-between">
+                      <div className="relative flex-1 w-full">
+                        <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                        <input
+                          type="text"
+                          placeholder="Search questions by topic, keyword, or chapter..."
+                          value={bankSearch}
+                          onChange={e => setBankSearch(e.target.value)}
+                          className="w-full pl-9 pr-3 py-1.5 text-xs font-medium border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-indigo-500 bg-slate-50 text-slate-900"
+                        />
+                      </div>
+
+                      {/* Quick Subject Filter Chips */}
+                      <div className="flex items-center gap-1.5 overflow-x-auto text-xs w-full sm:w-auto">
+                        {['all', 'Physics', 'Chemistry', 'Mathematics', 'Biology'].map(subj => (
+                          <button
+                            key={subj}
+                            type="button"
+                            onClick={() => setBankSubject(subj)}
+                            className={`px-3 py-1.5 rounded-lg font-bold text-xs whitespace-nowrap transition-all cursor-pointer ${
+                              bankSubject === subj
+                                ? 'bg-indigo-600 text-white shadow-xs'
+                                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                            }`}
+                          >
+                            {subj === 'all' ? 'All Subjects' : subj}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Questions Full List (All Questions Displayed) */}
+                    <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/50 min-h-[350px]">
+                      {loadingBank ? (
+                        <div className="p-12 text-center text-sm text-slate-400 font-medium">
+                          Loading bank questions...
+                        </div>
+                      ) : bankQuestions.length === 0 ? (
+                        <div className="p-12 text-center text-sm text-slate-400 font-medium">
+                          No questions found matching your search. Try another query or add new questions.
+                        </div>
+                      ) : (
+                        bankQuestions.map((q, idx) => (
+                          <div
+                            key={q.id || idx}
+                            className="p-4 bg-white hover:bg-indigo-50/30 border border-slate-200 hover:border-indigo-300 rounded-xl transition-all flex flex-col gap-2.5 shadow-xs group"
+                          >
+                            <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                              <div className="flex flex-wrap items-center gap-2 text-xs">
+                                <span className="font-bold px-2 py-0.5 bg-indigo-100 text-indigo-800 rounded-md">
+                                  {q.subject || 'General'}
+                                </span>
+                                {q.chapter && (
+                                  <span className="font-medium text-slate-500 text-[11px]">
+                                    {q.chapter}
+                                  </span>
+                                )}
+                                {q.difficulty && (
+                                  <span className="text-[10px] font-bold uppercase px-1.5 py-0.2 bg-slate-100 text-slate-600 rounded">
+                                    {q.difficulty}
+                                  </span>
+                                )}
+                                <span className="text-[11px] font-bold text-slate-700 ml-1">
+                                  [{q.marks} Marks{q.negativeMarks ? `, -${q.negativeMarks}` : ''}]
+                                </span>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => handleQuickDropQuestion(q)}
+                                className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95 transition-all"
+                              >
+                                <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                                <span>Drop in Paper</span>
+                              </button>
+                            </div>
+
+                            {/* Question Statement with LaTeX / Math support */}
+                            <div className="text-xs sm:text-sm font-semibold text-slate-900 leading-relaxed">
+                              <MathTextRenderer text={q.rawText} />
+                            </div>
+
+                            {/* Options Preview */}
+                            {q.options && q.options.length > 0 && (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-xs text-slate-700">
+                                {q.options.map((opt, oIdx) => (
+                                  <div
+                                    key={opt.id || oIdx}
+                                    className={`p-1.5 rounded-lg border flex items-center gap-2 ${
+                                      opt.isCorrect
+                                        ? 'bg-emerald-50 border-emerald-300 text-emerald-950 font-bold'
+                                        : 'bg-slate-50 border-slate-200'
+                                    }`}
+                                  >
+                                    <span className="font-bold text-slate-500 text-[11px]">
+                                      ({opt.key || String.fromCharCode(97 + oIdx)}).
+                                    </span>
+                                    <span className="truncate">
+                                      <MathTextRenderer text={opt.rawText || ''} />
+                                    </span>
+                                    {opt.isCorrect && (
+                                      <span className="ml-auto text-[9px] font-bold uppercase text-emerald-700 bg-emerald-100 px-1 py-0.2 rounded">
+                                        Ans
+                                      </span>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Diagram thumbnail if present */}
+                            {q.diagramSvg && (
+                              <div className="p-2 bg-slate-50 rounded-lg border border-slate-200 max-h-24 overflow-hidden flex items-center justify-center">
+                                <div className="scale-75" dangerouslySetInnerHTML={{ __html: q.diagramSvg }} />
+                              </div>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    {/* Modal Footer */}
+                    <div className="p-3.5 border-t border-slate-200 bg-slate-100/90 flex items-center justify-between text-xs">
+                      <span className="text-slate-500 font-medium">
+                        Showing all {bankQuestions.length} questions in repository
+                      </span>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsQuestionBankDropdownOpen(false);
+                            onOpenQuestionBank && onOpenQuestionBank();
+                          }}
+                          className="px-3 py-1.5 bg-white hover:bg-slate-200 border border-slate-300 text-slate-700 font-bold rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                        >
+                          <BookOpen className="w-3.5 h-3.5" /> Full Question Bank Manager
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsQuestionBankDropdownOpen(false)}
+                          className="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold rounded-lg transition-colors cursor-pointer"
+                        >
+                          Close
+                        </button>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Create Custom MCQ */}
+            <button
+              type="button"
+              onClick={onOpenQuestionBuilder}
+              className="flex flex-col items-center justify-center p-1.5 bg-sky-50 hover:bg-sky-100 border border-sky-200 text-sky-900 rounded-lg transition-colors px-3 cursor-pointer shadow-2xs"
+            >
+              <HelpCircle className="w-5 h-5 mb-0.5 text-sky-600" />
+              <span className="text-[10px] font-bold">+ MCQ Question</span>
+            </button>
+
+            <div className="h-8 w-px bg-slate-200" />
+
             <button
               type="button"
               onClick={onInsertParagraph}
-              className="flex flex-col items-center justify-center p-1.5 hover:bg-slate-700/80 rounded transition-colors px-3 text-slate-200"
+              className="flex flex-col items-center justify-center p-1.5 hover:bg-slate-100 rounded transition-colors px-3 text-slate-700 hover:text-slate-950 cursor-pointer"
             >
-              <Type className="w-5 h-5 mb-0.5 text-sky-400" />
+              <Type className="w-5 h-5 mb-0.5 text-sky-600" />
               <span className="text-[10px] font-bold">+ Custom Text</span>
             </button>
 
             <button
               type="button"
-              onClick={() => onInsertHeading && onInsertHeading(1)}
-              className="flex flex-col items-center justify-center p-1.5 hover:bg-slate-700/80 rounded transition-colors px-2 text-slate-200"
-            >
-              <span className="text-base font-black text-sky-400">H1</span>
-              <span className="text-[10px] font-bold">Heading</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={onOpenQuestionBuilder}
-              className="flex flex-col items-center justify-center p-1.5 bg-sky-950 hover:bg-sky-900 border border-sky-600/50 text-sky-300 rounded-lg transition-colors px-3"
-            >
-              <HelpCircle className="w-5 h-5 mb-0.5 text-sky-400" />
-              <span className="text-[10px] font-bold">+ MCQ Question</span>
-            </button>
-
-            <button
-              type="button"
               onClick={onOpenEquationModal}
-              className="flex flex-col items-center justify-center p-1.5 hover:bg-slate-700/80 rounded transition-colors px-2 text-slate-200"
+              className="flex flex-col items-center justify-center p-1.5 hover:bg-slate-100 rounded transition-colors px-2 text-slate-700 hover:text-slate-950 cursor-pointer"
             >
-              <Sigma className="w-5 h-5 mb-0.5 text-amber-400" />
+              <Sigma className="w-5 h-5 mb-0.5 text-amber-600" />
               <span className="text-[10px] font-bold">Equation</span>
             </button>
 
             <button
               type="button"
               onClick={onOpenSymbolsModal}
-              className="flex flex-col items-center justify-center p-1.5 hover:bg-slate-700/80 rounded transition-colors px-2 text-slate-200"
+              className="flex flex-col items-center justify-center p-1.5 hover:bg-slate-100 rounded transition-colors px-2 text-slate-700 hover:text-slate-950 cursor-pointer"
             >
-              <Hash className="w-5 h-5 mb-0.5 text-indigo-400" />
+              <Hash className="w-5 h-5 mb-0.5 text-indigo-600" />
               <span className="text-[10px] font-bold">Symbol</span>
             </button>
 
-            <div className="h-8 w-px bg-slate-700" />
+            <div className="h-8 w-px bg-slate-200" />
 
             <button
               type="button"
               onClick={() => onInsertTable && onInsertTable(3, 3)}
-              className="flex flex-col items-center justify-center p-1.5 hover:bg-slate-700/80 rounded transition-colors px-2 text-slate-200"
+              className="flex flex-col items-center justify-center p-1.5 hover:bg-slate-100 rounded transition-colors px-2 text-slate-700 hover:text-slate-950 cursor-pointer"
             >
-              <TableIcon className="w-5 h-5 mb-0.5 text-emerald-400" />
+              <TableIcon className="w-5 h-5 mb-0.5 text-emerald-600" />
               <span className="text-[10px] font-bold">Table 3×3</span>
             </button>
 
             <button
               type="button"
               onClick={onInsertImage}
-              className="flex flex-col items-center justify-center p-1.5 hover:bg-slate-700/80 rounded transition-colors px-2 text-slate-200"
+              className="flex flex-col items-center justify-center p-1.5 hover:bg-slate-100 rounded transition-colors px-2 text-slate-700 hover:text-slate-950 cursor-pointer"
             >
-              <ImageIcon className="w-5 h-5 mb-0.5 text-purple-400" />
+              <ImageIcon className="w-5 h-5 mb-0.5 text-purple-600" />
               <span className="text-[10px] font-bold">Image</span>
             </button>
 
             <button
               type="button"
-              onClick={() => onInsertShape && onInsertShape('rectangle')}
-              className="flex flex-col items-center justify-center p-1.5 hover:bg-slate-700/80 rounded transition-colors px-2 text-slate-200"
-            >
-              <Shapes className="w-5 h-5 mb-0.5 text-rose-400" />
-              <span className="text-[10px] font-bold">Shape</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => onInsertWordArt && onInsertWordArt('EduForge Special', 'gradient_purple')}
-              className="flex flex-col items-center justify-center p-1.5 hover:bg-slate-700/80 rounded transition-colors px-2 text-slate-200"
-            >
-              <Sparkles className="w-5 h-5 mb-0.5 text-yellow-400" />
-              <span className="text-[10px] font-bold">WordArt</span>
-            </button>
-
-            <button
-              type="button"
               onClick={onInsertHorizontalLine}
-              className="flex flex-col items-center justify-center p-1.5 hover:bg-slate-700/80 rounded transition-colors px-2 text-slate-200"
+              className="flex flex-col items-center justify-center p-1.5 hover:bg-slate-100 rounded transition-colors px-2 text-slate-700 hover:text-slate-950 cursor-pointer"
             >
-              <div className="w-5 h-0.5 bg-slate-400 my-2" />
+              <div className="w-5 h-0.5 bg-slate-500 my-2" />
               <span className="text-[10px] font-bold">Divider Line</span>
             </button>
 
             <button
               type="button"
               onClick={onInsertPageBreak}
-              className="flex flex-col items-center justify-center p-1.5 hover:bg-slate-700/80 rounded transition-colors px-2 text-slate-200"
+              className="flex flex-col items-center justify-center p-1.5 hover:bg-slate-100 rounded transition-colors px-2 text-slate-700 hover:text-slate-950 cursor-pointer"
             >
-              <Layers className="w-5 h-5 mb-0.5 text-sky-400" />
+              <Layers className="w-5 h-5 mb-0.5 text-sky-600" />
               <span className="text-[10px] font-bold">Page Break</span>
             </button>
-          </div>
-        )}
-
-        {/* ================= PAGE LAYOUT TAB ================= */}
-        {activeTab === 'Page Layout' && (
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1 border-r border-slate-700 pr-3">
-              <button
-                type="button"
-                onClick={() => onSetColumns && onSetColumns(1)}
-                className={`px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1.5 ${
-                  doc.settings.columns === 1 ? 'bg-sky-600 text-white' : 'hover:bg-slate-700 text-slate-300'
-                }`}
-              >
-                <div className="w-4 h-5 border border-current rounded-xs" />
-                1 Column
-              </button>
-              <button
-                type="button"
-                onClick={() => onSetColumns && onSetColumns(2)}
-                className={`px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1.5 ${
-                  doc.settings.columns === 2 ? 'bg-sky-600 text-white' : 'hover:bg-slate-700 text-slate-300'
-                }`}
-              >
-                <div className="w-4 h-5 border border-current rounded-xs flex gap-0.5 p-0.5">
-                  <div className="flex-1 bg-current" />
-                  <div className="flex-1 bg-current" />
-                </div>
-                2 Columns (Paper Style)
-              </button>
-            </div>
-
-            <div className="flex items-center gap-1 border-r border-slate-700 pr-3">
-              <button
-                type="button"
-                onClick={onToggleColumnDivider}
-                className={`px-3 py-1.5 rounded text-xs font-medium flex items-center gap-1.5 ${
-                  doc.settings.columnDivider ? 'bg-indigo-600 text-white' : 'hover:bg-slate-700 text-slate-300'
-                }`}
-              >
-                <Columns className="w-3.5 h-3.5" />
-                Column Divider Line
-              </button>
-            </div>
-
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => onSetMargins && onSetMargins({ top: 10, bottom: 10, left: 10, right: 10 })}
-                className="px-2.5 py-1 hover:bg-slate-700 text-slate-300 rounded text-xs"
-              >
-                Narrow (10mm)
-              </button>
-              <button
-                type="button"
-                onClick={() => onSetMargins && onSetMargins({ top: 15, bottom: 15, left: 15, right: 15 })}
-                className="px-2.5 py-1 hover:bg-slate-700 text-slate-300 rounded text-xs font-bold text-sky-400"
-              >
-                Normal (15mm)
-              </button>
-              <button
-                type="button"
-                onClick={() => onSetMargins && onSetMargins({ top: 25, bottom: 25, left: 25, right: 25 })}
-                className="px-2.5 py-1 hover:bg-slate-700 text-slate-300 rounded text-xs"
-              >
-                Wide (25mm)
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ================= VIEW TAB ================= */}
-        {activeTab === 'View' && (
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 border-r border-slate-700 pr-3">
-              <button
-                type="button"
-                onClick={() => setZoom(Math.max(50, zoom - 10))}
-                className="p-1 hover:bg-slate-700 rounded text-slate-300"
-                title="Zoom Out"
-              >
-                <ZoomOut className="w-4 h-4" />
-              </button>
-              <span className="text-xs font-mono font-bold w-12 text-center text-sky-400">
-                {zoom}%
-              </span>
-              <button
-                type="button"
-                onClick={() => setZoom(Math.min(200, zoom + 10))}
-                className="p-1 hover:bg-slate-700 rounded text-slate-300"
-                title="Zoom In"
-              >
-                <ZoomIn className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setZoom(100)}
-                className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 rounded text-[11px] text-slate-300"
-              >
-                100%
-              </button>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setShowMarginGuides(!showMarginGuides)}
-                className={`px-3 py-1.5 rounded text-xs font-medium ${
-                  showMarginGuides ? 'bg-sky-600 text-white' : 'hover:bg-slate-700 text-slate-300'
-                }`}
-              >
-                Margin Guides
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowColumnGuides(!showColumnGuides)}
-                className={`px-3 py-1.5 rounded text-xs font-medium ${
-                  showColumnGuides ? 'bg-sky-600 text-white' : 'hover:bg-slate-700 text-slate-300'
-                }`}
-              >
-                Column Guides
-              </button>
-              <button
-                type="button"
-                onClick={() => setPrintPreviewMode(!printPreviewMode)}
-                className={`px-3 py-1.5 rounded text-xs font-medium ${
-                  printPreviewMode ? 'bg-purple-600 text-white' : 'hover:bg-slate-700 text-slate-300'
-                }`}
-              >
-                Print Preview Clean Mode
-              </button>
-            </div>
           </div>
         )}
 
@@ -1320,16 +1342,16 @@ export const EditorRibbon: React.FC<EditorRibbonProps> = ({
             <button
               type="button"
               onClick={onOpenEquationModal}
-              className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded flex items-center gap-1.5"
+              className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded flex items-center gap-1.5 shadow-2xs cursor-pointer"
             >
               <Sigma className="w-4 h-4" /> Open Math Equation Editor
             </button>
             <button
               type="button"
               onClick={onOpenSymbolsModal}
-              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded flex items-center gap-1.5"
+              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-800 text-xs font-medium rounded flex items-center gap-1.5 cursor-pointer shadow-2xs"
             >
-              <Hash className="w-4 h-4" /> Math Symbol Palette
+              <Hash className="w-4 h-4 text-indigo-600" /> Math Symbol Palette
             </button>
           </div>
         )}
@@ -1340,21 +1362,21 @@ export const EditorRibbon: React.FC<EditorRibbonProps> = ({
             <button
               type="button"
               onClick={onOpenPhysicsModal}
-              className="px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold rounded flex items-center gap-1.5"
+              className="px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold rounded flex items-center gap-1.5 shadow-2xs cursor-pointer"
             >
               <Atom className="w-4 h-4" /> Physics Formulas & Notation Library
             </button>
             <button
               type="button"
               onClick={onOpenUnitsModal}
-              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded"
+              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-800 text-xs font-medium rounded cursor-pointer"
             >
               SI Units Library
             </button>
             <button
               type="button"
               onClick={onOpenConstantsModal}
-              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded"
+              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-800 text-xs font-medium rounded cursor-pointer"
             >
               Physical Constants
             </button>
@@ -1367,29 +1389,9 @@ export const EditorRibbon: React.FC<EditorRibbonProps> = ({
             <button
               type="button"
               onClick={onOpenChemistryModal}
-              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded flex items-center gap-1.5"
+              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded flex items-center gap-1.5 shadow-2xs cursor-pointer"
             >
               <FlaskConical className="w-4 h-4" /> Chemistry Formula & Reaction Library
-            </button>
-          </div>
-        )}
-
-        {/* ================= OTHER TABS ================= */}
-        {(activeTab === 'References' || activeTab === 'Review' || activeTab === 'Tools') && (
-          <div className="flex items-center gap-2 text-xs text-slate-400">
-            <button
-              type="button"
-              onClick={onOpenQuestionBank}
-              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded font-medium flex items-center gap-1.5"
-            >
-              <Database className="w-4 h-4 text-sky-400" /> Browse Question Bank
-            </button>
-            <button
-              type="button"
-              onClick={onOpenFindReplace}
-              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded font-medium flex items-center gap-1.5"
-            >
-              <Search className="w-4 h-4 text-emerald-400" /> Advanced Find & Replace
             </button>
           </div>
         )}
@@ -1400,35 +1402,35 @@ export const EditorRibbon: React.FC<EditorRibbonProps> = ({
             <button
               type="button"
               onClick={onSave}
-              className="flex flex-col items-center justify-center p-1.5 hover:bg-slate-700 rounded text-slate-200 hover:text-sky-400 transition-colors"
+              className="flex flex-col items-center justify-center p-1.5 hover:bg-slate-100 rounded text-slate-700 hover:text-sky-600 transition-colors cursor-pointer"
             >
-              <Save className="w-5 h-5 mb-0.5 text-sky-400" />
+              <Save className="w-5 h-5 mb-0.5 text-sky-600" />
               <span className="text-[10px] font-bold">Save Paper</span>
             </button>
-            <div className="h-8 w-px bg-slate-700" />
+            <div className="h-8 w-px bg-slate-200" />
             <button
               type="button"
               onClick={onExportDocx}
-              className="flex flex-col items-center justify-center p-1.5 hover:bg-slate-700 rounded text-slate-200 hover:text-blue-400 transition-colors"
+              className="flex flex-col items-center justify-center p-1.5 hover:bg-slate-100 rounded text-slate-700 hover:text-blue-600 transition-colors cursor-pointer"
             >
-              <Download className="w-5 h-5 mb-0.5 text-blue-400" />
+              <Download className="w-5 h-5 mb-0.5 text-blue-600" />
               <span className="text-[10px] font-bold">Export DOCX</span>
             </button>
             <button
               type="button"
               onClick={onExportPdf}
-              className="flex flex-col items-center justify-center p-1.5 hover:bg-slate-700 rounded text-slate-200 hover:text-emerald-400 transition-colors"
+              className="flex flex-col items-center justify-center p-1.5 hover:bg-slate-100 rounded text-slate-700 hover:text-emerald-600 transition-colors cursor-pointer"
             >
-              <Printer className="w-5 h-5 mb-0.5 text-emerald-400" />
+              <Printer className="w-5 h-5 mb-0.5 text-emerald-600" />
               <span className="text-[10px] font-bold">Export PDF</span>
             </button>
-            <div className="h-8 w-px bg-slate-700" />
+            <div className="h-8 w-px bg-slate-200" />
             <button
               type="button"
               onClick={onPrintPreview}
-              className="flex flex-col items-center justify-center p-1.5 hover:bg-slate-700 rounded text-slate-200 hover:text-purple-400 transition-colors"
+              className="flex flex-col items-center justify-center p-1.5 hover:bg-slate-100 rounded text-slate-700 hover:text-purple-600 transition-colors cursor-pointer"
             >
-              <Eye className="w-5 h-5 mb-0.5 text-purple-400" />
+              <Eye className="w-5 h-5 mb-0.5 text-purple-600" />
               <span className="text-[10px] font-bold">Print Preview</span>
             </button>
           </div>

@@ -28,7 +28,7 @@ export default {
         }
       },
       fontFamily: {
-        sans: ['Manrope', 'Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
         serif: ['Times New Roman', 'Liberation Serif', 'Georgia', 'serif'],
         math: ['Latin Modern Math', 'Computer Modern', 'Cambria Math', 'serif'],
         mono: ['JetBrains Mono', 'Fira Code', 'Courier New', 'monospace']

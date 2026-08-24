@@ -117,7 +117,7 @@ export const TemplateGalleryModal: React.FC<TemplateGalleryModalProps> = ({
                           Font: {tpl.settings.defaultFont} ({tpl.settings.defaultFontSize}pt)
                         </span>
                         <span className="px-2 py-0.5 bg-slate-100 rounded border border-slate-200">
-                          Margins: {tpl.settings.margins.top}mm
+                          Margins: {tpl.settings.margins?.top || 15}mm
                         </span>
                       </div>
                     </div>

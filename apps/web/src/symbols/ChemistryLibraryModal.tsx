@@ -119,11 +119,21 @@ export const ChemistryLibraryModal: React.FC<ChemistryLibraryModalProps> = ({
               {filteredNotations.map(not => (
                 <div
                   key={not.id}
+                  draggable={true}
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData('application/eduforge-item', JSON.stringify({
+                      category: 'chemistry',
+                      type: 'reaction',
+                      latex: not.latex || not.formula,
+                      name: not.name
+                    }));
+                  }}
                   onClick={() => {
                     onInsertChemistry(not.formula, not.latex);
                     onClose();
                   }}
-                  className="p-3 bg-slate-50 hover:bg-emerald-50/50 border border-slate-200 hover:border-emerald-400 rounded-lg transition-all cursor-pointer group flex flex-col justify-between"
+                  className="p-3 bg-slate-50 hover:bg-emerald-50/50 border border-slate-200 hover:border-emerald-400 rounded-lg transition-all cursor-grab active:cursor-grabbing group flex flex-col justify-between"
+                  title="Drag onto paper or click to insert"
                 >
                   <div>
                     <div className="flex items-center justify-between mb-2">
@@ -140,8 +150,9 @@ export const ChemistryLibraryModal: React.FC<ChemistryLibraryModalProps> = ({
                       <p className="text-[11px] text-slate-500 mt-0.5">{not.description}</p>
                     )}
                   </div>
-                  <div className="mt-2 pt-2 border-t border-slate-100 text-[10px] text-slate-400 font-mono truncate">
-                    Formula: {not.formula}
+                  <div className="mt-2 pt-2 border-t border-slate-100 text-[10px] text-slate-400 font-mono truncate flex items-center justify-between">
+                    <span>Formula: {not.formula}</span>
+                    <span className="text-[9px] text-emerald-600 font-bold">Drag / Click</span>
                   </div>
                 </div>
               ))}
@@ -151,12 +162,21 @@ export const ChemistryLibraryModal: React.FC<ChemistryLibraryModalProps> = ({
               {filteredElements.map(el => (
                 <button
                   key={el.symbol}
+                  draggable={true}
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData('application/eduforge-item', JSON.stringify({
+                      category: 'chemistry',
+                      type: 'element',
+                      latex: `\\text{${el.symbol}}`,
+                      name: el.name
+                    }));
+                  }}
                   onClick={() => {
                     onInsertChemistry(el.symbol, `\\text{${el.symbol}}`);
                     onClose();
                   }}
-                  className="p-2.5 bg-slate-50 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-400 rounded-lg flex flex-col items-center justify-between text-center transition-all group active:scale-95"
-                  title={`${el.name} (Atomic Weight: ${el.atomicMass})`}
+                  className="p-2.5 bg-slate-50 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-400 rounded-lg flex flex-col items-center justify-between text-center transition-all group active:scale-95 cursor-grab"
+                  title={`${el.name} (Atomic Weight: ${el.atomicMass}) - Drag onto paper`}
                 >
                   <div className="w-full flex justify-between text-[9px] text-slate-400 font-mono">
                     <span>{el.atomicNumber}</span>

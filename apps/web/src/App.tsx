@@ -11,12 +11,11 @@ import { QuestionBuilderModal } from './questions/QuestionBuilderModal.js';
 import { TemplateGalleryModal } from './templates/TemplateGalleryModal.js';
 import { api } from './services/api.js';
 import { DocumentModel, Template } from '@eduforge/shared';
-import { ThemeProvider, useTheme } from './state/ThemeContext.js';
+import { ThemeProvider } from './state/ThemeContext.js';
 
 const AppContent: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<PageView>('dashboard');
   const [activeDocumentId, setActiveDocumentId] = useState<string | null>(null);
-  const { theme } = useTheme();
 
   // Pre-warm in-memory caches on startup for instantaneous 0ms loading
   React.useEffect(() => {
@@ -72,15 +71,8 @@ const AppContent: React.FC = () => {
     await handleCreatePaper(newDoc);
   };
 
-  // Background style based on theme
-  const getAppBgClass = () => {
-    if (theme === 'white') return 'bg-slate-100 text-slate-900';
-    if (theme === 'dark-blue') return 'bg-[#070e1e] text-slate-100';
-    return 'bg-[#0f172a] text-slate-100'; // dark default
-  };
-
   return (
-    <div className={`min-h-screen flex flex-col font-sans transition-colors duration-200 ${getAppBgClass()}`}>
+    <div className="min-h-screen flex flex-col font-sans bg-slate-100 text-slate-900">
       
       {/* Top Navbar */}
       {currentPage !== 'editor' && (

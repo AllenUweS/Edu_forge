@@ -8,14 +8,11 @@
     "apps/*"
   ],
   "scripts": {
-    "dev": "concurrently -k -n \"shared,server,web\" -c \"cyan,blue,green\" \"npm run dev:shared\" \"npm run dev:server\" \"npm run dev:web\"",
-    "dev:shared": "npm run dev --workspace=packages/shared",
-    "dev:server": "npm run dev --workspace=apps/server",
+    "dev": "concurrently -k -n \"py-api,web\" -c \"magenta,green\" \"npm run dev:py\" \"npm run dev:web\"",
+    "dev:py": "./server_py/.venv/bin/python server_py/main.py",
     "dev:web": "npm run dev --workspace=apps/web",
-    "build:shared": "npm run build --workspace=packages/shared",
-    "build:web": "npm run build --workspace=apps/web",
-    "build:server": "npm run build --workspace=apps/server",
-    "build": "npm run build:shared && npm run build:web",
+    "dev:server": "npm run dev --workspace=apps/server",
+    "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present"
   },
   "keywords": [
@@ -30,9 +27,5 @@
   "license": "ISC",
   "devDependencies": {
     "concurrently": "^10.0.5"
-  },
-  "optionalDependencies": {
-    "@rollup/rollup-linux-x64-gnu": "^4.62.5",
-    "@rollup/rollup-linux-x64-musl": "^4.62.5"
   }
 }

@@ -8,54 +8,20 @@
   :root {
     --primary: 2 132 199;
     --primary-foreground: 255 255 255;
-    --app-bg: #0f172a;
-    --app-surface: #1e293b;
-    --app-border: #334155;
-    --app-text: #f8fafc;
-    --app-text-muted: #94a3b8;
-    --app-header-bg: #090d16;
-    --app-ribbon-bg: #181e29;
-    --app-canvas-bg: #1e293b;
-    --ui-title: #ffffff;
-  }
-
-  /* White Theme */
-  [data-theme="white"], .theme-white {
-    --app-bg: #f1f5f9;
+    --app-bg: #f8fafc;
     --app-surface: #ffffff;
     --app-border: #e2e8f0;
     --app-text: #0f172a;
     --app-text-muted: #64748b;
-    --app-header-bg: #1e293b;
+    --app-header-bg: #ffffff;
     --app-ribbon-bg: #ffffff;
-    --app-canvas-bg: #cbd5e1;
+    --app-canvas-bg: #e2e8f0;
     --ui-title: #0f172a;
   }
 
-  /* Dark Theme */
-  [data-theme="dark"], .theme-dark {
-    --app-bg: #0f172a;
-    --app-surface: #1e293b;
-    --app-border: #334155;
-    --app-text: #f8fafc;
-    --app-text-muted: #94a3b8;
-    --app-header-bg: #090d16;
-    --app-ribbon-bg: #181e29;
-    --app-canvas-bg: #1e293b;
-    --ui-title: #ffffff;
-  }
-
-  /* Dark Blue Theme */
-  [data-theme="dark-blue"], .theme-dark-blue {
-    --app-bg: #070e1e;
-    --app-surface: #0f1e36;
-    --app-border: #1d3557;
-    --app-text: #f0f9ff;
-    --app-text-muted: #7dd3fc;
-    --app-header-bg: #050a17;
-    --app-ribbon-bg: #0b172a;
-    --app-canvas-bg: #0b172a;
-    --ui-title: #ffffff;
+  body {
+    background-color: #f8fafc;
+    color: #0f172a;
   }
 }
 
@@ -95,12 +61,7 @@ html, body {
 .page-sheet {
   background-color: #ffffff !important;
   color: #0f172a !important;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.25);
-}
-
-/* Ensure document paper blocks and math equations retain their specific fonts */
-.page-sheet, .page-sheet .katex, .page-sheet .katex * {
-  /* KaTeX uses Computer Modern / Latin Modern Math */
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
 }
 
 /* Custom scrollbars */
@@ -109,19 +70,19 @@ html, body {
   height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.05);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.4);
+  background: rgba(148, 163, 184, 0.5);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.7);
+  background: rgba(100, 116, 139, 0.7);
 }
 
 /* Theme Adaptive Title Class */
 .theme-title {
-  color: var(--ui-title) !important;
+  color: #0f172a !important;
 }
 
 /* WordArt special styling */

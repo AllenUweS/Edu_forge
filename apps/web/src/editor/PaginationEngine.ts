@@ -18,9 +18,11 @@ export interface PageLayout {
 
 // Approximate block heights in pixels for pagination estimation
 function estimateBlockHeight(block: DocumentBlock): number {
+  if (!block) return 30;
   switch (block.type) {
     case 'paragraph': {
-      const textLen = block.runs.reduce((acc, r) => acc + (r.text?.length || 0), 0);
+      const runs = block.runs || [];
+      const textLen = runs.reduce((acc, r) => acc + (r?.text?.length || 0), 0);
       const lines = Math.max(1, Math.ceil(textLen / 55));
       return lines * 22 + 10;
     }
@@ -31,7 +33,7 @@ function estimateBlockHeight(block: DocumentBlock): number {
     case 'image':
       return (block.height || 180) + 20;
     case 'table':
-      return block.rows * 32 + 20;
+      return (block.rows || 3) * 32 + 20;
     case 'shape':
       return (block.height || 80) + 15;
     case 'wordart':
@@ -44,6 +46,7 @@ function estimateBlockHeight(block: DocumentBlock): number {
       return 45;
     case 'question': {
       const q = block.question;
+      if (!q) return 40;
       const qTextLen = q.rawText?.length || 50;
       const qLines = Math.max(1, Math.ceil(qTextLen / 50));
       const optCount = q.options?.length || 4;
@@ -56,15 +59,38 @@ function estimateBlockHeight(block: DocumentBlock): number {
 }
 
 export function paginateDocument(doc: DocumentModel): PageLayout[] {
-  const isTwoColumn = doc.settings.columns === 2;
+  if (!doc) {
+    return [{ pageNumber: 1, isFirstPage: true, columns: [{ columnIndex: 0, blocks: [] }] }];
+  }
+
+  const settings = doc.settings || {
+    pageSize: 'A4',
+    orientation: 'portrait',
+    margins: { top: 15, bottom: 15, left: 15, right: 15 },
+    columns: 2,
+    columnGap: 8,
+    columnDivider: true,
+    defaultFont: 'Calibri, sans-serif',
+    defaultFontSize: 10.5,
+    questionSpacing: 6,
+    optionSpacing: 4,
+    lineSpacing: 1.15,
+    paragraphSpacing: 4
+  };
+
+  const margins = settings.margins || { top: 15, bottom: 15, left: 15, right: 15 };
+  const metadata = doc.metadata || {};
+  const sections = Array.isArray(doc.sections) ? doc.sections : [];
+
+  const isTwoColumn = settings.columns === 2;
   const mmToPx = 3.7795;
   const pageHeightPx = 297 * mmToPx; // ~1123px
-  const topMarginPx = (doc.settings.margins.top || 15) * mmToPx;
-  const bottomMarginPx = (doc.settings.margins.bottom || 15) * mmToPx;
+  const topMarginPx = (margins.top ?? 15) * mmToPx;
+  const bottomMarginPx = (margins.bottom ?? 15) * mmToPx;
   const footerHeightPx = 35;
 
   // Header takes ~180px on first page if institute/instructions exist
-  const firstPageHeaderHeightPx = doc.metadata.instituteName ? 170 : 80;
+  const firstPageHeaderHeightPx = metadata.instituteName ? 170 : 80;
 
   const firstPageUsableHeight = pageHeightPx - topMarginPx - bottomMarginPx - footerHeightPx - firstPageHeaderHeightPx;
   const subsequentPageUsableHeight = pageHeightPx - topMarginPx - bottomMarginPx - footerHeightPx;
@@ -103,10 +129,12 @@ export function paginateDocument(doc: DocumentModel): PageLayout[] {
     return maxHeight - currentColumnHeight;
   };
 
-  for (const section of doc.sections) {
+  for (const section of sections) {
+    if (!section) continue;
+
     // Add section header block
     const secHeaderBlock: DocumentBlock = {
-      id: `sec-hdr-${section.id}`,
+      id: `sec-hdr-${section.id || Date.now()}`,
       type: 'section_header',
       title: section.title,
       instructions: section.instructions,
@@ -119,15 +147,19 @@ export function paginateDocument(doc: DocumentModel): PageLayout[] {
     }
 
     pages[currentPageIndex].columns[currentColumnIndex].blocks.push({
-      sectionId: section.id,
+      sectionId: section.id || 'default-sec',
       sectionTitle: section.title,
       isSectionHeader: true,
       block: secHeaderBlock
     });
     currentColumnHeight += secHeaderHeight;
 
+    const blocks = Array.isArray(section.blocks) ? section.blocks : [];
+
     // Process section blocks
-    for (const block of section.blocks) {
+    for (const block of blocks) {
+      if (!block) continue;
+
       if (block.type === 'page_break') {
         // Explicit page break: jump to next page
         currentPageIndex++;
@@ -145,7 +177,7 @@ export function paginateDocument(doc: DocumentModel): PageLayout[] {
       }
 
       pages[currentPageIndex].columns[currentColumnIndex].blocks.push({
-        sectionId: section.id,
+        sectionId: section.id || 'default-sec',
         block
       });
       currentColumnHeight += blockHeight;

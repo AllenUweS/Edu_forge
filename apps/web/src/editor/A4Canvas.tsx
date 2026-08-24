@@ -1,5 +1,5 @@
 import React from 'react';
-import { DocumentModel, DocumentBlock, QuestionBlock, EquationBlock, ParagraphBlock } from '@eduforge/shared';
+import { DocumentModel, DocumentBlock, QuestionBlock, EquationBlock, Question } from '@eduforge/shared';
 import { paginateDocument, PageLayout } from './PaginationEngine.js';
 import { BlockRenderer } from './BlockRenderer.js';
 import { PaperHeader } from '../paper/PaperHeader.js';
@@ -25,8 +25,11 @@ interface A4CanvasProps {
   onEditQuestion?: (question: QuestionBlock) => void;
   onEditEquation?: (eq: EquationBlock) => void;
   onEditHeader?: () => void;
+  onUpdateMetadata?: (metadata: DocumentModel['metadata']) => void;
   onTextSelectionChange?: (formatting: Partial<FormattingState>) => void;
   onAddBlankParagraph?: () => void;
+  onDropQuestion?: (question: Question, targetBlockId?: string) => void;
+  onDropItemOnSection?: (sectionId: string, item: any) => void;
 }
 
 export const A4Canvas: React.FC<A4CanvasProps> = ({
@@ -49,8 +52,11 @@ export const A4Canvas: React.FC<A4CanvasProps> = ({
   onEditQuestion,
   onEditEquation,
   onEditHeader,
+  onUpdateMetadata,
   onTextSelectionChange,
-  onAddBlankParagraph
+  onAddBlankParagraph,
+  onDropQuestion,
+  onDropItemOnSection
 }) => {
   const pages: PageLayout[] = React.useMemo(() => paginateDocument(doc), [doc]);
   const isTwoColumn = doc.settings.columns === 2;
@@ -63,9 +69,37 @@ export const A4Canvas: React.FC<A4CanvasProps> = ({
   const rightPx = Math.round(margins.right * 3.7795);
   const gapPx = Math.round((doc.settings.columnGap || 8) * 3.7795);
 
+  const handleContainerDrop = (e: React.DragEvent, targetBlockId?: string) => {
+    e.preventDefault();
+    try {
+      const eduforgeData = e.dataTransfer.getData('application/eduforge-item');
+      if (eduforgeData) {
+        const item = JSON.parse(eduforgeData);
+        if (item.category === 'questions' && item.questionData && onDropQuestion) {
+          onDropQuestion(item.questionData, targetBlockId);
+          return;
+        } else if (onDropItemOnSection) {
+          const targetSecId = doc.sections[0]?.id || 'sec-0';
+          onDropItemOnSection(targetSecId, item);
+          return;
+        }
+      }
+
+      const rawData = e.dataTransfer.getData('application/json');
+      if (rawData) {
+        const parsed = JSON.parse(rawData);
+        if (parsed.type === 'question' && parsed.data && onDropQuestion) {
+          onDropQuestion(parsed.data, targetBlockId);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to parse dropped item:', err);
+    }
+  };
+
   return (
     <div className="flex flex-col items-center gap-8 py-8 w-full select-text">
-      {pages.map((page, pIdx) => (
+      {pages.map((page) => (
         <div
           key={page.pageNumber}
           style={{
@@ -81,6 +115,11 @@ export const A4Canvas: React.FC<A4CanvasProps> = ({
             transformOrigin: 'top center',
             marginBottom: zoom !== 100 ? `${1123 * (zoom / 100 - 1)}px` : undefined
           }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+          }}
+          onDrop={(e) => handleContainerDrop(e)}
           onClick={(e) => {
             // If user clicks on the empty page area, create/focus a new paragraph
             if (e.target === e.currentTarget && onAddBlankParagraph) {
@@ -111,6 +150,7 @@ export const A4Canvas: React.FC<A4CanvasProps> = ({
               <PaperHeader
                 metadata={doc.metadata}
                 onEditMetadata={onEditHeader}
+                onUpdateMetadata={onUpdateMetadata}
               />
             )}
 
@@ -120,6 +160,11 @@ export const A4Canvas: React.FC<A4CanvasProps> = ({
               className={`flex-1 ${
                 isTwoColumn ? 'grid grid-cols-2 relative' : 'flex flex-col'
               }`}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'copy';
+              }}
+              onDrop={(e) => handleContainerDrop(e)}
               onClick={(e) => {
                 if (e.target === e.currentTarget && onAddBlankParagraph) {
                   onAddBlankParagraph();
@@ -141,6 +186,11 @@ export const A4Canvas: React.FC<A4CanvasProps> = ({
                 <div
                   key={colIdx}
                   className="flex flex-col gap-1 min-w-0 flex-1"
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'copy';
+                  }}
+                  onDrop={(e) => handleContainerDrop(e)}
                   onClick={(e) => {
                     if (e.target === e.currentTarget && onAddBlankParagraph) {
                       onAddBlankParagraph();
@@ -148,26 +198,38 @@ export const A4Canvas: React.FC<A4CanvasProps> = ({
                   }}
                 >
                   {col.blocks.map((item, bIdx) => (
-                    <BlockRenderer
+                    <div
                       key={item.block.id || bIdx}
-                      block={item.block}
-                      sectionId={item.sectionId}
-                      isSelected={selectedBlockId === item.block.id}
-                      isFormatPainterActive={isFormatPainterActive}
-                      showFormattingMarks={showFormattingMarks}
-                      onSelect={() => onSelectBlock && onSelectBlock(item.block.id)}
-                      onUpdateBlock={updated => onUpdateBlock && onUpdateBlock(item.sectionId, updated)}
-                      onDeleteBlock={() => onDeleteBlock && onDeleteBlock(item.sectionId, item.block.id)}
-                      onDuplicateBlock={() => onDuplicateBlock && onDuplicateBlock(item.sectionId, item.block.id)}
-                      onMoveUp={() => onMoveBlock && onMoveBlock(item.sectionId, item.block.id, 'up')}
-                      onMoveDown={() => onMoveBlock && onMoveBlock(item.sectionId, item.block.id, 'down')}
-                      onInsertNextParagraph={onInsertNextParagraph}
-                      onFocusPreviousBlock={onFocusPreviousBlock}
-                      onApplyFormatPainter={onApplyFormatPainter}
-                      onEditQuestion={q => onEditQuestion && onEditQuestion(q)}
-                      onEditEquation={eq => onEditEquation && onEditEquation(eq)}
-                      onTextSelectionChange={onTextSelectionChange}
-                    />
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        e.dataTransfer.dropEffect = 'copy';
+                      }}
+                      onDrop={(e) => {
+                        e.stopPropagation();
+                        handleContainerDrop(e, item.block.id);
+                      }}
+                    >
+                      <BlockRenderer
+                        block={item.block}
+                        sectionId={item.sectionId}
+                        isSelected={selectedBlockId === item.block.id}
+                        isFormatPainterActive={isFormatPainterActive}
+                        showFormattingMarks={showFormattingMarks}
+                        onSelect={() => onSelectBlock && onSelectBlock(item.block.id)}
+                        onUpdateBlock={updated => onUpdateBlock && onUpdateBlock(item.sectionId, updated)}
+                        onDeleteBlock={() => onDeleteBlock && onDeleteBlock(item.sectionId, item.block.id)}
+                        onDuplicateBlock={() => onDuplicateBlock && onDuplicateBlock(item.sectionId, item.block.id)}
+                        onMoveUp={() => onMoveBlock && onMoveBlock(item.sectionId, item.block.id, 'up')}
+                        onMoveDown={() => onMoveBlock && onMoveBlock(item.sectionId, item.block.id, 'down')}
+                        onInsertNextParagraph={onInsertNextParagraph}
+                        onFocusPreviousBlock={onFocusPreviousBlock}
+                        onApplyFormatPainter={onApplyFormatPainter}
+                        onEditQuestion={q => onEditQuestion && onEditQuestion(q)}
+                        onEditEquation={eq => onEditEquation && onEditEquation(eq)}
+                        onTextSelectionChange={onTextSelectionChange}
+                      />
+                    </div>
                   ))}
                 </div>
               ))}

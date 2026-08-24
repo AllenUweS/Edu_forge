@@ -142,12 +142,22 @@ export const PhysicsLibraryModal: React.FC<PhysicsLibraryModalProps> = ({
                         {sym.commonFormulas.map((f, i) => (
                           <span
                             key={i}
+                            draggable={true}
+                            onDragStart={(e) => {
+                              e.dataTransfer.setData('application/eduforge-item', JSON.stringify({
+                                category: 'physics',
+                                type: 'formula',
+                                latex: f,
+                                name: sym.name,
+                                unit: sym.standardUnit
+                              }));
+                            }}
                             onClick={() => {
                               onInsertSymbol(sym.symbol, sym.latex, f);
                               onClose();
                             }}
-                            className="text-xs cursor-pointer hover:bg-blue-100 text-slate-700 px-1.5 py-0.5 rounded transition-colors"
-                            title="Click to insert formula"
+                            className="text-xs cursor-grab active:cursor-grabbing hover:bg-blue-100 text-slate-700 px-1.5 py-0.5 rounded transition-colors border border-transparent hover:border-blue-300"
+                            title="Drag onto paper or click to insert"
                           >
                             <KaTeXRenderer math={f} />
                           </span>
@@ -160,13 +170,23 @@ export const PhysicsLibraryModal: React.FC<PhysicsLibraryModalProps> = ({
                     <span className="text-[10px] text-slate-400 font-mono">LaTeX: \{sym.latex}</span>
                     <button
                       type="button"
+                      draggable={true}
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData('application/eduforge-item', JSON.stringify({
+                          category: 'physics',
+                          type: 'formula',
+                          latex: sym.commonFormulas?.[0] || sym.symbol,
+                          name: sym.name,
+                          unit: sym.standardUnit
+                        }));
+                      }}
                       onClick={() => {
                         onInsertSymbol(sym.symbol, sym.latex);
                         onClose();
                       }}
-                      className="px-3 py-1 text-xs font-bold text-blue-700 bg-blue-100 hover:bg-blue-200 rounded-md transition-colors flex items-center gap-1 active:scale-95"
+                      className="px-3 py-1 text-xs font-bold text-blue-700 bg-blue-100 hover:bg-blue-200 rounded-md transition-colors flex items-center gap-1 active:scale-95 cursor-grab"
                     >
-                      <Sparkles className="w-3 h-3" /> Insert Symbol
+                      <Sparkles className="w-3 h-3" /> Insert / Drag
                     </button>
                   </div>
                 </div>

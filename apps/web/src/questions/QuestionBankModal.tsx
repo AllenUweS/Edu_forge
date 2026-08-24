@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../services/api.js';
 import { Question } from '@eduforge/shared';
 import { OptionLayoutRenderer } from './OptionLayoutRenderer.js';
-import { KaTeXRenderer } from '../equation/KaTeXRenderer.js';
-import { Database, Search, X, Plus, Filter, Tag, Check, BookOpen } from 'lucide-react';
+import { MathTextRenderer } from '../equation/MathTextRenderer.js';
+import { Database, Search, X, Plus, Tag, Check, BookOpen, Move } from 'lucide-react';
 
 interface QuestionBankModalProps {
   isOpen: boolean;
@@ -63,18 +63,23 @@ export const QuestionBankModal: React.FC<QuestionBankModalProps> = ({
         
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50">
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-indigo-100 text-indigo-700 rounded-lg">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-indigo-100 text-indigo-700 rounded-lg shadow-2xs">
               <Database className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-800">Question Bank & Repository</h3>
-              <p className="text-xs text-slate-500">Filter, search, and insert verified objective questions into your paper</p>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-bold text-slate-900">Question Bank & Repository</h3>
+                <span className="text-[10px] font-bold px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full flex items-center gap-1">
+                  <Move className="w-3 h-3" /> Drag & Drop Enabled
+                </span>
+              </div>
+              <p className="text-xs text-slate-500">Filter, search, click to insert, or drag any question directly onto your A4 paper canvas</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded-lg transition-colors"
+            className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -90,7 +95,7 @@ export const QuestionBankModal: React.FC<QuestionBankModalProps> = ({
               value={search}
               onChange={e => setSearch(e.target.value)}
               onKeyDown={handleSearchKeyDown}
-              className="w-full pl-9 pr-4 py-2 text-sm border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+              className="w-full pl-9 pr-4 py-2 text-sm border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-indigo-500 bg-white text-slate-900"
             />
           </div>
 
@@ -98,7 +103,7 @@ export const QuestionBankModal: React.FC<QuestionBankModalProps> = ({
             <select
               value={subjectFilter}
               onChange={e => setSubjectFilter(e.target.value)}
-              className="w-full py-2 px-3 text-sm border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+              className="w-full py-2 px-3 text-sm border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-indigo-500 bg-slate-50 text-slate-900"
             >
               <option value="all">All Subjects</option>
               <option value="Physics">Physics</option>
@@ -111,7 +116,7 @@ export const QuestionBankModal: React.FC<QuestionBankModalProps> = ({
             <select
               value={difficultyFilter}
               onChange={e => setDifficultyFilter(e.target.value)}
-              className="w-full py-2 px-3 text-sm border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+              className="w-full py-2 px-3 text-sm border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-indigo-500 bg-slate-50 text-slate-900"
             >
               <option value="all">All Difficulties</option>
               <option value="Easy">Easy</option>
@@ -136,7 +141,12 @@ export const QuestionBankModal: React.FC<QuestionBankModalProps> = ({
               return (
                 <div
                   key={q.id}
-                  className="p-4 bg-slate-50 border border-slate-200 hover:border-indigo-300 rounded-xl transition-all shadow-xs"
+                  draggable={true}
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData('application/json', JSON.stringify({ type: 'question', data: q }));
+                    e.dataTransfer.effectAllowed = 'copy';
+                  }}
+                  className="p-4 bg-slate-50 border border-slate-200 hover:border-indigo-400 rounded-xl transition-all shadow-xs cursor-grab active:cursor-grabbing hover:bg-white"
                 >
                   <div className="flex items-start justify-between gap-4 mb-2">
                     <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -158,12 +168,15 @@ export const QuestionBankModal: React.FC<QuestionBankModalProps> = ({
                       <span className="text-slate-500 font-mono">
                         +{q.marks} / -{q.negativeMarks || 0}
                       </span>
+                      <span className="text-[10px] text-slate-400 italic">
+                        (Drag to canvas)
+                      </span>
                     </div>
 
                     <button
                       type="button"
                       onClick={() => handleInsert(q)}
-                      className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 active:scale-95 ${
+                      className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 active:scale-95 cursor-pointer ${
                         isInserted
                           ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                           : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs'
@@ -182,7 +195,7 @@ export const QuestionBankModal: React.FC<QuestionBankModalProps> = ({
                   </div>
 
                   <div className="text-sm font-medium text-slate-900 mb-2">
-                    {q.rawText}
+                    <MathTextRenderer text={q.rawText} />
                   </div>
 
                   <OptionLayoutRenderer
@@ -205,10 +218,10 @@ export const QuestionBankModal: React.FC<QuestionBankModalProps> = ({
 
         {/* Footer */}
         <div className="flex items-center justify-between px-6 py-3 border-t border-slate-200 bg-slate-50 text-xs text-slate-500">
-          <span>{questions.length} questions available in bank</span>
+          <span>{questions.length} questions available in bank (Click &apos;Insert&apos; or drag cards into paper)</span>
           <button
             onClick={onClose}
-            className="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium rounded-md transition-colors"
+            className="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium rounded-md transition-colors cursor-pointer"
           >
             Done
           </button>

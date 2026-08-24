@@ -118,11 +118,22 @@ export const UnitsLibraryModal: React.FC<UnitsLibraryModalProps> = ({
               {filteredUnits.map(unit => (
                 <div
                   key={unit.id}
+                  draggable={true}
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData('application/eduforge-item', JSON.stringify({
+                      category: 'units',
+                      type: 'unit',
+                      symbol: unit.symbol,
+                      name: unit.name,
+                      latex: `\\text{ ${unit.symbol}}`
+                    }));
+                  }}
                   onClick={() => {
                     onInsertUnit(unit.symbol, unit.name);
                     onClose();
                   }}
-                  className="p-3 bg-slate-50 hover:bg-amber-50 border border-slate-200 hover:border-amber-400 rounded-lg transition-all cursor-pointer group flex flex-col justify-between"
+                  className="p-3 bg-slate-50 hover:bg-amber-50 border border-slate-200 hover:border-amber-400 rounded-lg transition-all cursor-grab active:cursor-grabbing group flex flex-col justify-between"
+                  title="Drag onto paper or click to insert"
                 >
                   <div className="flex items-start justify-between">
                     <div>
@@ -136,7 +147,7 @@ export const UnitsLibraryModal: React.FC<UnitsLibraryModalProps> = ({
                     </span>
                   </div>
 
-                  <div className="mt-2 pt-2 border-t border-slate-200/60 text-[11px] text-slate-500 font-mono">
+                  <div className="mt-2 pt-2 border-t border-slate-200/60 text-[11px] text-slate-500 font-mono flex items-center justify-between">
                     {unit.siEquivalent ? (
                       <span title="SI Equivalent">SI: {unit.siEquivalent}</span>
                     ) : unit.dimension ? (
@@ -144,6 +155,7 @@ export const UnitsLibraryModal: React.FC<UnitsLibraryModalProps> = ({
                     ) : (
                       <span>Metric Prefix</span>
                     )}
+                    <span className="text-[9px] text-amber-700 font-bold">Drag / Click</span>
                   </div>
                 </div>
               ))}

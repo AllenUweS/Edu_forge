@@ -98,7 +98,20 @@ export const ConstantsLibraryModal: React.FC<ConstantsLibraryModalProps> = ({
               {filtered.map(c => (
                 <div
                   key={c.id}
-                  className="p-3.5 bg-slate-50 hover:bg-purple-50/50 border border-slate-200 hover:border-purple-300 rounded-lg transition-all flex flex-col justify-between group shadow-xs"
+                  draggable={true}
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData('application/eduforge-item', JSON.stringify({
+                      category: 'constants',
+                      type: 'constant',
+                      latex: `${c.symbol} = ${c.value} \\text{ ${c.unit}}`,
+                      name: c.name,
+                      symbol: c.symbol,
+                      value: c.value,
+                      unit: c.unit
+                    }));
+                  }}
+                  className="p-3.5 bg-slate-50 hover:bg-purple-50/50 border border-slate-200 hover:border-purple-300 rounded-lg transition-all flex flex-col justify-between group shadow-xs cursor-grab active:cursor-grabbing"
+                  title="Drag onto paper or click Insert"
                 >
                   <div>
                     <div className="flex items-start justify-between gap-2 mb-1.5">
@@ -137,9 +150,9 @@ export const ConstantsLibraryModal: React.FC<ConstantsLibraryModalProps> = ({
                         onInsertConstant(c.symbol, c.latex, c.value, c.unit);
                         onClose();
                       }}
-                      className="px-3 py-1 text-xs font-bold text-purple-700 bg-purple-100 hover:bg-purple-200 rounded-md transition-colors flex items-center gap-1 active:scale-95"
+                      className="px-3 py-1 text-xs font-bold text-purple-700 bg-purple-100 hover:bg-purple-200 rounded-md transition-colors flex items-center gap-1 active:scale-95 cursor-pointer"
                     >
-                      <Sparkles className="w-3 h-3" /> Insert
+                      <Sparkles className="w-3 h-3" /> Insert / Drag
                     </button>
                   </div>
                 </div>

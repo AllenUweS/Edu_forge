@@ -7,8 +7,6 @@ export interface TextFormatting {
   bold?: boolean;
   italic?: boolean;
   underline?: boolean;
-  underlineStyle?: 'single' | 'double' | 'dotted' | 'dashed' | 'wavy';
-  underlineColor?: string;
   strikethrough?: boolean;
   superscript?: boolean;
   subscript?: boolean;
@@ -17,7 +15,9 @@ export interface TextFormatting {
   fontFamily?: string;
   fontSize?: number; // in pt or px
   letterSpacing?: number;
-  textEffect?: 'none' | 'glow' | 'shadow' | 'outline' | 'reflection';
+  textEffect?: 'none' | 'shadow' | 'glow' | 'outline' | 'reflection';
+  underlineStyle?: 'single' | 'double' | 'dotted' | 'dashed' | 'wavy';
+  underlineColor?: string;
   characterBorder?: boolean;
 }
 
@@ -49,13 +49,13 @@ export interface ParagraphBlock extends BaseBlock {
   type: 'paragraph';
   runs: TextRun[];
   alignment?: Alignment;
-  lineSpacing?: number; // e.g. 1.0, 1.15, 1.5, 2.0
+  lineSpacing?: number; // e.g. 1.15, 1.5
   indent?: number; // e.g. in mm or px
   listType?: 'none' | 'bullet' | 'number' | 'alpha' | 'roman' | 'multilevel';
   listLevel?: number;
-  listBulletStyle?: string; // e.g. '•', '○', '■', '➢', '1.', 'a)'
+  listBulletStyle?: string;
+  border?: 'none' | 'box' | 'all' | 'left' | 'bottom' | 'top';
   backgroundColor?: string;
-  border?: 'none' | 'box' | 'bottom' | 'top' | 'left' | 'all';
   styleName?: string;
 }
 
@@ -64,15 +64,13 @@ export interface HeadingBlock extends BaseBlock {
   level: 1 | 2 | 3 | 4 | 5 | 6;
   runs: TextRun[];
   alignment?: Alignment;
-  lineSpacing?: number;
+  border?: 'none' | 'box' | 'all' | 'left' | 'bottom' | 'top';
   backgroundColor?: string;
-  border?: 'none' | 'box' | 'bottom' | 'top' | 'left' | 'all';
-  styleName?: string;
 }
 
 export interface EquationBlock extends BaseBlock {
   type: 'equation';
-  ast: MathAST;
+  ast?: MathAST;
   rawLatex: string;
   alignment?: Alignment;
   displayMode?: 'block' | 'inline';

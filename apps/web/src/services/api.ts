@@ -461,11 +461,23 @@ export const api = {
 
   async getUnits(): Promise<Unit[]> {
     try {
-      const data = await fetchJson<Unit[]>(`${API_BASE}/units`);
-      cache.units = data;
-      return data;
+      const data = await fetchJson<any>(`${API_BASE}/units`);
+      const unitsArray = Array.isArray(data) ? data : (data?.units || []);
+      cache.units = unitsArray;
+      return unitsArray;
     } catch {
-      return defaultUnits as unknown as Unit[];
+      const fallback = Array.isArray(defaultUnits) ? defaultUnits : ((defaultUnits as any)?.units || []);
+      return fallback as unknown as Unit[];
+    }
+  },
+
+  async getPrefixes(): Promise<any[]> {
+    try {
+      const data = await fetchJson<any>(`${API_BASE}/units/prefixes`);
+      if (Array.isArray(data)) return data;
+      return (defaultUnits as any)?.prefixes || [];
+    } catch {
+      return (defaultUnits as any)?.prefixes || [];
     }
   },
 
@@ -473,7 +485,7 @@ export const api = {
     try {
       const data = await fetchJson<ScientificConstant[]>(`${API_BASE}/constants`);
       cache.constants = data;
-      return data;
+      return Array.isArray(data) ? data : [];
     } catch {
       return defaultConstants as unknown as ScientificConstant[];
     }
@@ -486,7 +498,6 @@ export const api = {
       cache.settings = data;
       return data;
     } catch {
-      const localTheme = (localStorage.getItem('eduforge_theme') || 'dark') as any;
       return {
         defaultFont: 'Calibri, sans-serif',
         defaultFontSize: 10.5,
@@ -496,7 +507,7 @@ export const api = {
         defaultOptionStyle: 'grid_2x2',
         defaultEquationSize: 12,
         autosaveIntervalMs: 2000,
-        theme: localTheme,
+        theme: 'white',
         exportSettings: {
           pdfDpi: 300,
           embedFonts: true,
