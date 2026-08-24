@@ -91,6 +91,8 @@ export const ScienceDrawer: React.FC<ScienceDrawerProps> = ({
 
   const handleDragStart = (e: React.DragEvent, payload: any) => {
     e.dataTransfer.setData('application/eduforge-item', JSON.stringify(payload));
+    const textPayload = payload.latex || payload.symbol || payload.value || payload.formula || (payload.questionData ? payload.questionData.rawText : '') || '';
+    e.dataTransfer.setData('text/plain', textPayload);
     e.dataTransfer.effectAllowed = 'copyMove';
   };
 

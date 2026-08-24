@@ -1,12 +1,13 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, memo } from 'react';
 import {
   DocumentBlock, QuestionBlock, TableBlock, ShapeBlock, WordArtBlock,
-  EquationBlock, ParagraphBlock, HeadingBlock, SectionHeaderBlock, TextRun
+  EquationBlock, ParagraphBlock, HeadingBlock, SectionHeaderBlock, TextRun,
+  QuestionOption
 } from '@eduforge/shared';
 import { KaTeXRenderer } from '../equation/KaTeXRenderer.js';
 import { MathTextRenderer } from '../equation/MathTextRenderer.js';
 import { OptionLayoutRenderer } from '../questions/OptionLayoutRenderer.js';
-import { Trash2, Copy, ArrowUp, ArrowDown, Edit3, Type, Wand2 } from 'lucide-react';
+import { Trash2, Copy, ArrowUp, ArrowDown, Edit3, Type, Wand2, Plus, Sigma, Sparkles } from 'lucide-react';
 import { FormattingState } from './EditorRibbon.js';
 
 interface BlockRendererProps {
@@ -48,9 +49,6 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
   onEditEquation,
   onTextSelectionChange
 }) => {
-  const editableRef = useRef<HTMLDivElement>(null);
-  const [isEditing, setIsEditing] = useState(false);
-
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isFormatPainterActive && onApplyFormatPainter) {
@@ -105,10 +103,11 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
               e.stopPropagation();
               onEditQuestion && onEditQuestion(block as QuestionBlock);
             }}
-            className="p-1 hover:text-sky-400 transition-colors"
-            title="Edit MCQ Question"
+            className="p-1 hover:text-sky-400 transition-colors flex items-center gap-1 text-[10px]"
+            title="Edit Full Question in Builder / MathType"
           >
             <Edit3 className="w-3 h-3" />
+            <span className="font-bold">Edit Builder</span>
           </button>
         )}
         {block.type === 'equation' && (
@@ -187,16 +186,76 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
   );
 };
 
+/* =========================================================================
+   QUESTION BLOCK ITEM (WITH LIVE EDITING OF QUESTIONS & OPTIONS & DROP SUPPORT)
+   ========================================================================= */
 const QuestionBlockItem: React.FC<{
   qb: QuestionBlock;
   onUpdateBlock?: (updated: DocumentBlock) => void;
-}> = ({ qb, onUpdateBlock }) => {
-  const [isEditing, setIsEditing] = useState(false);
+  onEditQuestion?: (q: QuestionBlock) => void;
+}> = ({ qb, onUpdateBlock, onEditQuestion }) => {
+  const [isEditingStatement, setIsEditingStatement] = useState(false);
   const q = qb.question;
+  const [statementText, setStatementText] = useState(q.rawText || '');
+
+  useEffect(() => {
+    setStatementText(q.rawText || '');
+  }, [q.rawText]);
+
+  // Drop handler: drop formulas/symbols from Science Drawer directly onto the question
+  const handleDropOnQuestion = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      const eduData = e.dataTransfer.getData('application/eduforge-item');
+      let inserted = '';
+      if (eduData) {
+        const item = JSON.parse(eduData);
+        inserted = item.latex || item.symbol || item.value || item.formula || '';
+      } else {
+        inserted = e.dataTransfer.getData('text/plain') || '';
+      }
+
+      if (inserted && onUpdateBlock) {
+        const current = q.rawText || '';
+        const updated = current ? `${current} ${inserted}` : inserted;
+        setStatementText(updated);
+        onUpdateBlock({
+          ...qb,
+          question: { ...q, rawText: updated }
+        });
+      }
+    } catch (err) {
+      console.error('Error dropping on question:', err);
+    }
+  };
+
+  const handleAddOption = () => {
+    if (!onUpdateBlock) return;
+    const currentOpts = q.options || [];
+    const nextKey = String.fromCharCode(97 + currentOpts.length);
+    const newOpt: QuestionOption = {
+      id: `opt-${Date.now()}-${currentOpts.length}`,
+      key: nextKey,
+      rawText: 'New option formula or text',
+      isCorrect: false,
+      content: []
+    };
+    onUpdateBlock({
+      ...qb,
+      question: { ...q, options: [...currentOpts, newOpt] }
+    });
+  };
 
   return (
-    <div className="my-2 text-[10.5pt] leading-snug select-text border border-transparent hover:border-sky-300 hover:bg-sky-50/20 p-1.5 rounded text-black transition-all">
+    <div
+      onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }}
+      onDrop={handleDropOnQuestion}
+      className="my-2 text-[10.5pt] leading-snug select-text border border-transparent hover:border-sky-300 hover:bg-sky-50/20 p-2 rounded-lg text-black transition-all group/qcard"
+    >
+      {/* Question Header & Statement */}
       <div className="flex items-start gap-1.5">
+        {/* Question Number */}
         <span
           contentEditable
           suppressContentEditableWarning
@@ -212,39 +271,42 @@ const QuestionBlockItem: React.FC<{
           {q.questionNumber ? `${q.questionNumber}.` : 'Q.'}
         </span>
 
-        {isEditing ? (
+        {/* Question Statement (Editable & Equation-rendered) */}
+        {isEditingStatement ? (
           <input
             type="text"
             autoFocus
-            defaultValue={q.rawText || ''}
-            onBlur={e => {
-              setIsEditing(false);
+            value={statementText}
+            onChange={e => setStatementText(e.target.value)}
+            onBlur={() => {
+              setIsEditingStatement(false);
               onUpdateBlock && onUpdateBlock({
                 ...qb,
-                question: { ...q, rawText: e.target.value }
+                question: { ...q, rawText: statementText }
               });
             }}
             onKeyDown={e => {
               if (e.key === 'Enter') {
-                setIsEditing(false);
+                setIsEditingStatement(false);
                 onUpdateBlock && onUpdateBlock({
                   ...qb,
-                  question: { ...q, rawText: e.currentTarget.value }
+                  question: { ...q, rawText: statementText }
                 });
               }
             }}
-            className="flex-1 font-semibold text-black px-1.5 py-0.5 border border-sky-400 rounded bg-white outline-hidden text-sm"
+            className="flex-1 font-semibold text-black px-1.5 py-0.5 border border-sky-400 rounded bg-white outline-hidden text-sm shadow-2xs"
           />
         ) : (
           <div
-            onClick={() => setIsEditing(true)}
-            className="flex-1 font-semibold text-black outline-hidden hover:bg-sky-50/40 rounded px-1 cursor-pointer"
-            title="Click to edit question statement / formula"
+            onClick={() => setIsEditingStatement(true)}
+            className="flex-1 font-semibold text-black outline-hidden hover:bg-sky-50/60 rounded px-1 cursor-pointer transition-all min-h-[22px]"
+            title="Click to edit question text / Drop science formulas here"
           >
             <MathTextRenderer text={q.rawText || ''} />
           </div>
         )}
 
+        {/* Marks Badge (Editable) */}
         <span
           contentEditable
           suppressContentEditableWarning
@@ -261,9 +323,19 @@ const QuestionBlockItem: React.FC<{
         >
           [{q.marks}{q.negativeMarks ? `, -${q.negativeMarks}` : ''}M]
         </span>
+
+        {/* Quick Builder Button on Hover */}
+        <button
+          type="button"
+          onClick={() => onEditQuestion && onEditQuestion(qb)}
+          className="opacity-0 group-hover/qcard:opacity-100 p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-all cursor-pointer no-print ml-1"
+          title="Open MathType & Diagram Studio for this question"
+        >
+          <Edit3 className="w-3.5 h-3.5" />
+        </button>
       </div>
 
-      {/* Render Diagram if present */}
+      {/* Render Attached Diagram if present */}
       {q.diagramSvg && (
         <div className="my-2 p-2 bg-slate-50 rounded-lg flex items-center justify-center border border-slate-200 overflow-hidden relative group/diag">
           <div dangerouslySetInnerHTML={{ __html: q.diagramSvg }} />
@@ -276,7 +348,7 @@ const QuestionBlockItem: React.FC<{
                 question: { ...q, diagramSvg: undefined }
               });
             }}
-            className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded text-[10px] opacity-0 group-hover/diag:opacity-100 transition-opacity"
+            className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded text-[10px] opacity-0 group-hover/diag:opacity-100 transition-opacity cursor-pointer"
             title="Remove Diagram"
           >
             ✕ Remove
@@ -290,19 +362,317 @@ const QuestionBlockItem: React.FC<{
         </div>
       )}
 
-      <OptionLayoutRenderer
-        options={q.options}
-        layoutType={q.optionLayout || 'grid_2x2'}
-        showAnswers={false}
-        isEditable={true}
-        onUpdateOptionText={(optId, newText) => {
-          const updatedOptions = q.options.map(o => (o.id === optId ? { ...o, rawText: newText } : o));
-          onUpdateBlock && onUpdateBlock({
-            ...qb,
-            question: { ...q, options: updatedOptions }
+      {/* Multiple Choice Options with direct editing & drop support */}
+      <div className="mt-1">
+        <OptionLayoutRenderer
+          options={q.options}
+          layoutType={q.optionLayout || 'grid_2x2'}
+          showAnswers={false}
+          isEditable={true}
+          onUpdateOptionText={(optId, newText) => {
+            const updatedOptions = q.options.map(o => (o.id === optId ? { ...o, rawText: newText } : o));
+            onUpdateBlock && onUpdateBlock({
+              ...qb,
+              question: { ...q, options: updatedOptions }
+            });
+          }}
+        />
+
+        {/* Quick Add Option Action */}
+        {q.options && q.options.length < 6 && (
+          <div className="opacity-0 group-hover/qcard:opacity-100 transition-opacity pl-4 pt-1 no-print">
+            <button
+              type="button"
+              onClick={handleAddOption}
+              className="text-[10px] font-bold text-sky-700 hover:text-sky-900 bg-sky-50 hover:bg-sky-100 px-2 py-0.5 rounded border border-sky-200 flex items-center gap-1 cursor-pointer"
+            >
+              <Plus className="w-3 h-3" /> Add Option ({String.fromCharCode(97 + (q.options?.length || 0))})
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+/* =========================================================================
+   CARET-PRESERVING PARAGRAPH COMPONENT (NO BACKWARD TYPING BUG)
+   ========================================================================= */
+const EditableParagraph: React.FC<{
+  block: ParagraphBlock;
+  showFormattingMarks: boolean;
+  onUpdateBlock?: (updated: DocumentBlock) => void;
+  onInsertNextParagraph?: (currentBlockId: string) => void;
+  onFocusPreviousBlock?: (currentBlockId: string) => void;
+  onTextSelectionChange?: (formatting: Partial<FormattingState>) => void;
+  getBorderStyle?: (borderType?: string, customBg?: string) => React.CSSProperties;
+}> = ({
+  block: p,
+  showFormattingMarks,
+  onUpdateBlock,
+  onInsertNextParagraph,
+  onFocusPreviousBlock,
+  onTextSelectionChange,
+  getBorderStyle
+}) => {
+  const elRef = useRef<HTMLDivElement>(null);
+  const isFocusedRef = useRef(false);
+  const primaryRun = p.runs?.[0];
+  const f = primaryRun?.formatting || {};
+  const fullText = p.runs?.map(r => r.text).join('') || '';
+
+  // Synchronize initial text to DOM node without React reconciling children on every keystroke
+  useEffect(() => {
+    if (elRef.current && !isFocusedRef.current) {
+      if (elRef.current.textContent !== fullText) {
+        elRef.current.textContent = fullText;
+      }
+    }
+  }, [fullText, p.id]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      onInsertNextParagraph && onInsertNextParagraph(p.id);
+    } else if (e.key === 'Backspace') {
+      const content = elRef.current?.textContent || '';
+      if (content.length === 0 || content === '\n') {
+        e.preventDefault();
+        onFocusPreviousBlock && onFocusPreviousBlock(p.id);
+      }
+    } else if (e.key === 'Tab') {
+      e.preventDefault();
+      const currentIndent = p.indent || 0;
+      const newIndent = e.shiftKey ? Math.max(0, currentIndent - 15) : currentIndent + 15;
+      onUpdateBlock && onUpdateBlock({ ...p, indent: newIndent });
+    }
+  };
+
+  const handleInput = () => {
+    if (!elRef.current) return;
+    const text = elRef.current.textContent || '';
+    onUpdateBlock && onUpdateBlock({
+      ...p,
+      runs: [{ id: `run-${Date.now()}`, text, formatting: f }]
+    });
+  };
+
+  const handleBlur = () => {
+    isFocusedRef.current = false;
+    if (!elRef.current) return;
+    const text = elRef.current.textContent || '';
+    onUpdateBlock && onUpdateBlock({
+      ...p,
+      runs: [{ id: `run-${Date.now()}`, text, formatting: f }]
+    });
+  };
+
+  // Drop handler: drop formulas/symbols from Science Drawer directly into paragraph
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      const eduData = e.dataTransfer.getData('application/eduforge-item');
+      let inserted = '';
+      if (eduData) {
+        const item = JSON.parse(eduData);
+        inserted = item.latex || item.symbol || item.value || item.formula || '';
+      } else {
+        inserted = e.dataTransfer.getData('text/plain') || '';
+      }
+
+      if (inserted && elRef.current && onUpdateBlock) {
+        const current = elRef.current.textContent || '';
+        const updated = current ? `${current} ${inserted}` : inserted;
+        elRef.current.textContent = updated;
+        onUpdateBlock({
+          ...p,
+          runs: [{ id: `run-${Date.now()}`, text: updated, formatting: f }]
+        });
+      }
+    } catch (err) {
+      console.error('Error dropping on paragraph:', err);
+    }
+  };
+
+  // WordArt / Text shadow styling
+  let textShadow: string | undefined = undefined;
+  if (f.textEffect === 'shadow') textShadow = '2px 2px 4px rgba(0,0,0,0.4)';
+  else if (f.textEffect === 'glow') textShadow = '0 0 8px rgba(56,189,248,0.8)';
+  else if (f.textEffect === 'outline') textShadow = '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000';
+  else if (f.textEffect === 'reflection') textShadow = '0 8px 6px rgba(0,0,0,0.3)';
+
+  // Underline / Strikethrough
+  let textDecoration = 'none';
+  if (f.underline && f.strikethrough) textDecoration = 'underline line-through';
+  else if (f.underline) textDecoration = 'underline';
+  else if (f.strikethrough) textDecoration = 'line-through';
+
+  // List numbering or bullet rendering
+  const bulletPrefix = p.listType === 'bullet'
+    ? (p.listBulletStyle || '•')
+    : p.listType === 'number'
+    ? (p.listBulletStyle || '1.')
+    : p.listType === 'alpha'
+    ? (p.listBulletStyle || 'a.')
+    : p.listType === 'roman'
+    ? (p.listBulletStyle || 'i.')
+    : null;
+
+  const containerStyle: React.CSSProperties = {
+    textAlign: p.alignment || 'left',
+    lineHeight: p.lineSpacing || 1.25,
+    paddingLeft: p.indent ? `${p.indent}px` : undefined,
+    ...(getBorderStyle ? getBorderStyle(p.border, p.backgroundColor) : {})
+  };
+
+  return (
+    <div
+      style={containerStyle}
+      onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }}
+      onDrop={handleDrop}
+      className="my-1 text-black group/para relative flex items-baseline"
+    >
+      {/* List bullet or numbering prefix */}
+      {bulletPrefix && (
+        <span
+          className="mr-2 font-black select-none text-black shrink-0"
+          style={{
+            fontFamily: f.fontFamily || undefined,
+            fontSize: f.fontSize ? `${f.fontSize}pt` : '10.5pt'
+          }}
+        >
+          {bulletPrefix}
+        </span>
+      )}
+
+      {/* Editable Text Area (Caret moves naturally left-to-right) */}
+      <div
+        ref={elRef}
+        contentEditable
+        suppressContentEditableWarning
+        data-block-id={p.id}
+        onFocus={() => {
+          isFocusedRef.current = true;
+        }}
+        onBlur={handleBlur}
+        onKeyDown={handleKeyDown}
+        onInput={handleInput}
+        onSelect={() => {
+          onTextSelectionChange && onTextSelectionChange({
+            ...f,
+            alignment: p.alignment,
+            lineSpacing: p.lineSpacing,
+            listType: p.listType,
+            indent: p.indent,
+            styleName: p.styleName
           });
         }}
+        style={{
+          fontWeight: f.bold ? 'bold' : 'normal',
+          fontStyle: f.italic ? 'italic' : 'normal',
+          textDecoration,
+          textDecorationStyle: f.underlineStyle === 'single' || !f.underlineStyle ? 'solid' : f.underlineStyle,
+          textDecorationColor: f.underlineColor || undefined,
+          verticalAlign: f.superscript ? 'super' : f.subscript ? 'sub' : 'baseline',
+          fontSize: f.superscript || f.subscript ? '0.75em' : f.fontSize ? `${f.fontSize}pt` : '10.5pt',
+          color: f.color || '#000000',
+          backgroundColor: f.backgroundColor && f.backgroundColor !== 'transparent' ? f.backgroundColor : undefined,
+          fontFamily: f.fontFamily || undefined,
+          border: f.characterBorder ? '1px solid #94a3b8' : undefined,
+          padding: f.characterBorder ? '1px 3px' : undefined,
+          textShadow,
+          minWidth: '10px'
+        }}
+        className="flex-1 outline-hidden cursor-text select-text empty:before:content-['Type_text_here_or_drop_from_science_library...'] empty:before:text-slate-400 empty:before:italic"
       />
+
+      {/* Formatting Mark: Pilcrow ¶ */}
+      {showFormattingMarks && (
+        <span className="text-slate-400 select-none ml-0.5 text-xs font-mono">
+          ¶
+        </span>
+      )}
+    </div>
+  );
+};
+
+/* =========================================================================
+   CARET-PRESERVING HEADING COMPONENT
+   ========================================================================= */
+const EditableHeading: React.FC<{
+  block: HeadingBlock;
+  showFormattingMarks: boolean;
+  onUpdateBlock?: (updated: DocumentBlock) => void;
+  onInsertNextParagraph?: (currentBlockId: string) => void;
+  getBorderStyle?: (borderType?: string, customBg?: string) => React.CSSProperties;
+}> = ({ block: h, showFormattingMarks, onUpdateBlock, onInsertNextParagraph, getBorderStyle }) => {
+  const elRef = useRef<HTMLDivElement>(null);
+  const isFocusedRef = useRef(false);
+  const fullText = h.runs?.map(r => r.text).join('') || '';
+  const f = h.runs?.[0]?.formatting || {};
+  const sizeClass = h.level === 1 ? 'text-lg font-black' : h.level === 2 ? 'text-base font-bold' : 'text-sm font-bold';
+
+  useEffect(() => {
+    if (elRef.current && !isFocusedRef.current) {
+      if (elRef.current.textContent !== fullText) {
+        elRef.current.textContent = fullText;
+      }
+    }
+  }, [fullText, h.id]);
+
+  const handleBlur = () => {
+    isFocusedRef.current = false;
+    if (!elRef.current) return;
+    const text = elRef.current.textContent || '';
+    onUpdateBlock && onUpdateBlock({
+      ...h,
+      runs: [{ id: `run-${Date.now()}`, text, formatting: f }]
+    });
+  };
+
+  return (
+    <div
+      style={{
+        textAlign: h.alignment || 'left',
+        ...(getBorderStyle ? getBorderStyle(h.border, h.backgroundColor) : {})
+      }}
+      className="my-2 text-black flex items-baseline"
+    >
+      <div
+        ref={elRef}
+        contentEditable
+        suppressContentEditableWarning
+        data-block-id={h.id}
+        onFocus={() => { isFocusedRef.current = true; }}
+        onBlur={handleBlur}
+        onKeyDown={e => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            onInsertNextParagraph && onInsertNextParagraph(h.id);
+          }
+        }}
+        onInput={() => {
+          if (!elRef.current) return;
+          const text = elRef.current.textContent || '';
+          onUpdateBlock && onUpdateBlock({
+            ...h,
+            runs: [{ id: `run-${Date.now()}`, text, formatting: f }]
+          });
+        }}
+        style={{
+          fontFamily: f.fontFamily || undefined,
+          fontSize: f.fontSize ? `${f.fontSize}pt` : undefined,
+          color: f.color || '#000000'
+        }}
+        className={`${sizeClass} flex-1 outline-hidden cursor-text select-text empty:before:content-['Heading_text...'] empty:before:text-slate-400`}
+      />
+
+      {showFormattingMarks && (
+        <span className="text-slate-400 select-none ml-1 text-xs font-mono">
+          ¶
+        </span>
+      )}
     </div>
   );
 };
@@ -321,7 +691,37 @@ function renderBlockContent(
 ) {
   switch (block.type) {
     case 'question':
-      return <QuestionBlockItem qb={block as QuestionBlock} onUpdateBlock={onUpdateBlock} />;
+      return (
+        <QuestionBlockItem
+          qb={block as QuestionBlock}
+          onUpdateBlock={onUpdateBlock}
+          onEditQuestion={onEditQuestion}
+        />
+      );
+
+    case 'paragraph':
+      return (
+        <EditableParagraph
+          block={block as ParagraphBlock}
+          showFormattingMarks={showFormattingMarks}
+          onUpdateBlock={onUpdateBlock}
+          onInsertNextParagraph={onInsertNextParagraph}
+          onFocusPreviousBlock={onFocusPreviousBlock}
+          onTextSelectionChange={onTextSelectionChange}
+          getBorderStyle={getBorderStyle}
+        />
+      );
+
+    case 'heading':
+      return (
+        <EditableHeading
+          block={block as HeadingBlock}
+          showFormattingMarks={showFormattingMarks}
+          onUpdateBlock={onUpdateBlock}
+          onInsertNextParagraph={onInsertNextParagraph}
+          getBorderStyle={getBorderStyle}
+        />
+      );
 
     case 'section_header': {
       const sh = block as SectionHeaderBlock;
@@ -346,193 +746,16 @@ function renderBlockContent(
               contentEditable
               suppressContentEditableWarning
               onBlur={e => {
-                const newInst = e.currentTarget.textContent || '';
-                onUpdateBlock && onUpdateBlock({ ...sh, instructions: newInst });
+                const text = e.currentTarget.textContent || '';
+                onUpdateBlock && onUpdateBlock({
+                  ...sh,
+                  instructions: text
+                });
               }}
-              className="text-[11px] font-semibold italic text-black mt-0.5 outline-hidden hover:bg-slate-100/50 rounded px-1"
+              className="text-xs italic text-slate-700 outline-hidden mt-0.5"
             >
               {sh.instructions}
             </p>
-          )}
-        </div>
-      );
-    }
-
-    case 'paragraph': {
-      const p = block as ParagraphBlock;
-      const primaryRun = p.runs?.[0];
-      const f = primaryRun?.formatting || {};
-      const fullText = p.runs?.map(r => r.text).join('') || '';
-
-      const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          onInsertNextParagraph && onInsertNextParagraph(p.id);
-        } else if (e.key === 'Backspace') {
-          const content = e.currentTarget.textContent || '';
-          if (content.length === 0 || content === '\n') {
-            e.preventDefault();
-            onFocusPreviousBlock && onFocusPreviousBlock(p.id);
-          }
-        } else if (e.key === 'Tab') {
-          e.preventDefault();
-          const currentIndent = p.indent || 0;
-          const newIndent = e.shiftKey ? Math.max(0, currentIndent - 15) : currentIndent + 15;
-          onUpdateBlock && onUpdateBlock({ ...p, indent: newIndent });
-        }
-      };
-
-      const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
-        const text = e.currentTarget.textContent || '';
-        onUpdateBlock && onUpdateBlock({
-          ...p,
-          runs: [{ id: `run-${Date.now()}`, text, formatting: f }]
-        });
-      };
-
-      // WordArt / Text shadow styling
-      let textShadow: string | undefined = undefined;
-      if (f.textEffect === 'shadow') textShadow = '2px 2px 4px rgba(0,0,0,0.4)';
-      else if (f.textEffect === 'glow') textShadow = '0 0 8px rgba(56,189,248,0.8)';
-      else if (f.textEffect === 'outline') textShadow = '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000';
-      else if (f.textEffect === 'reflection') textShadow = '0 8px 6px rgba(0,0,0,0.3)';
-
-      // Underline / Strikethrough
-      let textDecoration = 'none';
-      if (f.underline && f.strikethrough) textDecoration = 'underline line-through';
-      else if (f.underline) textDecoration = 'underline';
-      else if (f.strikethrough) textDecoration = 'line-through';
-
-      // List numbering or bullet rendering
-      const bulletPrefix = p.listType === 'bullet'
-        ? (p.listBulletStyle || '•')
-        : p.listType === 'number'
-        ? (p.listBulletStyle || '1.')
-        : p.listType === 'alpha'
-        ? (p.listBulletStyle || 'a.')
-        : p.listType === 'roman'
-        ? (p.listBulletStyle || 'i.')
-        : null;
-
-      const containerStyle: React.CSSProperties = {
-        textAlign: p.alignment || 'left',
-        lineHeight: p.lineSpacing || 1.25,
-        paddingLeft: p.indent ? `${p.indent}px` : undefined,
-        ...(getBorderStyle ? getBorderStyle(p.border, p.backgroundColor) : {})
-      };
-
-      return (
-        <div
-          style={containerStyle}
-          className="my-1 text-black group/para relative flex items-baseline"
-        >
-          {/* List bullet or numbering prefix */}
-          {bulletPrefix && (
-            <span
-              className="mr-2 font-black select-none text-black shrink-0"
-              style={{
-                fontFamily: f.fontFamily || undefined,
-                fontSize: f.fontSize ? `${f.fontSize}pt` : '10.5pt'
-              }}
-            >
-              {bulletPrefix}
-            </span>
-          )}
-
-          {/* Editable Text Area */}
-          <div
-            contentEditable
-            suppressContentEditableWarning
-            data-block-id={p.id}
-            onKeyDown={handleKeyDown}
-            onInput={handleInput}
-            onSelect={() => {
-              onTextSelectionChange && onTextSelectionChange({
-                ...f,
-                alignment: p.alignment,
-                lineSpacing: p.lineSpacing,
-                listType: p.listType,
-                indent: p.indent,
-                styleName: p.styleName
-              });
-            }}
-            style={{
-              fontWeight: f.bold ? 'bold' : 'normal',
-              fontStyle: f.italic ? 'italic' : 'normal',
-              textDecoration,
-              textDecorationStyle: f.underlineStyle === 'single' || !f.underlineStyle ? 'solid' : f.underlineStyle,
-              textDecorationColor: f.underlineColor || undefined,
-              verticalAlign: f.superscript ? 'super' : f.subscript ? 'sub' : 'baseline',
-              fontSize: f.superscript || f.subscript ? '0.75em' : f.fontSize ? `${f.fontSize}pt` : '10.5pt',
-              color: f.color || '#000000',
-              backgroundColor: f.backgroundColor && f.backgroundColor !== 'transparent' ? f.backgroundColor : undefined,
-              fontFamily: f.fontFamily || undefined,
-              border: f.characterBorder ? '1px solid #94a3b8' : undefined,
-              padding: f.characterBorder ? '1px 3px' : undefined,
-              textShadow,
-              minWidth: '10px'
-            }}
-            className="flex-1 outline-hidden cursor-text select-text empty:before:content-['Type_custom_text_here...'] empty:before:text-slate-400 empty:before:italic"
-          >
-            {fullText}
-          </div>
-
-          {/* Formatting Mark: Pilcrow ¶ */}
-          {showFormattingMarks && (
-            <span className="text-slate-400 select-none ml-0.5 text-xs font-mono">
-              ¶
-            </span>
-          )}
-        </div>
-      );
-    }
-
-    case 'heading': {
-      const h = block as HeadingBlock;
-      const fullText = h.runs?.map(r => r.text).join('') || '';
-      const f = h.runs?.[0]?.formatting || {};
-      const Tag = `h${h.level}` as keyof JSX.IntrinsicElements;
-      const sizeClass = h.level === 1 ? 'text-lg font-black' : h.level === 2 ? 'text-base font-bold' : 'text-sm font-bold';
-
-      return (
-        <div
-          style={{
-            textAlign: h.alignment || 'left',
-            ...(getBorderStyle ? getBorderStyle(h.border, h.backgroundColor) : {})
-          }}
-          className="my-2 text-black flex items-baseline"
-        >
-          <div
-            contentEditable
-            suppressContentEditableWarning
-            data-block-id={h.id}
-            onKeyDown={e => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                onInsertNextParagraph && onInsertNextParagraph(h.id);
-              }
-            }}
-            onInput={e => {
-              const text = e.currentTarget.textContent || '';
-              onUpdateBlock && onUpdateBlock({
-                ...h,
-                runs: [{ id: `run-${Date.now()}`, text, formatting: f }]
-              });
-            }}
-            style={{
-              fontFamily: f.fontFamily || undefined,
-              fontSize: f.fontSize ? `${f.fontSize}pt` : undefined,
-              color: f.color || '#000000'
-            }}
-            className={`${sizeClass} flex-1 outline-hidden cursor-text select-text empty:before:content-['Heading_text...'] empty:before:text-slate-400`}
-          >
-            {fullText}
-          </div>
-
-          {showFormattingMarks && (
-            <span className="text-slate-400 select-none ml-1 text-xs font-mono">
-              ¶
-            </span>
           )}
         </div>
       );
