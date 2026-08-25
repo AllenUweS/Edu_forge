@@ -103,6 +103,16 @@ def init_db():
     except sqlite3.OperationalError:
         pass
 
+    try:
+        cursor.execute("ALTER TABLE question_bank ADD COLUMN image_url TEXT")
+    except sqlite3.OperationalError:
+        pass
+
+    try:
+        cursor.execute("ALTER TABLE question_bank ADD COLUMN image_urls TEXT")
+    except sqlite3.OperationalError:
+        pass
+
     # Check question count and seed with full set if < 10
     cursor.execute("SELECT COUNT(*) as count FROM question_bank")
     if cursor.fetchone()["count"] < 10:
@@ -737,6 +747,11 @@ def list_questions(
 
     questions = []
     for r in rows:
+        keys = r.keys()
+        img_url = r["image_url"] if "image_url" in keys else None
+        raw_urls = r["image_urls"] if "image_urls" in keys else None
+        parsed_urls = safe_json_loads(raw_urls, []) if raw_urls else ([img_url] if img_url else [])
+        
         questions.append({
             "id": r["id"],
             "questionNumber": r["question_number"],
@@ -757,6 +772,8 @@ def list_questions(
             "explanationText": r["explanation_text"],
             "diagramSvg": r["diagram_svg"],
             "diagramUrl": r["diagram_url"],
+            "imageUrl": img_url,
+            "imageUrls": parsed_urls,
             "isSystem": bool(r["is_system"]),
             "createdAt": r["created_at"],
             "updatedAt": r["updated_at"]
@@ -775,6 +792,11 @@ def get_single_question(q_id: str):
 
     if not r:
         raise HTTPException(status_code=404, detail="Question not found")
+
+    keys = r.keys()
+    img_url = r["image_url"] if "image_url" in keys else None
+    raw_urls = r["image_urls"] if "image_urls" in keys else None
+    parsed_urls = safe_json_loads(raw_urls, []) if raw_urls else ([img_url] if img_url else [])
 
     return {
         "id": r["id"],
@@ -796,6 +818,8 @@ def get_single_question(q_id: str):
         "explanationText": r["explanation_text"],
         "diagramSvg": r["diagram_svg"],
         "diagramUrl": r["diagram_url"],
+        "imageUrl": img_url,
+        "imageUrls": parsed_urls,
         "isSystem": bool(r["is_system"]),
         "createdAt": r["created_at"],
         "updatedAt": r["updated_at"]
@@ -807,14 +831,17 @@ def create_question(payload: Dict[str, Any]):
     q_id = payload.get("id") or f"q-{uuid.uuid4().hex[:8]}"
     now = datetime.utcnow().isoformat()
     
+    img_urls = payload.get("imageUrls") or []
+    img_url = payload.get("imageUrl") or (img_urls[0] if len(img_urls) > 0 else None)
+    
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
     INSERT INTO question_bank (
         id, question_number, question_type, content, raw_text, options, correct_answer,
         marks, negative_marks, subject, chapter, topic, difficulty, tags, year,
-        option_layout, explanation_text, diagram_svg, diagram_url, is_system, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        option_layout, explanation_text, diagram_svg, diagram_url, image_url, image_urls, is_system, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         q_id,
         payload.get("questionNumber", 1),
@@ -834,7 +861,9 @@ def create_question(payload: Dict[str, Any]):
         payload.get("optionLayout", "grid_2x2"),
         payload.get("explanationText", ""),
         payload.get("diagramSvg"),
-        payload.get("diagramUrl"),
+        payload.get("diagramUrl") or img_url,
+        img_url,
+        json.dumps(img_urls),
         0,
         now,
         now
@@ -843,6 +872,50 @@ def create_question(payload: Dict[str, Any]):
     conn.close()
 
     return {"success": True, "id": q_id, "createdAt": now}
+
+
+@app.put("/api/question-bank/{q_id}")
+def update_question(q_id: str, payload: Dict[str, Any]):
+    now = datetime.utcnow().isoformat()
+    img_urls = payload.get("imageUrls") or []
+    img_url = payload.get("imageUrl") or (img_urls[0] if len(img_urls) > 0 else None)
+
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+    UPDATE question_bank SET
+        question_number = ?, question_type = ?, content = ?, raw_text = ?, options = ?,
+        correct_answer = ?, marks = ?, negative_marks = ?, subject = ?, chapter = ?,
+        topic = ?, difficulty = ?, tags = ?, year = ?, option_layout = ?,
+        explanation_text = ?, diagram_svg = ?, diagram_url = ?, image_url = ?, image_urls = ?, updated_at = ?
+    WHERE id = ?
+    """, (
+        payload.get("questionNumber", 1),
+        payload.get("questionType", "MCQ_SINGLE"),
+        json.dumps(payload.get("content", [])),
+        payload.get("rawText", ""),
+        json.dumps(payload.get("options", [])),
+        payload.get("correctAnswer"),
+        payload.get("marks", 1),
+        payload.get("negativeMarks", 0),
+        payload.get("subject", "Physics"),
+        payload.get("chapter", "General"),
+        payload.get("topic", "General"),
+        payload.get("difficulty", "Medium"),
+        json.dumps(payload.get("tags", [])),
+        payload.get("year", "2026"),
+        payload.get("optionLayout", "grid_2x2"),
+        payload.get("explanationText", ""),
+        payload.get("diagramSvg"),
+        payload.get("diagramUrl") or img_url,
+        img_url,
+        json.dumps(img_urls),
+        now,
+        q_id
+    ))
+    conn.commit()
+    conn.close()
+    return {"success": True, "id": q_id, "updatedAt": now}
 
 
 @app.delete("/api/question-bank/{q_id}")

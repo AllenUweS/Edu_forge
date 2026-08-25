@@ -1186,22 +1186,36 @@ export const EditorRibbon: React.FC<EditorRibbonProps> = ({
                               <MathTextRenderer text={q.rawText} />
                             </div>
 
-                            {/* Question Image if present */}
-                            {q.imageUrl && (
-                              <div className="p-1 bg-slate-50 border border-slate-200 rounded max-h-32 flex items-center justify-center overflow-hidden">
-                                <img
-                                  src={q.imageUrl}
-                                  alt="Question illustration"
-                                  onError={(e) => {
-                                    const target = e.currentTarget;
-                                    if (target.src.endsWith('.heic') || target.src.endsWith('.HEIC')) {
-                                      target.src = target.src.replace(/\.heic$/i, '.jpg');
-                                    }
-                                  }}
-                                  className="max-h-28 object-contain rounded"
-                                />
-                              </div>
-                            )}
+                            {/* Question Images if present */}
+                            {(() => {
+                              const images: string[] = q.imageUrls && q.imageUrls.length > 0
+                                ? q.imageUrls
+                                : (q.imageUrl ? [q.imageUrl] : []);
+
+                              if (images.length === 0) return null;
+
+                              return (
+                                <div className={`my-1 grid gap-1.5 ${
+                                  images.length === 1 ? 'grid-cols-1' : images.length === 2 ? 'grid-cols-2' : 'grid-cols-3'
+                                }`}>
+                                  {images.map((imgSrc, idx) => (
+                                    <div key={idx} className="p-1 bg-slate-50 border border-slate-200 rounded max-h-32 flex items-center justify-center overflow-hidden">
+                                      <img
+                                        src={imgSrc}
+                                        alt={`Question illustration ${idx + 1}`}
+                                        onError={(e) => {
+                                          const target = e.currentTarget;
+                                          if (target.src.endsWith('.heic') || target.src.endsWith('.HEIC')) {
+                                            target.src = target.src.replace(/\.heic$/i, '.jpg');
+                                          }
+                                        }}
+                                        className="max-h-28 object-contain rounded"
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                              );
+                            })()}
 
                             {/* Options Preview with Image support */}
                             {q.options && q.options.length > 0 && (

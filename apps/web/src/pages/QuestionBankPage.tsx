@@ -270,22 +270,36 @@ export const QuestionBankPage: React.FC<QuestionBankPageProps> = ({
                 <MathTextRenderer text={q.rawText} />
               </div>
 
-              {/* Render Question Image or Diagram */}
-              {q.imageUrl && (
-                <div className="my-2 p-2 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-center max-h-48 overflow-hidden">
-                  <img
-                    src={q.imageUrl}
-                    alt="Question illustration"
-                    onError={(e) => {
-                      const target = e.currentTarget;
-                      if (target.src.endsWith('.heic') || target.src.endsWith('.HEIC')) {
-                        target.src = target.src.replace(/\.heic$/i, '.jpg');
-                      }
-                    }}
-                    className="max-h-44 object-contain rounded"
-                  />
-                </div>
-              )}
+              {/* Render Question Images or Diagram */}
+              {(() => {
+                const images: string[] = q.imageUrls && q.imageUrls.length > 0
+                  ? q.imageUrls
+                  : (q.imageUrl ? [q.imageUrl] : []);
+
+                if (images.length === 0) return null;
+
+                return (
+                  <div className={`my-2 grid gap-2 ${
+                    images.length === 1 ? 'grid-cols-1' : images.length === 2 ? 'grid-cols-2' : 'grid-cols-3'
+                  }`}>
+                    {images.map((imgSrc, idx) => (
+                      <div key={idx} className="p-1 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-center max-h-48 overflow-hidden">
+                        <img
+                          src={imgSrc}
+                          alt={`Question illustration ${idx + 1}`}
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            if (target.src.endsWith('.heic') || target.src.endsWith('.HEIC')) {
+                              target.src = target.src.replace(/\.heic$/i, '.jpg');
+                            }
+                          }}
+                          className="max-h-40 object-contain rounded"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
               {q.diagramSvg && (
                 <div className="my-2 p-2 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-center overflow-hidden">
                   <div dangerouslySetInnerHTML={{ __html: q.diagramSvg }} />

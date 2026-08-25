@@ -48,6 +48,7 @@ export interface Question {
   diagramUrl?: string;
   diagramSvg?: string;
   imageUrl?: string;
+  imageUrls?: string[];
   isSystem?: boolean;
   createdAt: string;
   updatedAt: string;

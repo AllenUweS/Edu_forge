@@ -37,9 +37,16 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
   const [negativeMarks, setNegativeMarks] = useState<number>(initialQuestion?.negativeMarks !== undefined ? initialQuestion.negativeMarks : 1);
   const [optionLayout, setOptionLayout] = useState<OptionLayoutType>(initialQuestion?.optionLayout || 'grid_2x2');
   const [tagsInput, setTagsInput] = useState<string>((initialQuestion?.tags || []).join(', '));
-  const [explanationText, setExplanationText] = useState(initialQuestion?.explanationText || '');
+  const [explanationText, setExplanationText] = useState<string>(initialQuestion?.explanationText || '');
   const [diagramSvg, setDiagramSvg] = useState<string>(initialQuestion?.diagramSvg || '');
-  const [imageUrl, setImageUrl] = useState<string>(initialQuestion?.imageUrl || initialQuestion?.diagramUrl || '');
+  const [imageUrls, setImageUrls] = useState<string[]>(() => {
+    if (initialQuestion?.imageUrls && initialQuestion.imageUrls.length > 0) {
+      return initialQuestion.imageUrls;
+    }
+    if (initialQuestion?.imageUrl) return [initialQuestion.imageUrl];
+    if (initialQuestion?.diagramUrl && !initialQuestion?.diagramSvg) return [initialQuestion.diagramUrl];
+    return [];
+  });
   const [isUploadingQuestionImage, setIsUploadingQuestionImage] = useState<boolean>(false);
   const [uploadingOptionIdx, setUploadingOptionIdx] = useState<number | null>(null);
 
@@ -104,21 +111,29 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
     setOptions(updated);
   };
 
-  // Upload Question Image from local file
+  // Upload Question Images from local files (multiple supported)
   const handleQuestionImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
     try {
       setIsUploadingQuestionImage(true);
-      const res = await api.uploadImage(file);
-      setImageUrl(res.url);
+      const newUrls: string[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const res = await api.uploadImage(files[i]);
+        if (res.url) newUrls.push(res.url);
+      }
+      setImageUrls(prev => [...prev, ...newUrls]);
     } catch (err) {
       console.error('Question image upload error:', err);
     } finally {
       setIsUploadingQuestionImage(false);
       if (questionImageInputRef.current) questionImageInputRef.current.value = '';
     }
+  };
+
+  const handleRemoveQuestionImage = (idxToRemove: number) => {
+    setImageUrls(prev => prev.filter((_, idx) => idx !== idxToRemove));
   };
 
   // Upload Option Image from local file
@@ -218,8 +233,9 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
       optionLayout,
       explanationText,
       diagramSvg: diagramSvg || undefined,
-      imageUrl: imageUrl || undefined,
-      diagramUrl: imageUrl || undefined,
+      imageUrl: imageUrls[0] || undefined,
+      imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
+      diagramUrl: imageUrls[0] || undefined,
       isSystem: false,
       createdAt: initialQuestion?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString()
@@ -366,11 +382,12 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
                   Question Statement
                 </label>
                 <div className="flex items-center gap-2">
-                  {/* Upload Image from Local System for Question */}
+                  {/* Upload Images from Local System for Question (multiple allowed) */}
                   <input
                     ref={questionImageInputRef}
                     type="file"
                     accept="image/*"
+                    multiple
                     onChange={handleQuestionImageUpload}
                     className="hidden"
                   />
@@ -385,7 +402,7 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
                     ) : (
                       <ImageIcon className="w-3.5 h-3.5" />
                     )}
-                    <span>{imageUrl ? 'Change Image' : 'Add Question Image'}</span>
+                    <span>{imageUrls.length > 0 ? `+ Add Images (${imageUrls.length})` : 'Add Question Images'}</span>
                   </button>
 
                   <button
@@ -416,47 +433,51 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
                 className="w-full text-sm font-semibold p-3 border border-slate-300 rounded-lg text-black bg-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500 shadow-2xs placeholder:text-slate-400"
               />
 
-              {/* Uploaded Question Image Preview */}
-              {imageUrl && (
-                <div className="mt-2.5 p-3 bg-amber-50/70 border-2 border-amber-300 rounded-xl flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-24 h-16 bg-white border border-amber-300 rounded-lg p-1 overflow-hidden flex items-center justify-center">
-                      <img
-                        src={imageUrl}
-                        alt="Attached Question Asset"
-                        onError={(e) => {
-                          const target = e.currentTarget;
-                          if (target.src.endsWith('.heic') || target.src.endsWith('.HEIC')) {
-                            target.src = target.src.replace(/\.heic$/i, '.jpg');
-                          }
-                        }}
-                        className="max-h-full max-w-full object-contain rounded"
-                      />
-                    </div>
-                    <div>
-                      <span className="text-xs font-bold text-amber-950 block flex items-center gap-1">
-                        <Check className="w-3.5 h-3.5 text-amber-600" /> Question Image Attached (Local Upload)
-                      </span>
-                      <span className="text-[10px] text-slate-500">Will render directly with the question statement</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1.5">
+              {/* Uploaded Question Images Gallery Preview */}
+              {imageUrls.length > 0 && (
+                <div className="mt-2.5 p-3 bg-amber-50/70 border-2 border-amber-300 rounded-xl space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
+                      <Check className="w-4 h-4 text-amber-600" />
+                      {imageUrls.length} Question {imageUrls.length === 1 ? 'Image' : 'Images'} Attached
+                    </span>
                     <button
                       type="button"
                       onClick={() => questionImageInputRef.current?.click()}
-                      className="px-2.5 py-1 bg-white hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs font-bold cursor-pointer"
+                      className="text-xs font-bold text-amber-800 hover:text-amber-950 underline cursor-pointer"
                     >
-                      Replace
+                      + Attach More
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => setImageUrl('')}
-                      className="p-1 text-slate-400 hover:text-rose-600 rounded-lg cursor-pointer"
-                      title="Remove image"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 pt-1">
+                    {imageUrls.map((imgSrc, imgIdx) => (
+                      <div
+                        key={imgIdx}
+                        className="relative group/qimg bg-white border border-amber-300 rounded-lg p-1 flex flex-col items-center justify-center min-h-[80px]"
+                      >
+                        <img
+                          src={imgSrc}
+                          alt={`Question asset ${imgIdx + 1}`}
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            if (target.src.endsWith('.heic') || target.src.endsWith('.HEIC')) {
+                              target.src = target.src.replace(/\.heic$/i, '.jpg');
+                            }
+                          }}
+                          className="max-h-18 max-w-full object-contain rounded"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveQuestionImage(imgIdx)}
+                          className="absolute -top-1.5 -right-1.5 p-1 bg-red-600 hover:bg-red-700 text-white rounded-full opacity-0 group-hover/qimg:opacity-100 transition-opacity cursor-pointer shadow-xs text-[10px]"
+                          title="Remove this image"
+                        >
+                          ✕
+                        </button>
+                        <span className="text-[9px] text-slate-500 font-bold mt-1">Figure {imgIdx + 1}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}

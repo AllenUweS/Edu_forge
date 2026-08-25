@@ -10,8 +10,9 @@ import { OptionLayoutRenderer } from '../questions/OptionLayoutRenderer.js';
 import {
   Trash2, Copy, ArrowUp, ArrowDown, Edit3, Type, Wand2, Plus,
   Sigma, Sparkles, ZoomIn, ZoomOut, Maximize2, Minimize2, GripVertical,
-  ArrowRight, ArrowLeft
+  ArrowRight, ArrowLeft, Image as ImageIcon, Loader2
 } from 'lucide-react';
+import { api } from '../services/api.js';
 import { FormattingState } from './EditorRibbon.js';
 
 interface BlockRendererProps {
@@ -326,6 +327,8 @@ const QuestionBlockItem: React.FC<{
   const [isEditingStatement, setIsEditingStatement] = useState(false);
   const q = qb.question;
   const [statementText, setStatementText] = useState(q.rawText || '');
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const fontSize = qb.fontSize || 10.5;
   const scale = qb.scale || 1.0;
 
@@ -342,6 +345,35 @@ const QuestionBlockItem: React.FC<{
       fontSize: clamped,
       scale: Math.round((clamped / 10.5) * 100) / 100
     });
+  };
+
+  // Upload more images to this question directly on canvas
+  const handleUploadImages = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0 || !onUpdateBlock) return;
+    try {
+      setIsUploading(true);
+      const newUrls: string[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const res = await api.uploadImage(files[i]);
+        if (res.url) newUrls.push(res.url);
+      }
+      const existing = q.imageUrls && q.imageUrls.length > 0 ? q.imageUrls : (q.imageUrl ? [q.imageUrl] : []);
+      const merged = [...existing, ...newUrls];
+      onUpdateBlock({
+        ...qb,
+        question: {
+          ...q,
+          imageUrls: merged,
+          imageUrl: merged[0]
+        }
+      });
+    } catch (err) {
+      console.error('Error uploading question images:', err);
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   // Drop handler: drop formulas/symbols from Science Drawer directly onto the question
@@ -397,151 +429,210 @@ const QuestionBlockItem: React.FC<{
       }}
       onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }}
       onDrop={handleDropOnQuestion}
-      className="my-2 select-text border border-transparent hover:border-sky-300 hover:bg-sky-50/20 p-2 rounded-lg text-black transition-all group/qcard"
+      className="my-2 select-text border border-transparent hover:border-sky-300 hover:bg-sky-50/20 p-2 rounded-lg text-black transition-all group/qcard relative"
     >
-      {/* Question Header & Statement */}
-      <div className="flex items-start gap-1.5">
-        {/* Question Number */}
-        <span
-          contentEditable
-          suppressContentEditableWarning
-          onBlur={e => {
-            const val = parseInt(e.currentTarget.textContent?.replace(/\D/g, '') || '1', 10);
-            onUpdateBlock && onUpdateBlock({
-              ...qb,
-              question: { ...q, questionNumber: isNaN(val) ? 1 : val }
-            });
-          }}
-          className="font-black text-black min-w-[22px] outline-hidden hover:bg-slate-100 rounded px-0.5 cursor-text select-text shrink-0"
-        >
-          {q.questionNumber ? `${q.questionNumber}.` : 'Q.'}
-        </span>
-
-        {/* Question Statement (Editable & Equation-rendered) */}
-        {isEditingStatement ? (
+      {/* Floating Action Controls on Hover */}
+      <div className="relative w-full">
+        <div className="absolute -top-3.5 right-0 flex items-center gap-1 opacity-0 group-hover/qcard:opacity-100 transition-opacity no-print bg-white/95 backdrop-blur-xs border border-slate-200 shadow-xs rounded-md px-1.5 py-0.5 z-20">
+          {/* Quick Add Image to Question */}
           <input
-            type="text"
-            autoFocus
-            value={statementText}
-            onChange={e => setStatementText(e.target.value)}
-            onBlur={() => {
-              setIsEditingStatement(false);
-              onUpdateBlock && onUpdateBlock({
-                ...qb,
-                question: { ...q, rawText: statementText }
-              });
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleUploadImages}
+            className="hidden"
+          />
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              fileInputRef.current?.click();
             }}
-            onKeyDown={e => {
-              if (e.key === 'Enter') {
+            disabled={isUploading}
+            className="p-1 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded transition-all cursor-pointer flex items-center gap-1 text-[10px] font-bold"
+            title="Attach images to this question"
+          >
+            {isUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <ImageIcon className="w-3 h-3" />}
+            <span className="hidden sm:inline">+ Image</span>
+          </button>
+
+          <div className="h-3 w-px bg-slate-200" />
+
+          {/* Block Size Stepper */}
+          <div className="flex items-center gap-0.5 text-[9px]">
+            <span className="text-slate-500 font-bold hidden sm:inline">Size:</span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setBlockFontSize(fontSize - 1);
+              }}
+              className="w-4 h-4 flex items-center justify-center font-black bg-white hover:bg-slate-200 border border-slate-300 rounded text-slate-800 cursor-pointer shadow-2xs"
+              title="Decrease Block Size (-1pt)"
+            >
+              -
+            </button>
+            <span className="font-mono font-bold px-0.5 text-slate-900 min-w-[26px] text-center">
+              {fontSize}pt
+            </span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setBlockFontSize(fontSize + 1);
+              }}
+              className="w-4 h-4 flex items-center justify-center font-black bg-white hover:bg-slate-200 border border-slate-300 rounded text-slate-800 cursor-pointer shadow-2xs"
+              title="Increase Block Size (+1pt)"
+            >
+              +
+            </button>
+          </div>
+
+          <div className="h-3 w-px bg-slate-200" />
+
+          {/* Quick Builder Studio Button */}
+          <button
+            type="button"
+            onClick={() => onEditQuestion && onEditQuestion(qb)}
+            className="p-1 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-all cursor-pointer"
+            title="Open MathType & Diagram Studio for this question"
+          >
+            <Edit3 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        {/* Continuous Full-Width Flow for Question Number, Statement & Marks */}
+        {isEditingStatement ? (
+          <div className="w-full">
+            <input
+              type="text"
+              autoFocus
+              value={statementText}
+              onChange={e => setStatementText(e.target.value)}
+              onBlur={() => {
                 setIsEditingStatement(false);
                 onUpdateBlock && onUpdateBlock({
                   ...qb,
                   question: { ...q, rawText: statementText }
                 });
-              }
-            }}
-            className="flex-1 font-semibold text-black px-1.5 py-0.5 border border-sky-400 rounded bg-white outline-hidden shadow-2xs"
-          />
+              }}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  setIsEditingStatement(false);
+                  onUpdateBlock && onUpdateBlock({
+                    ...qb,
+                    question: { ...q, rawText: statementText }
+                  });
+                }
+              }}
+              className="w-full font-semibold text-black px-2 py-1 border border-sky-400 rounded bg-white outline-hidden shadow-2xs text-sm"
+            />
+          </div>
         ) : (
           <div
             onClick={() => setIsEditingStatement(true)}
-            className="flex-1 font-semibold text-black outline-hidden hover:bg-sky-50/60 rounded px-1 cursor-pointer transition-all min-h-[22px]"
+            className="w-full text-black font-semibold leading-relaxed hover:bg-sky-50/40 rounded px-1 -mx-1 py-0.5 cursor-pointer transition-all select-text break-words"
             title="Click to edit question text / Drop science formulas here"
           >
-            <MathTextRenderer text={q.rawText || ''} />
+            {/* Question Number */}
+            <span
+              contentEditable
+              suppressContentEditableWarning
+              onClick={e => e.stopPropagation()}
+              onBlur={e => {
+                const val = parseInt(e.currentTarget.textContent?.replace(/\D/g, '') || '1', 10);
+                onUpdateBlock && onUpdateBlock({
+                  ...qb,
+                  question: { ...q, questionNumber: isNaN(val) ? 1 : val }
+                });
+              }}
+              className="font-black text-black mr-1.5 outline-hidden hover:bg-slate-200/60 rounded px-0.5 cursor-text select-text"
+            >
+              {q.questionNumber ? `${q.questionNumber}.` : 'Q.'}
+            </span>
+
+            {/* Statement Text with Inline Math */}
+            <span className="font-semibold text-black">
+              <MathTextRenderer text={q.rawText || ''} />
+            </span>
+
+            {/* Marks Badge Inline */}
+            <span
+              contentEditable
+              suppressContentEditableWarning
+              onClick={e => e.stopPropagation()}
+              onBlur={e => {
+                const text = e.currentTarget.textContent || '';
+                const match = text.match(/\d+/);
+                const marksVal = match ? parseInt(match[0], 10) : q.marks;
+                onUpdateBlock && onUpdateBlock({
+                  ...qb,
+                  question: { ...q, marks: marksVal }
+                });
+              }}
+              className="inline-block align-baseline text-[9.5px] font-bold text-sky-800 whitespace-nowrap ml-1.5 px-1 py-0.2 bg-sky-50 rounded border border-sky-300 outline-hidden cursor-text"
+            >
+              [{q.marks}{q.negativeMarks ? `, -${q.negativeMarks}` : ''}M]
+            </span>
           </div>
         )}
-
-        {/* Marks Badge (Editable) */}
-        <span
-          contentEditable
-          suppressContentEditableWarning
-          onBlur={e => {
-            const text = e.currentTarget.textContent || '';
-            const match = text.match(/\d+/);
-            const marksVal = match ? parseInt(match[0], 10) : q.marks;
-            onUpdateBlock && onUpdateBlock({
-              ...qb,
-              question: { ...q, marks: marksVal }
-            });
-          }}
-          className="text-[9.5px] font-bold text-sky-800 whitespace-nowrap ml-1 px-1.5 py-0.5 bg-sky-50 rounded border border-sky-300 outline-hidden cursor-text shrink-0"
-        >
-          [{q.marks}{q.negativeMarks ? `, -${q.negativeMarks}` : ''}M]
-        </span>
-
-        {/* Quick Block Size Stepper on Hover */}
-        <div className="flex items-center gap-0.5 ml-1 opacity-0 group-hover/qcard:opacity-100 transition-opacity no-print bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded px-1 py-0.5 text-[9px] shrink-0">
-          <span className="text-slate-500 font-bold hidden sm:inline">Size:</span>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setBlockFontSize(fontSize - 1);
-            }}
-            className="w-4 h-4 flex items-center justify-center font-black bg-white hover:bg-slate-300 border border-slate-300 rounded text-slate-800 cursor-pointer transition-colors shadow-2xs"
-            title="Decrease Block Size (-1pt)"
-          >
-            -
-          </button>
-          <span className="font-mono font-bold px-0.5 text-slate-900 min-w-[28px] text-center">
-            {fontSize}pt
-          </span>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setBlockFontSize(fontSize + 1);
-            }}
-            className="w-4 h-4 flex items-center justify-center font-black bg-white hover:bg-slate-300 border border-slate-300 rounded text-slate-800 cursor-pointer transition-colors shadow-2xs"
-            title="Increase Block Size (+1pt)"
-          >
-            +
-          </button>
-        </div>
-
-        {/* Quick Builder Button on Hover */}
-        <button
-          type="button"
-          onClick={() => onEditQuestion && onEditQuestion(qb)}
-          className="opacity-0 group-hover/qcard:opacity-100 p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-all cursor-pointer no-print ml-0.5 shrink-0"
-          title="Open MathType & Diagram Studio for this question"
-        >
-          <Edit3 className="w-3.5 h-3.5" />
-        </button>
       </div>
 
-      {/* Render Attached Image (from local upload) or Diagram URL */}
-      {(q.imageUrl || (q.diagramUrl && !q.diagramSvg)) && (
-        <div className="my-2 p-1 bg-slate-50 rounded-lg flex items-center justify-center border border-slate-200 overflow-hidden relative group/qimg max-h-48">
-          <img
-            src={q.imageUrl || q.diagramUrl}
-            alt="Question illustration"
-            onError={(e) => {
-              const target = e.currentTarget;
-              if (target.src.endsWith('.heic') || target.src.endsWith('.HEIC')) {
-                target.src = target.src.replace(/\.heic$/i, '.jpg');
-              }
-            }}
-            style={{ maxHeight: `${Math.round(176 * scale)}px` }}
-            className="max-w-full object-contain rounded shadow-2xs"
-          />
-          <button
-            type="button"
-            onClick={e => {
-              e.stopPropagation();
-              onUpdateBlock && onUpdateBlock({
-                ...qb,
-                question: { ...q, imageUrl: undefined, diagramUrl: undefined }
-              });
-            }}
-            className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded text-[10px] opacity-0 group-hover/qimg:opacity-100 transition-opacity cursor-pointer no-print shadow-xs"
-            title="Remove Question Image"
-          >
-            ✕ Remove Image
-          </button>
-        </div>
-      )}
+      {/* Render Attached Question Images (Multi-image Gallery) or Diagram URL */}
+      {(() => {
+        const images: string[] = q.imageUrls && q.imageUrls.length > 0
+          ? q.imageUrls
+          : (q.imageUrl ? [q.imageUrl] : (q.diagramUrl && !q.diagramSvg ? [q.diagramUrl] : []));
+
+        if (images.length === 0) return null;
+
+        return (
+          <div className={`my-2 grid gap-2 ${
+            images.length === 1 ? 'grid-cols-1' : images.length === 2 ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3'
+          }`}>
+            {images.map((imgSrc, imgIdx) => (
+              <div
+                key={imgIdx}
+                className="p-1 bg-slate-50 rounded-lg flex items-center justify-center border border-slate-200 overflow-hidden relative group/qimg min-h-[90px]"
+              >
+                <img
+                  src={imgSrc}
+                  alt={`Question figure ${imgIdx + 1}`}
+                  onError={(e) => {
+                    const target = e.currentTarget;
+                    if (target.src.endsWith('.heic') || target.src.endsWith('.HEIC')) {
+                      target.src = target.src.replace(/\.heic$/i, '.jpg');
+                    }
+                  }}
+                  style={{ maxHeight: `${Math.round((images.length === 1 ? 180 : 130) * scale)}px` }}
+                  className="max-w-full object-contain rounded shadow-2xs"
+                />
+                <button
+                  type="button"
+                  onClick={e => {
+                    e.stopPropagation();
+                    const newImages = images.filter((_, idx) => idx !== imgIdx);
+                    onUpdateBlock && onUpdateBlock({
+                      ...qb,
+                      question: {
+                        ...q,
+                        imageUrls: newImages,
+                        imageUrl: newImages[0] || undefined,
+                        diagramUrl: newImages.length === 0 ? undefined : q.diagramUrl
+                      }
+                    });
+                  }}
+                  className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded text-[10px] opacity-0 group-hover/qimg:opacity-100 transition-opacity cursor-pointer no-print shadow-xs"
+                  title="Remove this image"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
 
       {/* Render Attached Diagram SVG if present */}
       {q.diagramSvg && (
