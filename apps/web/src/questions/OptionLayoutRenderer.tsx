@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { QuestionOption, OptionLayoutType } from '@eduforge/shared';
 import { MathTextRenderer } from '../equation/MathTextRenderer.js';
+import { RichTextEditor } from '../components/RichTextEditor.js';
 import { api } from '../services/api.js';
 import { Edit3, Check, Sparkles, Plus, Trash2, Image as ImageIcon, Loader2 } from 'lucide-react';
 
@@ -120,19 +121,28 @@ const EditableOptionItem: React.FC<{
       </span>
 
       <div className="flex-1 flex flex-col gap-1 min-w-0">
-        {/* Option Body (Editable & Formatted as Equation) */}
+        {/* Option Body (Editable & Formatted as Equation with TipTap) */}
         {isEditing && isEditable ? (
-          <input
-            type="text"
-            autoFocus
-            value={optText}
-            onChange={e => setOptText(e.target.value)}
-            onBlur={handleCommitText}
-            onKeyDown={e => {
-              if (e.key === 'Enter') handleCommitText();
-            }}
-            className="w-full text-xs font-semibold px-1.5 py-0.5 border border-sky-400 rounded bg-white text-black outline-hidden min-w-[60px] shadow-2xs"
-          />
+          <div className="w-full my-0.5">
+            <RichTextEditor
+              compact
+              autoFocus
+              value={optText}
+              onChange={val => {
+                setOptText(val);
+                if (onUpdateOptionText) onUpdateOptionText(opt.id, val);
+              }}
+              onBlur={handleCommitText}
+              className="w-full"
+            />
+            <button
+              type="button"
+              onClick={handleCommitText}
+              className="mt-1 px-2 py-0.5 bg-indigo-600 text-white rounded text-[10px] font-bold cursor-pointer"
+            >
+              Done
+            </button>
+          </div>
         ) : (
           <div
             onClick={(e) => {

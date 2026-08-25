@@ -11,6 +11,13 @@
   },
   "dependencies": {
     "@eduforge/shared": "file:../../packages/shared",
+    "@tiptap/extension-placeholder": "^3.30.3",
+    "@tiptap/extension-subscript": "^3.30.3",
+    "@tiptap/extension-superscript": "^3.30.3",
+    "@tiptap/extension-underline": "^3.30.3",
+    "@tiptap/pm": "^3.30.3",
+    "@tiptap/react": "^3.30.3",
+    "@tiptap/starter-kit": "^3.30.3",
     "clsx": "^2.1.1",
     "katex": "^0.16.9",
     "lucide-react": "^0.395.0",

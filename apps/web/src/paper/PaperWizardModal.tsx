@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api.js';
 import { Template, DocumentModel, DocumentSection } from '@eduforge/shared';
+import { RichTextEditor } from '../components/RichTextEditor.js';
 import { FilePlus, X, Check, ArrowRight, ArrowLeft, Columns, Settings2, BookOpen, Plus, Trash2 } from 'lucide-react';
 
 interface PaperWizardModalProps {
@@ -285,13 +286,13 @@ export const PaperWizardModal: React.FC<PaperWizardModalProps> = ({
 
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1">
-                  General Instructions (1 per line)
+                  General Instructions (Rich Text & Formulas)
                 </label>
-                <textarea
-                  rows={3}
+                <RichTextEditor
                   value={generalInstructions.join('\n')}
-                  onChange={e => setGeneralInstructions(e.target.value.split('\n').filter(Boolean))}
-                  className="w-full text-xs font-semibold p-2.5 border border-slate-300 rounded-lg text-black bg-white focus:outline-hidden focus:ring-2 focus:ring-sky-500"
+                  onChange={val => setGeneralInstructions(val.split('\n').filter(Boolean))}
+                  placeholder="Enter general examination instructions (e.g. All questions are compulsory. Use of calculators is not permitted.)..."
+                  className="w-full"
                 />
               </div>
             </div>
@@ -353,16 +354,16 @@ export const PaperWizardModal: React.FC<PaperWizardModalProps> = ({
                       )}
                     </div>
 
-                    <input
-                      type="text"
-                      placeholder="Instructions (e.g. Questions 1 to 25 carry 4 marks each with -1 negative marking)"
-                      value={sec.instructions}
-                      onChange={e => {
+                    <RichTextEditor
+                      compact
+                      value={sec.instructions || ''}
+                      onChange={val => {
                         const updated = [...sections];
-                        updated[idx].instructions = e.target.value;
+                        updated[idx].instructions = val;
                         setSections(updated);
                       }}
-                      className="w-full text-xs font-semibold p-1.5 border border-slate-300 rounded bg-white text-black placeholder:text-slate-400"
+                      placeholder="Section Instructions (e.g. Questions 1 to 25 carry 4 marks each with -1 negative marking)"
+                      className="w-full"
                     />
                   </div>
                 ))}

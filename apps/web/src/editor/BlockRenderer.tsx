@@ -13,6 +13,7 @@ import {
   ArrowRight, ArrowLeft, Image as ImageIcon, Loader2
 } from 'lucide-react';
 import { api } from '../services/api.js';
+import { RichTextEditor } from '../components/RichTextEditor.js';
 import { FormattingState } from './EditorRibbon.js';
 
 interface BlockRendererProps {
@@ -504,30 +505,29 @@ const QuestionBlockItem: React.FC<{
 
         {/* Continuous Full-Width Flow for Question Number, Statement & Marks */}
         {isEditingStatement ? (
-          <div className="w-full">
-            <input
-              type="text"
+          <div className="w-full my-1">
+            <RichTextEditor
               autoFocus
               value={statementText}
-              onChange={e => setStatementText(e.target.value)}
-              onBlur={() => {
-                setIsEditingStatement(false);
+              onChange={val => {
+                setStatementText(val);
                 onUpdateBlock && onUpdateBlock({
                   ...qb,
-                  question: { ...q, rawText: statementText }
+                  question: { ...q, rawText: val }
                 });
               }}
-              onKeyDown={e => {
-                if (e.key === 'Enter') {
-                  setIsEditingStatement(false);
-                  onUpdateBlock && onUpdateBlock({
-                    ...qb,
-                    question: { ...q, rawText: statementText }
-                  });
-                }
-              }}
-              className="w-full font-semibold text-black px-2 py-1 border border-sky-400 rounded bg-white outline-hidden shadow-2xs text-sm"
+              onBlur={() => setIsEditingStatement(false)}
+              className="w-full"
             />
+            <div className="flex justify-end gap-2 mt-1">
+              <button
+                type="button"
+                onClick={() => setIsEditingStatement(false)}
+                className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-bold cursor-pointer shadow-2xs"
+              >
+                Done Editing
+              </button>
+            </div>
           </div>
         ) : (
           <div
