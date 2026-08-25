@@ -1186,28 +1186,40 @@ export const EditorRibbon: React.FC<EditorRibbonProps> = ({
                               <MathTextRenderer text={q.rawText} />
                             </div>
 
-                            {/* Options Preview */}
+                            {/* Question Image if present */}
+                            {q.imageUrl && (
+                              <div className="p-1 bg-slate-50 border border-slate-200 rounded max-h-32 flex items-center justify-center overflow-hidden">
+                                <img src={q.imageUrl} alt="Question illustration" className="max-h-28 object-contain rounded" />
+                              </div>
+                            )}
+
+                            {/* Options Preview with Image support */}
                             {q.options && q.options.length > 0 && (
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-xs text-slate-700">
                                 {q.options.map((opt, oIdx) => (
                                   <div
                                     key={opt.id || oIdx}
-                                    className={`p-1.5 rounded-lg border flex items-center gap-2 ${
+                                    className={`p-1.5 rounded-lg border flex flex-col gap-1 ${
                                       opt.isCorrect
                                         ? 'bg-emerald-50 border-emerald-300 text-emerald-950 font-bold'
                                         : 'bg-slate-50 border-slate-200'
                                     }`}
                                   >
-                                    <span className="font-bold text-slate-500 text-[11px]">
-                                      ({opt.key || String.fromCharCode(97 + oIdx)}).
-                                    </span>
-                                    <span className="truncate">
-                                      <MathTextRenderer text={opt.rawText || ''} />
-                                    </span>
-                                    {opt.isCorrect && (
-                                      <span className="ml-auto text-[9px] font-bold uppercase text-emerald-700 bg-emerald-100 px-1 py-0.2 rounded">
-                                        Ans
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-bold text-slate-500 text-[11px]">
+                                        ({opt.key || String.fromCharCode(97 + oIdx)}).
                                       </span>
+                                      <span className="truncate">
+                                        <MathTextRenderer text={opt.rawText || ''} />
+                                      </span>
+                                      {opt.isCorrect && (
+                                        <span className="ml-auto text-[9px] font-bold uppercase text-emerald-700 bg-emerald-100 px-1 py-0.2 rounded">
+                                          Ans
+                                        </span>
+                                      )}
+                                    </div>
+                                    {opt.imageUrl && (
+                                      <img src={opt.imageUrl} alt={`Option ${opt.key}`} className="max-h-16 object-contain rounded border border-slate-200 bg-white p-0.5" />
                                     )}
                                   </div>
                                 ))}

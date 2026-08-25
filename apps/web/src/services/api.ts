@@ -533,11 +533,12 @@ export const api = {
     }
   },
 
-  // Assets
+  // Assets & Image Upload
   async uploadAsset(file: File): Promise<{ id: string; url: string; originalName: string }> {
     try {
       const formData = new FormData();
       formData.append('image', file);
+      formData.append('file', file);
 
       const res = await fetch(`${API_BASE}/assets/upload`, {
         method: 'POST',
@@ -549,16 +550,32 @@ export const api = {
       }
 
       const json = await res.json();
-      return json.data;
+      return json.data || json;
     } catch {
-      // Create local Object URL as fallback
-      const objectUrl = URL.createObjectURL(file);
-      return {
-        id: `asset-${Date.now()}`,
-        url: objectUrl,
-        originalName: file.name
-      };
+      // Create local Base64 Data URL as robust fallback
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          resolve({
+            id: `asset-${Date.now()}`,
+            url: reader.result as string,
+            originalName: file.name
+          });
+        };
+        reader.onerror = () => {
+          resolve({
+            id: `asset-${Date.now()}`,
+            url: URL.createObjectURL(file),
+            originalName: file.name
+          });
+        };
+        reader.readAsDataURL(file);
+      });
     }
+  },
+
+  async uploadImage(file: File): Promise<{ id: string; url: string; originalName: string }> {
+    return this.uploadAsset(file);
   },
 
   // Exports

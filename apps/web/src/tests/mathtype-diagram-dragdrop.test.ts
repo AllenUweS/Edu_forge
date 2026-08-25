@@ -133,3 +133,59 @@ describe('Science Library Drag & Drop Payload Processing', () => {
     expect(parsed.questionData.rawText).toContain('de Broglie');
   });
 });
+
+describe('Question and Option Local Image Attachment Support', () => {
+  it('supports attaching local image URL to question statement', () => {
+    const qWithImage: Question = {
+      id: 'q-img-1',
+      questionNumber: 1,
+      questionType: 'MCQ_SINGLE',
+      rawText: 'Identify the logic gate represented in the diagram below:',
+      imageUrl: '/api/assets/logic_gate_nand.png',
+      content: [],
+      options: [
+        { id: 'o-1', key: 'a', rawText: 'NAND Gate', isCorrect: true, content: [] },
+        { id: 'o-2', key: 'b', rawText: 'NOR Gate', isCorrect: false, content: [] }
+      ],
+      correctAnswer: 'a',
+      marks: 4,
+      difficulty: 'Easy',
+      tags: ['digital-electronics', 'logic-gates'],
+      optionLayout: 'grid_2x2',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    expect(qWithImage.imageUrl).toBe('/api/assets/logic_gate_nand.png');
+    expect(qWithImage.options.length).toBe(2);
+  });
+
+  it('supports attaching local image URLs to individual multiple choice options', () => {
+    const qWithOptionsImages: Question = {
+      id: 'q-img-options-1',
+      questionNumber: 2,
+      questionType: 'MCQ_SINGLE',
+      rawText: 'Which of the following V-I graphs represents an Ohmic conductor?',
+      content: [],
+      options: [
+        { id: 'o-1', key: 'a', rawText: 'Linear Graph', imageUrl: '/api/assets/vi_linear.png', isCorrect: true, content: [] },
+        { id: 'o-2', key: 'b', rawText: 'Non-linear Diode', imageUrl: '/api/assets/vi_diode.png', isCorrect: false, content: [] },
+        { id: 'o-3', key: 'c', rawText: 'Filament Lamp', imageUrl: '/api/assets/vi_lamp.png', isCorrect: false, content: [] },
+        { id: 'o-4', key: 'd', rawText: 'Thermistor', imageUrl: '/api/assets/vi_thermistor.png', isCorrect: false, content: [] }
+      ],
+      correctAnswer: 'a',
+      marks: 4,
+      difficulty: 'Medium',
+      tags: ['ohms-law', 'graphs'],
+      optionLayout: 'grid_2x2',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    expect(qWithOptionsImages.options[0].imageUrl).toBe('/api/assets/vi_linear.png');
+    expect(qWithOptionsImages.options[1].imageUrl).toBe('/api/assets/vi_diode.png');
+    expect(qWithOptionsImages.options[2].imageUrl).toBe('/api/assets/vi_lamp.png');
+    expect(qWithOptionsImages.options[3].imageUrl).toBe('/api/assets/vi_thermistor.png');
+  });
+});
+

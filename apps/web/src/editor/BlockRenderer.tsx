@@ -335,7 +335,32 @@ const QuestionBlockItem: React.FC<{
         </button>
       </div>
 
-      {/* Render Attached Diagram if present */}
+      {/* Render Attached Image (from local upload) or Diagram URL */}
+      {(q.imageUrl || (q.diagramUrl && !q.diagramSvg)) && (
+        <div className="my-2 p-1 bg-slate-50 rounded-lg flex items-center justify-center border border-slate-200 overflow-hidden relative group/qimg max-h-48">
+          <img
+            src={q.imageUrl || q.diagramUrl}
+            alt="Question illustration"
+            className="max-h-44 max-w-full object-contain rounded shadow-2xs"
+          />
+          <button
+            type="button"
+            onClick={e => {
+              e.stopPropagation();
+              onUpdateBlock && onUpdateBlock({
+                ...qb,
+                question: { ...q, imageUrl: undefined, diagramUrl: undefined }
+              });
+            }}
+            className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded text-[10px] opacity-0 group-hover/qimg:opacity-100 transition-opacity cursor-pointer no-print shadow-xs"
+            title="Remove Question Image"
+          >
+            ✕ Remove Image
+          </button>
+        </div>
+      )}
+
+      {/* Render Attached Diagram SVG if present */}
       {q.diagramSvg && (
         <div className="my-2 p-2 bg-slate-50 rounded-lg flex items-center justify-center border border-slate-200 overflow-hidden relative group/diag">
           <div dangerouslySetInnerHTML={{ __html: q.diagramSvg }} />
@@ -356,13 +381,7 @@ const QuestionBlockItem: React.FC<{
         </div>
       )}
 
-      {q.diagramUrl && !q.diagramSvg && (
-        <div className="my-2 flex items-center justify-center relative group/diag">
-          <img src={q.diagramUrl} alt="Question diagram" className="max-h-40 rounded border border-slate-200" />
-        </div>
-      )}
-
-      {/* Multiple Choice Options with direct editing & drop support */}
+      {/* Multiple Choice Options with direct editing, image attachments & drop support */}
       <div className="mt-1">
         <OptionLayoutRenderer
           options={q.options}
@@ -371,6 +390,28 @@ const QuestionBlockItem: React.FC<{
           isEditable={true}
           onUpdateOptionText={(optId, newText) => {
             const updatedOptions = q.options.map(o => (o.id === optId ? { ...o, rawText: newText } : o));
+            onUpdateBlock && onUpdateBlock({
+              ...qb,
+              question: { ...q, options: updatedOptions }
+            });
+          }}
+          onUpdateOptionImage={(optId, newImgUrl) => {
+            const updatedOptions = q.options.map(o => (o.id === optId ? { ...o, imageUrl: newImgUrl } : o));
+            onUpdateBlock && onUpdateBlock({
+              ...qb,
+              question: { ...q, options: updatedOptions }
+            });
+          }}
+          onRemoveOption={(optId) => {
+            if ((q.options?.length || 0) <= 2) return;
+            const updatedOptions = q.options.filter(o => o.id !== optId);
+            onUpdateBlock && onUpdateBlock({
+              ...qb,
+              question: { ...q, options: updatedOptions }
+            });
+          }}
+          onToggleCorrectOption={(optId) => {
+            const updatedOptions = q.options.map(o => ({ ...o, isCorrect: o.id === optId }));
             onUpdateBlock && onUpdateBlock({
               ...qb,
               question: { ...q, options: updatedOptions }

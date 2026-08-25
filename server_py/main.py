@@ -5,6 +5,7 @@ import uuid
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 from fastapi import FastAPI, HTTPException, UploadFile, File, Response, Query
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -1163,19 +1164,42 @@ def export_pdf_html(doc: Dict[str, Any]):
 
 
 @app.post("/api/assets/upload")
-async def upload_asset(file: UploadFile = File(...)):
-    filename = f"{uuid.uuid4().hex[:8]}_{file.filename}"
-    filepath = os.path.join(UPLOADS_DIR, filename)
+@app.post("/api/upload")
+@app.post("/api/upload/image")
+async def upload_asset(file: Optional[UploadFile] = None, image: Optional[UploadFile] = None):
+    uploaded = file or image
+    if not uploaded:
+        raise HTTPException(status_code=400, detail="No file provided")
+    
+    ext = os.path.splitext(uploaded.filename)[1] or ".png"
+    safe_name = f"{uuid.uuid4().hex[:10]}{ext}"
+    filepath = os.path.join(UPLOADS_DIR, safe_name)
     
     with open(filepath, "wb") as f:
-        content = await file.read()
+        content = await uploaded.read()
         f.write(content)
         
+    url = f"/api/assets/{safe_name}"
     return {
         "success": True,
-        "originalName": file.filename,
-        "url": f"/api/assets/{filename}"
+        "originalName": uploaded.filename,
+        "filename": safe_name,
+        "url": url,
+        "data": {
+            "id": f"asset-{uuid.uuid4().hex[:6]}",
+            "url": url,
+            "originalName": uploaded.filename
+        }
     }
+
+
+@app.get("/api/assets/{filename}")
+@app.get("/api/uploads/{filename}")
+async def get_uploaded_asset(filename: str):
+    filepath = os.path.join(UPLOADS_DIR, filename)
+    if not os.path.exists(filepath):
+        raise HTTPException(status_code=404, detail="Asset not found")
+    return FileResponse(filepath)
 
 
 # Settings API

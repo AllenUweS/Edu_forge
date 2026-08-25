@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { QuestionOption, OptionLayoutType } from '@eduforge/shared';
 import { MathTextRenderer } from '../equation/MathTextRenderer.js';
-import { Edit3, Check, Sparkles, Plus, Trash2 } from 'lucide-react';
+import { api } from '../services/api.js';
+import { Edit3, Check, Sparkles, Plus, Trash2, Image as ImageIcon, Loader2 } from 'lucide-react';
 
 interface OptionLayoutRendererProps {
   options: QuestionOption[];
@@ -9,6 +10,7 @@ interface OptionLayoutRendererProps {
   showAnswers?: boolean;
   onSelectOption?: (optionId: string) => void;
   onUpdateOptionText?: (optionId: string, newText: string) => void;
+  onUpdateOptionImage?: (optionId: string, imageUrl?: string) => void;
   onToggleCorrectOption?: (optionId: string) => void;
   onRemoveOption?: (optionId: string) => void;
   className?: string;
@@ -24,6 +26,7 @@ const EditableOptionItem: React.FC<{
   isEditable: boolean;
   onSelectOption?: (optionId: string) => void;
   onUpdateOptionText?: (optionId: string, newText: string) => void;
+  onUpdateOptionImage?: (optionId: string, imageUrl?: string) => void;
   onToggleCorrectOption?: (optionId: string) => void;
   onRemoveOption?: (optionId: string) => void;
   textColorClass: string;
@@ -35,12 +38,15 @@ const EditableOptionItem: React.FC<{
   isEditable,
   onSelectOption,
   onUpdateOptionText,
+  onUpdateOptionImage,
   onToggleCorrectOption,
   onRemoveOption,
   textColorClass
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [optText, setOptText] = useState(opt.rawText || '');
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setOptText(opt.rawText || '');
@@ -78,6 +84,22 @@ const EditableOptionItem: React.FC<{
     }
   };
 
+  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !onUpdateOptionImage) return;
+
+    try {
+      setIsUploading(true);
+      const res = await api.uploadImage(file);
+      onUpdateOptionImage(opt.id, res.url);
+    } catch (err) {
+      console.error('Option image upload error:', err);
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <div
       onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }}
@@ -89,7 +111,7 @@ const EditableOptionItem: React.FC<{
       {/* Option Key Label (a), (b) etc. */}
       <span
         onClick={() => onToggleCorrectOption && onToggleCorrectOption(opt.id)}
-        className={`font-black min-w-[24px] select-none text-slate-800 ${
+        className={`font-black min-w-[24px] select-none text-slate-800 shrink-0 ${
           isEditable ? 'cursor-pointer hover:text-emerald-700' : ''
         }`}
         title={isEditable ? 'Click to toggle correct answer' : undefined}
@@ -97,60 +119,118 @@ const EditableOptionItem: React.FC<{
         {label}
       </span>
 
-      {/* Option Body (Editable & Formatted as Equation) */}
-      {isEditing && isEditable ? (
-        <input
-          type="text"
-          autoFocus
-          value={optText}
-          onChange={e => setOptText(e.target.value)}
-          onBlur={handleCommitText}
-          onKeyDown={e => {
-            if (e.key === 'Enter') handleCommitText();
-          }}
-          className="flex-1 text-xs font-semibold px-1.5 py-0.5 border border-sky-400 rounded bg-white text-black outline-hidden min-w-[60px] shadow-2xs"
-        />
-      ) : (
-        <div
-          onClick={(e) => {
-            if (isEditable && onUpdateOptionText) {
-              e.stopPropagation();
-              setIsEditing(true);
-            } else if (onSelectOption) {
-              onSelectOption(opt.id);
-            }
-          }}
-          className={`flex-1 font-semibold ${
-            isEditable
-              ? 'cursor-pointer hover:bg-sky-50/70 hover:border-sky-300 border border-transparent rounded px-1 transition-all'
-              : ''
-          }`}
-          title={isEditable ? 'Click to edit option text or drop science formula' : undefined}
-        >
-          <MathTextRenderer text={opt.rawText || ''} />
-        </div>
-      )}
+      <div className="flex-1 flex flex-col gap-1 min-w-0">
+        {/* Option Body (Editable & Formatted as Equation) */}
+        {isEditing && isEditable ? (
+          <input
+            type="text"
+            autoFocus
+            value={optText}
+            onChange={e => setOptText(e.target.value)}
+            onBlur={handleCommitText}
+            onKeyDown={e => {
+              if (e.key === 'Enter') handleCommitText();
+            }}
+            className="w-full text-xs font-semibold px-1.5 py-0.5 border border-sky-400 rounded bg-white text-black outline-hidden min-w-[60px] shadow-2xs"
+          />
+        ) : (
+          <div
+            onClick={(e) => {
+              if (isEditable && onUpdateOptionText) {
+                e.stopPropagation();
+                setIsEditing(true);
+              } else if (onSelectOption) {
+                onSelectOption(opt.id);
+              }
+            }}
+            className={`font-semibold ${
+              isEditable
+                ? 'cursor-pointer hover:bg-sky-50/70 hover:border-sky-300 border border-transparent rounded px-1 transition-all'
+                : ''
+            }`}
+            title={isEditable ? 'Click to edit option text or drop science formula' : undefined}
+          >
+            {opt.rawText ? (
+              <MathTextRenderer text={opt.rawText} />
+            ) : !opt.imageUrl ? (
+              <span className="text-slate-400 italic text-xs">Empty option...</span>
+            ) : null}
+          </div>
+        )}
+
+        {/* Option Image Rendering */}
+        {opt.imageUrl && (
+          <div className="relative group/optimg inline-block my-0.5">
+            <img
+              src={opt.imageUrl}
+              alt={`Option ${label}`}
+              className="max-h-24 max-w-full rounded border border-slate-200 bg-white p-0.5 object-contain shadow-2xs"
+            />
+            {isEditable && onUpdateOptionImage && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onUpdateOptionImage(opt.id, undefined);
+                }}
+                className="absolute -top-1.5 -right-1.5 bg-red-600 hover:bg-red-700 text-white rounded-full p-0.5 opacity-0 group-hover/optimg:opacity-100 transition-opacity text-[10px] cursor-pointer shadow-xs no-print"
+                title="Remove option image"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Correct answer indicator */}
       {showAnswers && isCorrect && (
-        <span className="text-[9px] font-bold uppercase text-emerald-700 bg-emerald-100 px-1 py-0.2 rounded border border-emerald-200">
+        <span className="text-[9px] font-bold uppercase text-emerald-700 bg-emerald-100 px-1 py-0.2 rounded border border-emerald-200 shrink-0">
           Ans
         </span>
       )}
 
-      {/* Quick remove option button */}
-      {isEditable && onRemoveOption && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onRemoveOption(opt.id);
-          }}
-          className="opacity-0 group-hover/opt:opacity-100 p-0.5 text-slate-400 hover:text-red-600 rounded transition-opacity cursor-pointer no-print"
-          title="Remove option"
-        >
-          <Trash2 className="w-3 h-3" />
-        </button>
+      {/* Quick Actions (Add image / Remove option) */}
+      {isEditable && (
+        <div className="flex items-center gap-0.5 opacity-0 group-hover/opt:opacity-100 transition-opacity no-print shrink-0">
+          {onUpdateOptionImage && (
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageFileChange}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  fileInputRef.current?.click();
+                }}
+                disabled={isUploading}
+                className="p-0.5 text-slate-400 hover:text-amber-600 rounded transition-colors cursor-pointer"
+                title="Attach image from local system to this option"
+              >
+                {isUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <ImageIcon className="w-3 h-3" />}
+              </button>
+            </>
+          )}
+
+          {onRemoveOption && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemoveOption(opt.id);
+              }}
+              className="p-0.5 text-slate-400 hover:text-red-600 rounded transition-opacity cursor-pointer"
+              title="Remove option"
+            >
+              <Trash2 className="w-3 h-3" />
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
@@ -162,6 +242,7 @@ export const OptionLayoutRenderer: React.FC<OptionLayoutRendererProps> = ({
   showAnswers = false,
   onSelectOption,
   onUpdateOptionText,
+  onUpdateOptionImage,
   onToggleCorrectOption,
   onRemoveOption,
   className = '',
@@ -192,6 +273,7 @@ export const OptionLayoutRenderer: React.FC<OptionLayoutRendererProps> = ({
             isEditable={isEditable}
             onSelectOption={onSelectOption}
             onUpdateOptionText={onUpdateOptionText}
+            onUpdateOptionImage={onUpdateOptionImage}
             onToggleCorrectOption={onToggleCorrectOption}
             onRemoveOption={onRemoveOption}
             textColorClass={textColorClass}
@@ -215,6 +297,7 @@ export const OptionLayoutRenderer: React.FC<OptionLayoutRendererProps> = ({
             isEditable={isEditable}
             onSelectOption={onSelectOption}
             onUpdateOptionText={onUpdateOptionText}
+            onUpdateOptionImage={onUpdateOptionImage}
             onToggleCorrectOption={onToggleCorrectOption}
             onRemoveOption={onRemoveOption}
             textColorClass={textColorClass}
@@ -237,6 +320,7 @@ export const OptionLayoutRenderer: React.FC<OptionLayoutRendererProps> = ({
           isEditable={isEditable}
           onSelectOption={onSelectOption}
           onUpdateOptionText={onUpdateOptionText}
+          onUpdateOptionImage={onUpdateOptionImage}
           onToggleCorrectOption={onToggleCorrectOption}
           onRemoveOption={onRemoveOption}
           textColorClass={textColorClass}

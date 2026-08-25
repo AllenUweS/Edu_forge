@@ -22,6 +22,8 @@ export interface QuestionOption {
   content: DocumentBlock[];
   rawText?: string;
   isCorrect?: boolean;
+  imageUrl?: string;
+  imageSvg?: string;
 }
 
 export interface Question {
@@ -45,6 +47,7 @@ export interface Question {
   explanationText?: string;
   diagramUrl?: string;
   diagramSvg?: string;
+  imageUrl?: string;
   isSystem?: boolean;
   createdAt: string;
   updatedAt: string;

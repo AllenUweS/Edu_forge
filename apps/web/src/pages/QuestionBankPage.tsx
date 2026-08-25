@@ -270,6 +270,18 @@ export const QuestionBankPage: React.FC<QuestionBankPageProps> = ({
                 <MathTextRenderer text={q.rawText} />
               </div>
 
+              {/* Render Question Image or Diagram */}
+              {q.imageUrl && (
+                <div className="my-2 p-2 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-center max-h-48 overflow-hidden">
+                  <img src={q.imageUrl} alt="Question illustration" className="max-h-44 object-contain rounded" />
+                </div>
+              )}
+              {q.diagramSvg && (
+                <div className="my-2 p-2 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-center overflow-hidden">
+                  <div dangerouslySetInnerHTML={{ __html: q.diagramSvg }} />
+                </div>
+              )}
+
               {/* Multiple Choice Options */}
               <OptionLayoutRenderer
                 options={q.options}

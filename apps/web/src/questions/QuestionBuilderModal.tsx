@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Question, QuestionOption, OptionLayoutType, QuestionDifficulty } from '@eduforge/shared';
 import { MathTextRenderer } from '../equation/MathTextRenderer.js';
 import { MathTypeEditor } from '../equation/MathTypeEditor.js';
 import { DiagramStudioModal } from './DiagramStudioModal.js';
-import { HelpCircle, X, Check, Plus, Trash2, Sigma, Sparkles, BookOpen, Image as ImageIcon, Palette } from 'lucide-react';
+import { api } from '../services/api.js';
+import {
+  HelpCircle, X, Check, Plus, Trash2, Sigma, Sparkles,
+  Image as ImageIcon, Palette, Upload, Loader2
+} from 'lucide-react';
 
 interface QuestionBuilderModalProps {
   isOpen: boolean;
@@ -35,6 +39,13 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
   const [tagsInput, setTagsInput] = useState<string>((initialQuestion?.tags || []).join(', '));
   const [explanationText, setExplanationText] = useState(initialQuestion?.explanationText || '');
   const [diagramSvg, setDiagramSvg] = useState<string>(initialQuestion?.diagramSvg || '');
+  const [imageUrl, setImageUrl] = useState<string>(initialQuestion?.imageUrl || initialQuestion?.diagramUrl || '');
+  const [isUploadingQuestionImage, setIsUploadingQuestionImage] = useState<boolean>(false);
+  const [uploadingOptionIdx, setUploadingOptionIdx] = useState<number | null>(null);
+
+  // Hidden file input refs
+  const questionImageInputRef = useRef<HTMLInputElement>(null);
+  const optionImageInputRefs = useRef<{ [key: number]: HTMLInputElement | null }>({});
 
   // MathType Visual Equation Editor integration
   const [isMathTypeOpen, setIsMathTypeOpen] = useState<boolean>(false);
@@ -81,7 +92,7 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
 
   const handleOptionTextChange = (index: number, text: string) => {
     const updated = [...options];
-    updated[index].rawText = text;
+    updated[index] = { ...updated[index], rawText: text };
     setOptions(updated);
   };
 
@@ -90,6 +101,50 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
       ...opt,
       isCorrect: idx === index
     }));
+    setOptions(updated);
+  };
+
+  // Upload Question Image from local file
+  const handleQuestionImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsUploadingQuestionImage(true);
+      const res = await api.uploadImage(file);
+      setImageUrl(res.url);
+    } catch (err) {
+      console.error('Question image upload error:', err);
+    } finally {
+      setIsUploadingQuestionImage(false);
+      if (questionImageInputRef.current) questionImageInputRef.current.value = '';
+    }
+  };
+
+  // Upload Option Image from local file
+  const handleOptionImageUpload = async (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setUploadingOptionIdx(index);
+      const res = await api.uploadImage(file);
+      const updated = [...options];
+      updated[index] = { ...updated[index], imageUrl: res.url };
+      setOptions(updated);
+    } catch (err) {
+      console.error('Option image upload error:', err);
+    } finally {
+      setUploadingOptionIdx(null);
+      if (optionImageInputRefs.current[index]) {
+        optionImageInputRefs.current[index]!.value = '';
+      }
+    }
+  };
+
+  const handleRemoveOptionImage = (index: number) => {
+    const updated = [...options];
+    updated[index] = { ...updated[index], imageUrl: undefined };
     setOptions(updated);
   };
 
@@ -149,6 +204,7 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
       ],
       options: options.map(o => ({
         ...o,
+        imageUrl: o.imageUrl || undefined,
         content: [{ id: `p-${Date.now()}`, type: 'paragraph', runs: [{ id: `t-${Date.now()}`, text: o.rawText || '' }] }]
       })),
       correctAnswer: correctOpt?.key || 'a',
@@ -162,6 +218,8 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
       optionLayout,
       explanationText,
       diagramSvg: diagramSvg || undefined,
+      imageUrl: imageUrl || undefined,
+      diagramUrl: imageUrl || undefined,
       isSystem: false,
       createdAt: initialQuestion?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString()
@@ -186,7 +244,7 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
                 <h3 className="text-base font-bold text-black">
                   {initialQuestion?.id ? 'Edit MCQ Question' : 'Create New MCQ Question'}
                 </h3>
-                <p className="text-xs text-slate-600 font-medium">Configure statement, formulas with MathType, diagrams/shapes, and options</p>
+                <p className="text-xs text-slate-600 font-medium">Configure statement, formulas with MathType, local image attachments, diagrams, and options</p>
               </div>
             </div>
             <button
@@ -301,13 +359,35 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
               </div>
             </div>
 
-            {/* Question Statement with MathType & Diagram Studio */}
+            {/* Question Statement with MathType, Local Image Upload & Diagram Studio */}
             <div>
               <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
                 <label className="block text-xs font-bold uppercase tracking-wider text-black">
                   Question Statement
                 </label>
                 <div className="flex items-center gap-2">
+                  {/* Upload Image from Local System for Question */}
+                  <input
+                    ref={questionImageInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleQuestionImageUpload}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => questionImageInputRef.current?.click()}
+                    disabled={isUploadingQuestionImage}
+                    className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all shadow-xs active:scale-95 cursor-pointer disabled:opacity-50"
+                  >
+                    {isUploadingQuestionImage ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <ImageIcon className="w-3.5 h-3.5" />
+                    )}
+                    <span>{imageUrl ? 'Change Image' : 'Add Question Image'}</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={openMathTypeForStatement}
@@ -323,7 +403,7 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
                     className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all shadow-xs active:scale-95 cursor-pointer"
                   >
                     <Palette className="w-3.5 h-3.5" />
-                    <span>{diagramSvg ? 'Edit Diagram / Shapes' : 'Draw & Insert Diagram'}</span>
+                    <span>{diagramSvg ? 'Edit Diagram' : 'Draw Shapes'}</span>
                   </button>
                 </div>
               </div>
@@ -336,7 +416,42 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
                 className="w-full text-sm font-semibold p-3 border border-slate-300 rounded-lg text-black bg-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500 shadow-2xs placeholder:text-slate-400"
               />
 
-              {/* Attached Diagram Preview */}
+              {/* Uploaded Question Image Preview */}
+              {imageUrl && (
+                <div className="mt-2.5 p-3 bg-amber-50/70 border-2 border-amber-300 rounded-xl flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-24 h-16 bg-white border border-amber-300 rounded-lg p-1 overflow-hidden flex items-center justify-center">
+                      <img src={imageUrl} alt="Attached Question Asset" className="max-h-full max-w-full object-contain rounded" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-amber-950 block flex items-center gap-1">
+                        <Check className="w-3.5 h-3.5 text-amber-600" /> Question Image Attached (Local Upload)
+                      </span>
+                      <span className="text-[10px] text-slate-500">Will render directly with the question statement</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => questionImageInputRef.current?.click()}
+                      className="px-2.5 py-1 bg-white hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs font-bold cursor-pointer"
+                    >
+                      Replace
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setImageUrl('')}
+                      className="p-1 text-slate-400 hover:text-rose-600 rounded-lg cursor-pointer"
+                      title="Remove image"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Attached SVG Diagram Preview */}
               {diagramSvg && (
                 <div className="mt-2.5 p-3 bg-slate-50 border-2 border-emerald-300 rounded-xl flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -386,7 +501,7 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
                   <h4 className="text-xs font-bold uppercase tracking-wider text-black">
                     Multiple Choice Options ({options.length} options)
                   </h4>
-                  <span className="text-[11px] text-slate-600 font-medium">Click the MathType icon on any option to build formulas</span>
+                  <span className="text-[11px] text-slate-600 font-medium">Add text, formulas, or images from your local system for each option</span>
                 </div>
 
                 <div className="flex items-center gap-3">
@@ -417,56 +532,108 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
               </div>
 
               {/* Options List */}
-              <div className="space-y-2.5">
+              <div className="space-y-3">
                 {options.map((opt, idx) => (
-                  <div key={opt.id || idx} className="flex items-center gap-2.5 bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs">
-                    <label className="flex items-center gap-1.5 cursor-pointer" title="Mark as correct answer">
+                  <div key={opt.id || idx} className="bg-white p-3 rounded-lg border border-slate-200 shadow-2xs space-y-2">
+                    <div className="flex items-center gap-2.5">
+                      <label className="flex items-center gap-1.5 cursor-pointer" title="Mark as correct answer">
+                        <input
+                          type="radio"
+                          name="correct_option"
+                          checked={opt.isCorrect}
+                          onChange={() => handleSetCorrect(idx)}
+                          className="w-4 h-4 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                        />
+                        <span className={`text-xs font-bold uppercase min-w-[20px] ${opt.isCorrect ? 'text-emerald-700 font-black' : 'text-black'}`}>
+                          ({opt.key})
+                        </span>
+                      </label>
+
                       <input
-                        type="radio"
-                        name="correct_option"
-                        checked={opt.isCorrect}
-                        onChange={() => handleSetCorrect(idx)}
-                        className="w-4 h-4 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                        type="text"
+                        placeholder={`Option (${opt.key}) text or formula (e.g. H = \\frac{u^2}{2g})`}
+                        value={opt.rawText || ''}
+                        onChange={e => handleOptionTextChange(idx, e.target.value)}
+                        className="flex-1 text-sm font-semibold p-1.5 border border-slate-300 rounded text-black bg-white focus:outline-hidden focus:ring-1 focus:ring-indigo-500 placeholder:text-slate-400"
                       />
-                      <span className={`text-xs font-bold uppercase min-w-[20px] ${opt.isCorrect ? 'text-emerald-700 font-black' : 'text-black'}`}>
-                        ({opt.key})
-                      </span>
-                    </label>
 
-                    <input
-                      type="text"
-                      placeholder={`Option (${opt.key}) text or formula (e.g. H = \\frac{u^2}{2g})`}
-                      value={opt.rawText || ''}
-                      onChange={e => handleOptionTextChange(idx, e.target.value)}
-                      className="flex-1 text-sm font-semibold p-1.5 border border-slate-300 rounded text-black bg-white focus:outline-hidden focus:ring-1 focus:ring-indigo-500 placeholder:text-slate-400"
-                    />
-
-                    {/* MathType Button for Option */}
-                    <button
-                      type="button"
-                      onClick={() => openMathTypeForOption(idx, opt.key, opt.rawText || '')}
-                      className="p-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg transition-colors cursor-pointer flex items-center gap-1 text-xs font-bold"
-                      title={`Open MathType Formula Editor for Option (${opt.key})`}
-                    >
-                      <Sigma className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline text-[11px]">MathType</span>
-                    </button>
-
-                    {opt.rawText && (opt.rawText.includes('\\') || opt.rawText.includes('$')) && (
-                      <div className="px-2 py-1 bg-slate-50 border border-slate-200 rounded max-w-[150px] overflow-hidden text-xs text-black">
-                        <MathTextRenderer text={opt.rawText} />
-                      </div>
-                    )}
-
-                    {options.length > 2 && (
+                      {/* MathType Button for Option */}
                       <button
                         type="button"
-                        onClick={() => handleRemoveOption(idx)}
-                        className="p-1 text-slate-400 hover:text-red-600 rounded transition-colors cursor-pointer"
-                        title="Remove option"
+                        onClick={() => openMathTypeForOption(idx, opt.key, opt.rawText || '')}
+                        className="p-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg transition-colors cursor-pointer flex items-center gap-1 text-xs font-bold"
+                        title={`Open MathType Formula Editor for Option (${opt.key})`}
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Sigma className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline text-[11px]">Math</span>
                       </button>
+
+                      {/* Option Image Upload Trigger */}
+                      <input
+                        ref={el => (optionImageInputRefs.current[idx] = el)}
+                        type="file"
+                        accept="image/*"
+                        onChange={e => handleOptionImageUpload(idx, e)}
+                        className="hidden"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => optionImageInputRefs.current[idx]?.click()}
+                        disabled={uploadingOptionIdx === idx}
+                        className={`p-1.5 border rounded-lg transition-colors cursor-pointer flex items-center gap-1 text-xs font-bold ${
+                          opt.imageUrl
+                            ? 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200'
+                            : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
+                        }`}
+                        title={`Upload local image for Option (${opt.key})`}
+                      >
+                        {uploadingOptionIdx === idx ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <ImageIcon className="w-3.5 h-3.5" />
+                        )}
+                        <span className="hidden sm:inline text-[11px]">
+                          {opt.imageUrl ? 'Image' : 'Add Img'}
+                        </span>
+                      </button>
+
+                      {opt.rawText && (opt.rawText.includes('\\') || opt.rawText.includes('$')) && (
+                        <div className="px-2 py-1 bg-slate-50 border border-slate-200 rounded max-w-[130px] overflow-hidden text-xs text-black">
+                          <MathTextRenderer text={opt.rawText} />
+                        </div>
+                      )}
+
+                      {options.length > 2 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveOption(idx)}
+                          className="p-1 text-slate-400 hover:text-red-600 rounded transition-colors cursor-pointer"
+                          title="Remove option"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Option Image Preview Thumbnail */}
+                    {opt.imageUrl && (
+                      <div className="pl-7 pt-1 flex items-center gap-3">
+                        <div className="w-16 h-12 bg-slate-100 border border-amber-300 rounded p-0.5 flex items-center justify-center overflow-hidden">
+                          <img src={opt.imageUrl} alt={`Option (${opt.key}) image`} className="max-h-full max-w-full object-contain rounded" />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] font-bold text-amber-900">
+                            Option ({opt.key}) Image Attached
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveOptionImage(idx)}
+                            className="text-[10px] text-red-600 hover:text-red-800 underline font-semibold cursor-pointer"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
                     )}
                   </div>
                 ))}
