@@ -1150,12 +1150,18 @@ def export_docx(doc: Dict[str, Any]):
     )
 
 
+@app.post("/api/export/pdf")
 @app.post("/api/export/pdf-html")
 def export_pdf_html(doc: Dict[str, Any]):
     title = doc.get("title", "Question Paper")
     metadata = doc.get("metadata", {})
     sections = doc.get("sections", [])
     inst_name = metadata.get("instituteName") or metadata.get("institutionName") or "EXAMINATION ACADEMY"
+    exam_name = metadata.get("examName") or "TERMINAL EXAMINATION"
+    subject = metadata.get("subject") or "General"
+    time_min = metadata.get("timeAllowedMinutes") or 180
+    max_marks = metadata.get("maxMarks") or 100
+    instructions = metadata.get("generalInstructions") or []
     
     html = f"""<!DOCTYPE html>
 <html>
@@ -1166,58 +1172,324 @@ def export_pdf_html(doc: Dict[str, Any]):
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
     <style>
-        @page {{ size: A4; margin: 12mm; }}
-        body {{ font-family: 'Inter', sans-serif; color: #0f172a; line-height: 1.4; margin: 0; padding: 12mm; }}
-        .header {{ text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 12px; }}
-        .inst {{ font-size: 16pt; font-weight: 900; text-transform: uppercase; margin: 0; }}
-        .exam {{ font-size: 12pt; font-weight: 700; margin: 4px 0; }}
-        .meta-row {{ display: flex; justify-content: space-between; font-size: 10pt; font-weight: 600; margin-top: 6px; }}
-        .section-title {{ text-align: center; font-size: 11pt; font-weight: 900; text-transform: uppercase; border-bottom: 1px solid #94a3b8; padding: 4px 0; margin-top: 16px; }}
-        .question {{ margin: 10px 0; font-size: 10.5pt; }}
-        .options-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 6px 20px; margin: 6px 0 6px 16px; font-size: 10pt; }}
-        .diagram {{ text-align: center; margin: 8px 0; }}
+        @page {{
+            size: A4;
+            margin: 12mm 15mm 12mm 15mm;
+        }}
+        * {{ box-sizing: border-box; }}
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            color: #0f172a;
+            line-height: 1.45;
+            margin: 0;
+            padding: 20px;
+            background: #f8fafc;
+        }}
+        .page-container {{
+            max-width: 210mm;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 15mm;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }}
+        .no-print-bar {{
+            position: sticky;
+            top: 0;
+            max-width: 210mm;
+            margin: 0 auto 16px auto;
+            background: #4f46e5;
+            color: #ffffff;
+            padding: 10px 16px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+            z-index: 999;
+        }}
+        .btn-print {{
+            background: #ffffff;
+            color: #4f46e5;
+            border: none;
+            padding: 6px 16px;
+            font-weight: bold;
+            font-size: 13px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }}
+        .btn-print:hover {{
+            background: #f1f5f9;
+        }}
+        .header {{
+            text-align: center;
+            border-bottom: 2px solid #0f172a;
+            padding-bottom: 10px;
+            margin-bottom: 14px;
+        }}
+        .inst {{
+            font-size: 16pt;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 0;
+        }}
+        .exam {{
+            font-size: 12pt;
+            font-weight: 700;
+            margin: 4px 0;
+            color: #1e293b;
+        }}
+        .meta-row {{
+            display: flex;
+            justify-content: space-between;
+            font-size: 9.5pt;
+            font-weight: 600;
+            margin-top: 8px;
+            padding-top: 6px;
+            border-top: 1px dashed #cbd5e1;
+        }}
+        .instructions-box {{
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 8px 12px;
+            margin-bottom: 14px;
+            font-size: 8.5pt;
+            color: #475569;
+        }}
+        .section-title {{
+            text-align: center;
+            font-size: 11pt;
+            font-weight: 900;
+            text-transform: uppercase;
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            padding: 4px 8px;
+            margin: 16px 0 10px 0;
+            border-radius: 4px;
+        }}
+        .section-inst {{
+            text-align: center;
+            font-style: italic;
+            font-size: 8.5pt;
+            color: #64748b;
+            margin-bottom: 10px;
+        }}
+        .two-column {{
+            column-count: 2;
+            column-gap: 24px;
+            column-rule: 1px solid #e2e8f0;
+        }}
+        .question-card {{
+            break-inside: avoid;
+            page-break-inside: avoid;
+            margin-bottom: 14px;
+            font-size: 10pt;
+        }}
+        .question-statement {{
+            font-weight: 600;
+            color: #0f172a;
+            line-height: 1.45;
+        }}
+        .q-num {{
+            font-weight: 900;
+            margin-right: 4px;
+        }}
+        .q-marks {{
+            font-size: 8.5pt;
+            font-weight: bold;
+            color: #0369a1;
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 4px;
+            padding: 1px 4px;
+            margin-left: 6px;
+            white-space: nowrap;
+            display: inline-block;
+        }}
+        .img-grid {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 8px;
+            margin: 8px 0;
+        }}
+        .img-card {{
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 4px;
+            background: #ffffff;
+            text-align: center;
+        }}
+        .img-card img {{
+            max-width: 100%;
+            max-height: 150px;
+            object-fit: contain;
+            border-radius: 4px;
+        }}
+        .options-grid-2x2 {{
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px 16px;
+            margin-top: 6px;
+            font-size: 9.5pt;
+        }}
+        .options-vertical {{
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-top: 6px;
+            font-size: 9.5pt;
+        }}
+        .options-horizontal {{
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 20px;
+            margin-top: 6px;
+            font-size: 9.5pt;
+        }}
+        .opt-item {{
+            display: flex;
+            align-items: flex-start;
+            gap: 4px;
+        }}
+        .opt-key {{
+            font-weight: bold;
+            color: #334155;
+            min-width: 20px;
+        }}
+        .opt-img {{
+            margin-top: 4px;
+            max-height: 80px;
+            border-radius: 4px;
+            border: 1px solid #e2e8f0;
+        }}
+        @media print {{
+            body {{
+                background: #ffffff !important;
+                padding: 0 !important;
+            }}
+            .page-container {{
+                box-shadow: none !important;
+                padding: 0 !important;
+                max-width: 100% !important;
+            }}
+            .no-print-bar {{
+                display: none !important;
+            }}
+        }}
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="inst">{inst_name}</div>
-        <div class="exam">{metadata.get('examName', 'QUESTION PAPER')}</div>
-        <div class="meta-row">
-            <span>Subject: {metadata.get('subject', 'General')}</span>
-            <span>Time: {metadata.get('timeAllowedMinutes', 180)} Min | Max Marks: {metadata.get('maxMarks', 100)}</span>
-        </div>
+    <div class="no-print-bar">
+        <span style="font-weight: 600; font-size: 13px;">📄 EduForge PDF Print Preview</span>
+        <button type="button" class="btn-print" onclick="window.print()">🖨️ Print / Save as PDF</button>
     </div>
+
+    <div class="page-container">
+        <div class="header">
+            <div class="inst">{inst_name}</div>
+            <div class="exam">{exam_name}</div>
+            <div class="meta-row">
+                <span><strong>Subject:</strong> {subject}</span>
+                <span><strong>Time Allowed:</strong> {time_min} Minutes</span>
+                <span><strong>Max Marks:</strong> {max_marks}</span>
+            </div>
+        </div>
 """
 
-    for s in sections:
-        html += f"<div class='section-title'>{s.get('title', 'SECTION')}</div>"
+    if instructions and len(instructions) > 0:
+        html += "<div class='instructions-box'><strong>General Instructions:</strong><ol style='margin:4px 0 0 16px; padding:0;'>"
+        for inst in instructions:
+            html += f"<li>{inst}</li>"
+        html += "</ol></div>"
+
+    for s_idx, s in enumerate(sections):
+        s_title = s.get("title") or f"SECTION - {chr(65 + s_idx)}"
+        html += f"<div class='section-title'>{s_title}</div>"
         if s.get("instructions"):
-            html += f"<div style='text-align:center; font-style:italic; font-size:9pt; color:#64748b;'>{s.get('instructions')}</div>"
+            html += f"<div class='section-inst'>{s.get('instructions')}</div>"
         
+        is_two_col = s.get("columnCount") == 2 or s.get("layout") == "TWO_COLUMN"
+        html += f"<div class='{'two-column' if is_two_col else ''}'>"
+
         for b in s.get("blocks", []):
-            if b.get("type") == "question":
+            b_type = b.get("type", "")
+            if b_type == "question":
                 q = b.get("question", {})
                 q_num = q.get("questionNumber", "")
                 q_text = q.get("rawText", "")
                 marks = q.get("marks", 1)
-                html += f"<div class='question'><strong>{q_num}.</strong> {q_text} <span style='float:right; font-size:9pt; font-weight:bold;'>[{marks}M]</span></div>"
+                neg = q.get("negativeMarks")
+                marks_badge = f"[{marks}{f', -{neg}' if neg else ''}M]"
                 
-                # Render diagram if present
-                if q.get("diagramSvg"):
-                    html += f"<div class='diagram'>{q['diagramSvg']}</div>"
-                elif q.get("diagramUrl"):
-                    html += f"<div class='diagram'><img src='{q['diagramUrl']}' style='max-height:160px;'/></div>"
+                html += f"""
+                <div class="question-card">
+                    <div class="question-statement">
+                        <span class="q-num">{q_num}.</span>
+                        <span>{q_text}</span>
+                        <span class="q-marks">{marks_badge}</span>
+                    </div>
+                """
 
+                # Render attached question images
+                img_urls = q.get("imageUrls") or ([] if not q.get("imageUrl") else [q["imageUrl"]])
+                if img_urls:
+                    html += "<div class='img-grid'>"
+                    for url in img_urls:
+                        html += f"<div class='img-card'><img src='{url}' alt='Question Figure'/></div>"
+                    html += "</div>"
+                elif q.get("diagramSvg"):
+                    html += f"<div style='text-align:center; margin:8px 0;'>{q['diagramSvg']}</div>"
+                elif q.get("diagramUrl"):
+                    html += f"<div style='text-align:center; margin:8px 0;'><img src='{q['diagramUrl']}' style='max-height:160px; object-fit:contain;'/></div>"
+
+                # Render options
                 opts = q.get("options", [])
+                opt_layout = q.get("optionLayout", "grid_2x2")
                 if opts:
-                    html += "<div class='options-grid'>"
-                    for opt in opts:
-                        key = opt.get("key", "a").upper()
+                    layout_class = "options-grid-2x2"
+                    if opt_layout == "vertical" or opt_layout == "stacked":
+                        layout_class = "options-vertical"
+                    elif opt_layout == "horizontal" or opt_layout == "inline":
+                        layout_class = "options-horizontal"
+
+                    html += f"<div class='{layout_class}'>"
+                    for o_idx, opt in enumerate(opts):
+                        key = opt.get("key") or chr(97 + o_idx)
                         raw = opt.get("rawText", "")
-                        html += f"<div><strong>({key})</strong> {raw}</div>"
+                        html += f"""
+                        <div class="opt-item">
+                            <span class="opt-key">({key})</span>
+                            <div>
+                                <span>{raw}</span>
+                                {f'<br/><img src="{opt["imageUrl"]}" class="opt-img" />' if opt.get("imageUrl") else ''}
+                            </div>
+                        </div>
+                        """
                     html += "</div>"
 
+                html += "</div>"
+
+            elif b_type == "paragraph":
+                runs = b.get("runs", [])
+                p_text = "".join(r.get("text", "") for r in runs)
+                html += f"<div style='margin-bottom:8px; font-size:10pt;'>{p_text}</div>"
+
+            elif b_type == "heading":
+                level = b.get("level", 2)
+                h_text = b.get("text", "")
+                html += f"<h{level} style='margin:10px 0 6px 0; font-size:11pt;'>{h_text}</h{level}>"
+
+            elif b_type == "sectionHeader":
+                html += f"<div class='section-title'>{b.get('title', '')}</div>"
+
+        html += "</div>"  # close column container
+
     html += """
+    </div>
+
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             renderMathInElement(document.body, {
@@ -1226,13 +1498,16 @@ def export_pdf_html(doc: Dict[str, Any]):
                     {left: "$", right: "$", display: false},
                     {left: "\\\\(", right: "\\\\)", display: false},
                     {left: "\\\\[", right: "\\\\]", display: true}
-                ]
+                ],
+                throwOnError: false
             });
+            setTimeout(function() {
+                window.print();
+            }, 800);
         });
     </script>
 </body>
 </html>"""
-    
     return Response(content=html, media_type="text/html")
 
 

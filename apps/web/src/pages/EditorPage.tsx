@@ -290,17 +290,33 @@ export const EditorPage: React.FC<EditorPageProps> = ({
     if (!doc) return;
     try {
       const html = await api.exportPdfHtml(doc);
-      const printWindow = window.open('', '_blank');
-      if (printWindow) {
-        printWindow.document.write(html);
-        printWindow.document.close();
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const blobUrl = URL.createObjectURL(blob);
+      const printWindow = window.open(blobUrl, '_blank');
+      
+      if (!printWindow) {
+        // Fallback if browser popup blocker blocks window.open
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = '0';
+        iframe.src = blobUrl;
+        document.body.appendChild(iframe);
         setTimeout(() => {
-          printWindow.focus();
-          printWindow.print();
-        }, 500);
+          try {
+            iframe.contentWindow?.focus();
+            iframe.contentWindow?.print();
+          } catch (e) {
+            console.error('Iframe print error:', e);
+          }
+        }, 1000);
       }
     } catch (err) {
-      alert('Failed to render PDF preview');
+      console.error('Failed to render PDF preview:', err);
+      window.print();
     }
   };
 
