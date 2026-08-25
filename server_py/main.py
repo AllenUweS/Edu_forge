@@ -1163,6 +1163,9 @@ def export_pdf_html(doc: Dict[str, Any]):
     return Response(content=html, media_type="text/html")
 
 
+import subprocess
+
+
 @app.post("/api/assets/upload")
 @app.post("/api/upload")
 @app.post("/api/upload/image")
@@ -1171,13 +1174,42 @@ async def upload_asset(file: Optional[UploadFile] = None, image: Optional[Upload
     if not uploaded:
         raise HTTPException(status_code=400, detail="No file provided")
     
-    ext = os.path.splitext(uploaded.filename)[1] or ".png"
-    safe_name = f"{uuid.uuid4().hex[:10]}{ext}"
+    orig_name = uploaded.filename or "image.png"
+    orig_base, orig_ext = os.path.splitext(orig_name)
+    ext = orig_ext.lower() or ".png"
+    
+    prefix = uuid.uuid4().hex[:8]
+    clean_base = "".join(c for c in orig_base if c.isalnum() or c in ("-", "_")).rstrip()
+    if not clean_base:
+        clean_base = "image"
+    safe_name = f"{prefix}_{clean_base}{ext}"
     filepath = os.path.join(UPLOADS_DIR, safe_name)
     
     with open(filepath, "wb") as f:
         content = await uploaded.read()
         f.write(content)
+        
+    # Auto-convert HEIC / HEIF to web-compatible JPG using native macOS sips or Pillow
+    if ext in [".heic", ".heif"]:
+        jpg_name = f"{prefix}_{clean_base}.jpg"
+        jpg_path = os.path.join(UPLOADS_DIR, jpg_name)
+        converted = False
+        try:
+            res = subprocess.run(["/usr/bin/sips", "-s", "format", "jpeg", filepath, "--out", jpg_path], capture_output=True)
+            if res.returncode == 0 and os.path.exists(jpg_path):
+                safe_name = jpg_name
+                converted = True
+        except Exception as e:
+            print(f"sips conversion error: {e}")
+            
+        if not converted:
+            try:
+                from PIL import Image
+                im = Image.open(filepath)
+                im.convert("RGB").save(jpg_path, "JPEG")
+                safe_name = jpg_name
+            except Exception as e:
+                print(f"PIL conversion error: {e}")
         
     url = f"/api/assets/{safe_name}"
     return {
@@ -1193,13 +1225,70 @@ async def upload_asset(file: Optional[UploadFile] = None, image: Optional[Upload
     }
 
 
-@app.get("/api/assets/{filename}")
-@app.get("/api/uploads/{filename}")
+@app.get("/api/assets/{filename:path}")
+@app.get("/api/uploads/{filename:path}")
+@app.head("/api/assets/{filename:path}")
+@app.head("/api/uploads/{filename:path}")
 async def get_uploaded_asset(filename: str):
-    filepath = os.path.join(UPLOADS_DIR, filename)
-    if not os.path.exists(filepath):
-        raise HTTPException(status_code=404, detail="Asset not found")
-    return FileResponse(filepath)
+    # Search in multiple potential uploads folders
+    candidates = [
+        os.path.join(UPLOADS_DIR, filename),
+        os.path.join(os.path.dirname(__file__), "uploads", filename),
+        os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads", filename),
+        os.path.join(os.path.dirname(os.path.dirname(__file__)), "server_py", "uploads", filename),
+        os.path.join("/Users/ashwintelangstark/Desktop/dot.files/PROJECTS.HAEGL.IN/EduForge/eduforge/server_py/uploads", filename),
+        os.path.join("/Users/ashwintelangstark/.gemini/antigravity-ide/scratch/eduforge/server_py/uploads", filename)
+    ]
+    
+    filepath = None
+    for cand in candidates:
+        if os.path.exists(cand):
+            filepath = cand
+            break
+            
+    # If not found directly, check if a converted .jpg exists
+    if not filepath:
+        base, ext = os.path.splitext(filename)
+        jpg_candidates = [
+            os.path.join(UPLOADS_DIR, f"{base}.jpg"),
+            os.path.join(os.path.dirname(__file__), "uploads", f"{base}.jpg"),
+            os.path.join(os.path.dirname(os.path.dirname(__file__)), "server_py", "uploads", f"{base}.jpg"),
+            os.path.join("/Users/ashwintelangstark/Desktop/dot.files/PROJECTS.HAEGL.IN/EduForge/eduforge/server_py/uploads", f"{base}.jpg"),
+            os.path.join("/Users/ashwintelangstark/.gemini/antigravity-ide/scratch/eduforge/server_py/uploads", f"{base}.jpg")
+        ]
+        for jcand in jpg_candidates:
+            if os.path.exists(jcand):
+                filepath = jcand
+                break
+
+    if not filepath or not os.path.exists(filepath):
+        raise HTTPException(status_code=404, detail=f"Asset '{filename}' not found")
+    
+    # If file is HEIC/HEIF, convert on the fly to JPG and serve JPG
+    base, ext = os.path.splitext(filepath)
+    if ext.lower() in [".heic", ".heif"]:
+        jpg_path = f"{base}.jpg"
+        if not os.path.exists(jpg_path):
+            try:
+                subprocess.run(["/usr/bin/sips", "-s", "format", "jpeg", filepath, "--out", jpg_path], capture_output=True)
+            except Exception as e:
+                print(f"On-the-fly HEIC conversion error: {e}")
+        if os.path.exists(jpg_path):
+            return FileResponse(jpg_path, media_type="image/jpeg")
+
+    # Determine media type
+    media_type = "image/png"
+    ext_lower = ext.lower()
+    if ext_lower in [".jpg", ".jpeg"]:
+        media_type = "image/jpeg"
+    elif ext_lower == ".svg":
+        media_type = "image/svg+xml"
+    elif ext_lower == ".webp":
+        media_type = "image/webp"
+    elif ext_lower == ".gif":
+        media_type = "image/gif"
+        
+    return FileResponse(filepath, media_type=media_type)
 
 
 # Settings API

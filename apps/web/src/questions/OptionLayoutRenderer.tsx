@@ -164,6 +164,12 @@ const EditableOptionItem: React.FC<{
             <img
               src={opt.imageUrl}
               alt={`Option ${label}`}
+              onError={(e) => {
+                const target = e.currentTarget;
+                if (target.src.endsWith('.heic') || target.src.endsWith('.HEIC')) {
+                  target.src = target.src.replace(/\.heic$/i, '.jpg');
+                }
+              }}
               className="max-h-24 max-w-full rounded border border-slate-200 bg-white p-0.5 object-contain shadow-2xs"
             />
             {isEditable && onUpdateOptionImage && (

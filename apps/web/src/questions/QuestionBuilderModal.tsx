@@ -421,7 +421,17 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
                 <div className="mt-2.5 p-3 bg-amber-50/70 border-2 border-amber-300 rounded-xl flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-24 h-16 bg-white border border-amber-300 rounded-lg p-1 overflow-hidden flex items-center justify-center">
-                      <img src={imageUrl} alt="Attached Question Asset" className="max-h-full max-w-full object-contain rounded" />
+                      <img
+                        src={imageUrl}
+                        alt="Attached Question Asset"
+                        onError={(e) => {
+                          const target = e.currentTarget;
+                          if (target.src.endsWith('.heic') || target.src.endsWith('.HEIC')) {
+                            target.src = target.src.replace(/\.heic$/i, '.jpg');
+                          }
+                        }}
+                        className="max-h-full max-w-full object-contain rounded"
+                      />
                     </div>
                     <div>
                       <span className="text-xs font-bold text-amber-950 block flex items-center gap-1">
@@ -619,7 +629,17 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
                     {opt.imageUrl && (
                       <div className="pl-7 pt-1 flex items-center gap-3">
                         <div className="w-16 h-12 bg-slate-100 border border-amber-300 rounded p-0.5 flex items-center justify-center overflow-hidden">
-                          <img src={opt.imageUrl} alt={`Option (${opt.key}) image`} className="max-h-full max-w-full object-contain rounded" />
+                          <img
+                            src={opt.imageUrl}
+                            alt={`Option (${opt.key}) image`}
+                            onError={(e) => {
+                              const target = e.currentTarget;
+                              if (target.src.endsWith('.heic') || target.src.endsWith('.HEIC')) {
+                                target.src = target.src.replace(/\.heic$/i, '.jpg');
+                              }
+                            }}
+                            className="max-h-full max-w-full object-contain rounded"
+                          />
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-[11px] font-bold text-amber-900">

@@ -1189,7 +1189,17 @@ export const EditorRibbon: React.FC<EditorRibbonProps> = ({
                             {/* Question Image if present */}
                             {q.imageUrl && (
                               <div className="p-1 bg-slate-50 border border-slate-200 rounded max-h-32 flex items-center justify-center overflow-hidden">
-                                <img src={q.imageUrl} alt="Question illustration" className="max-h-28 object-contain rounded" />
+                                <img
+                                  src={q.imageUrl}
+                                  alt="Question illustration"
+                                  onError={(e) => {
+                                    const target = e.currentTarget;
+                                    if (target.src.endsWith('.heic') || target.src.endsWith('.HEIC')) {
+                                      target.src = target.src.replace(/\.heic$/i, '.jpg');
+                                    }
+                                  }}
+                                  className="max-h-28 object-contain rounded"
+                                />
                               </div>
                             )}
 
@@ -1219,7 +1229,17 @@ export const EditorRibbon: React.FC<EditorRibbonProps> = ({
                                       )}
                                     </div>
                                     {opt.imageUrl && (
-                                      <img src={opt.imageUrl} alt={`Option ${opt.key}`} className="max-h-16 object-contain rounded border border-slate-200 bg-white p-0.5" />
+                                      <img
+                                        src={opt.imageUrl}
+                                        alt={`Option ${opt.key}`}
+                                        onError={(e) => {
+                                          const target = e.currentTarget;
+                                          if (target.src.endsWith('.heic') || target.src.endsWith('.HEIC')) {
+                                            target.src = target.src.replace(/\.heic$/i, '.jpg');
+                                          }
+                                        }}
+                                        className="max-h-16 object-contain rounded border border-slate-200 bg-white p-0.5"
+                                      />
                                     )}
                                   </div>
                                 ))}

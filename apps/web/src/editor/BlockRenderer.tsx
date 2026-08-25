@@ -517,6 +517,12 @@ const QuestionBlockItem: React.FC<{
           <img
             src={q.imageUrl || q.diagramUrl}
             alt="Question illustration"
+            onError={(e) => {
+              const target = e.currentTarget;
+              if (target.src.endsWith('.heic') || target.src.endsWith('.HEIC')) {
+                target.src = target.src.replace(/\.heic$/i, '.jpg');
+              }
+            }}
             style={{ maxHeight: `${Math.round(176 * scale)}px` }}
             className="max-w-full object-contain rounded shadow-2xs"
           />

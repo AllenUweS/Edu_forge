@@ -273,7 +273,17 @@ export const QuestionBankPage: React.FC<QuestionBankPageProps> = ({
               {/* Render Question Image or Diagram */}
               {q.imageUrl && (
                 <div className="my-2 p-2 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-center max-h-48 overflow-hidden">
-                  <img src={q.imageUrl} alt="Question illustration" className="max-h-44 object-contain rounded" />
+                  <img
+                    src={q.imageUrl}
+                    alt="Question illustration"
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      if (target.src.endsWith('.heic') || target.src.endsWith('.HEIC')) {
+                        target.src = target.src.replace(/\.heic$/i, '.jpg');
+                      }
+                    }}
+                    className="max-h-44 object-contain rounded"
+                  />
                 </div>
               )}
               {q.diagramSvg && (
