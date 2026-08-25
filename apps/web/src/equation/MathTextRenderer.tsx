@@ -140,14 +140,16 @@ export const MathTextRenderer: React.FC<MathTextRendererProps> = ({
   }
 
   // 3. Pure formula test:
-  // Starts with \ or contains \frac, \sqrt, = with math terms, reactions with \rightleftharpoons, etc.
-  // And does NOT contain standard multiple english sentences.
-  const isPureFormula = (
+  // Must NOT be a natural language sentence (i.e. contains spaces between ordinary words)
+  const wordCount = trimmed.split(/\s+/).length;
+  const hasEnglishWords = /\b(the|is|are|of|in|to|and|for|with|from|by|at|which|what|calculate|find|determine|when|if|where|each|connected|equivalent|combination|resistor|resistors|identical)\b/i.test(trimmed);
+
+  const isPureFormula = !hasEnglishWords && wordCount <= 4 && (
     (trimmed.startsWith('\\') && !trimmed.includes('. ')) ||
     (trimmed.includes('\\frac') && !trimmed.includes('. ')) ||
     (trimmed.includes('\\rightleftharpoons')) ||
     (trimmed.includes('\\rightarrow') && trimmed.includes('\\text{')) ||
-    (trimmed.includes('=') && (trimmed.includes('\\') || trimmed.includes('^') || trimmed.includes('_')) && !trimmed.includes('. ') && trimmed.length < 120) ||
+    (trimmed.includes('=') && (trimmed.includes('\\') || trimmed.includes('^') || trimmed.includes('_')) && !trimmed.includes('. ') && trimmed.length < 50) ||
     (/^\d+\s*\\Omega$/.test(trimmed)) ||
     (/^[a-zA-Z]\s*=\s*\\frac/.test(trimmed))
   );
