@@ -145,6 +145,10 @@ export interface WordArtBlock extends BaseBlock {
 export interface QuestionBlock extends BaseBlock {
   type: 'question';
   question: Question;
+  fontSize?: number;
+  scale?: number;
+  padding?: number;
+  lineSpacing?: number;
 }
 
 export interface PageBreakBlock extends BaseBlock {

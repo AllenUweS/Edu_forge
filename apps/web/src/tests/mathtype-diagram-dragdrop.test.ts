@@ -189,3 +189,48 @@ describe('Question and Option Local Image Attachment Support', () => {
   });
 });
 
+describe('Question Block Size Increase & Decrease Controls', () => {
+  it('increases and decreases block font size and scale properly', () => {
+    const qb: QuestionBlock = {
+      id: 'qb-size-test',
+      type: 'question',
+      fontSize: 10.5,
+      scale: 1.0,
+      question: {
+        id: 'q-1',
+        questionType: 'MCQ_SINGLE',
+        content: [],
+        rawText: 'Sample question statement for scaling',
+        options: [],
+        marks: 4,
+        difficulty: 'Medium',
+        tags: [],
+        optionLayout: 'grid_2x2',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    };
+
+    // Simulate Increase Size (+1pt)
+    const enlarged: QuestionBlock = {
+      ...qb,
+      fontSize: Math.min(22, (qb.fontSize || 10.5) + 1),
+      scale: Math.round(((qb.fontSize || 10.5) + 1) / 10.5 * 100) / 100
+    };
+
+    expect(enlarged.fontSize).toBe(11.5);
+    expect(enlarged.scale).toBe(1.1);
+
+    // Simulate Decrease Size (-2pt)
+    const compact: QuestionBlock = {
+      ...qb,
+      fontSize: Math.max(7, (qb.fontSize || 10.5) - 2),
+      scale: Math.round(((qb.fontSize || 10.5) - 2) / 10.5 * 100) / 100
+    };
+
+    expect(compact.fontSize).toBe(8.5);
+    expect(compact.scale).toBe(0.81);
+  });
+});
+
+

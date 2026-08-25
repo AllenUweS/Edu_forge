@@ -51,7 +51,9 @@ function estimateBlockHeight(block: DocumentBlock): number {
       const qLines = Math.max(1, Math.ceil(qTextLen / 50));
       const optCount = q.options?.length || 4;
       const optHeight = q.optionLayout === 'grid_2x2' ? 55 : optCount * 26;
-      return qLines * 22 + optHeight + 35;
+      const imgHeight = (q.imageUrl || q.diagramUrl || q.diagramSvg) ? 75 : 0;
+      const scaleMultiplier = (block as any).scale ? (block as any).scale : ((block as any).fontSize ? (block as any).fontSize / 10.5 : 1);
+      return Math.round((qLines * 22 + optHeight + 35 + imgHeight) * scaleMultiplier);
     }
     default:
       return 30;

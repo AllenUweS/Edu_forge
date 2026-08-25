@@ -7,7 +7,10 @@ import {
 import { KaTeXRenderer } from '../equation/KaTeXRenderer.js';
 import { MathTextRenderer } from '../equation/MathTextRenderer.js';
 import { OptionLayoutRenderer } from '../questions/OptionLayoutRenderer.js';
-import { Trash2, Copy, ArrowUp, ArrowDown, Edit3, Type, Wand2, Plus, Sigma, Sparkles } from 'lucide-react';
+import {
+  Trash2, Copy, ArrowUp, ArrowDown, Edit3, Type, Wand2, Plus,
+  Sigma, Sparkles, ZoomIn, ZoomOut, Maximize2, Minimize2
+} from 'lucide-react';
 import { FormattingState } from './EditorRibbon.js';
 
 interface BlockRendererProps {
@@ -56,6 +59,70 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
       return;
     }
     onSelect && onSelect();
+  };
+
+  // Increase Block Size / Font Size / Scale
+  const handleIncreaseBlockSize = () => {
+    if (!onUpdateBlock) return;
+    if (block.type === 'question') {
+      const qb = block as QuestionBlock;
+      const currentSize = qb.fontSize || 10.5;
+      const newSize = Math.min(22, Math.round((currentSize + 1) * 10) / 10);
+      const currentScale = qb.scale || 1.0;
+      const newScale = Math.min(2.0, Math.round((currentScale + 0.1) * 100) / 100);
+      onUpdateBlock({
+        ...qb,
+        fontSize: newSize,
+        scale: newScale
+      });
+    } else if (block.type === 'paragraph') {
+      const p = block as ParagraphBlock;
+      const f = p.runs?.[0]?.formatting || {};
+      const currentSize = f.fontSize || 10.5;
+      const newSize = Math.min(24, Math.round((currentSize + 1) * 10) / 10);
+      onUpdateBlock({
+        ...p,
+        runs: p.runs && p.runs.length > 0
+          ? p.runs.map(r => ({ ...r, formatting: { ...r.formatting, fontSize: newSize } }))
+          : [{ id: `r-${Date.now()}`, text: '', formatting: { ...f, fontSize: newSize } }]
+      });
+    } else if (block.type === 'equation') {
+      const eq = block as EquationBlock;
+      const currentSize = eq.fontSize || 14;
+      onUpdateBlock({ ...eq, fontSize: Math.min(26, currentSize + 2) });
+    }
+  };
+
+  // Decrease Block Size / Font Size / Scale
+  const handleDecreaseBlockSize = () => {
+    if (!onUpdateBlock) return;
+    if (block.type === 'question') {
+      const qb = block as QuestionBlock;
+      const currentSize = qb.fontSize || 10.5;
+      const newSize = Math.max(7, Math.round((currentSize - 1) * 10) / 10);
+      const currentScale = qb.scale || 1.0;
+      const newScale = Math.max(0.6, Math.round((currentScale - 0.1) * 100) / 100);
+      onUpdateBlock({
+        ...qb,
+        fontSize: newSize,
+        scale: newScale
+      });
+    } else if (block.type === 'paragraph') {
+      const p = block as ParagraphBlock;
+      const f = p.runs?.[0]?.formatting || {};
+      const currentSize = f.fontSize || 10.5;
+      const newSize = Math.max(6.5, Math.round((currentSize - 1) * 10) / 10);
+      onUpdateBlock({
+        ...p,
+        runs: p.runs && p.runs.length > 0
+          ? p.runs.map(r => ({ ...r, formatting: { ...r.formatting, fontSize: newSize } }))
+          : [{ id: `r-${Date.now()}`, text: '', formatting: { ...f, fontSize: newSize } }]
+      });
+    } else if (block.type === 'equation') {
+      const eq = block as EquationBlock;
+      const currentSize = eq.fontSize || 14;
+      onUpdateBlock({ ...eq, fontSize: Math.max(8, currentSize - 2) });
+    }
   };
 
   // Helper for border styling
@@ -123,6 +190,35 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
             <Edit3 className="w-3 h-3" />
           </button>
         )}
+
+        {/* Decrease Block Size (A-) */}
+        <button
+          type="button"
+          onClick={e => {
+            e.stopPropagation();
+            handleDecreaseBlockSize();
+          }}
+          className="px-1 py-0.5 hover:text-sky-400 transition-colors flex items-center font-bold text-[10px] bg-slate-800 hover:bg-slate-700 rounded cursor-pointer"
+          title={`Decrease Block Size / Font Size (Current: ${(block as any).fontSize || 10.5}pt)`}
+        >
+          <ZoomOut className="w-2.5 h-2.5 mr-0.5" />
+          <span>A-</span>
+        </button>
+
+        {/* Increase Block Size (A+) */}
+        <button
+          type="button"
+          onClick={e => {
+            e.stopPropagation();
+            handleIncreaseBlockSize();
+          }}
+          className="px-1 py-0.5 hover:text-sky-400 transition-colors flex items-center font-bold text-[10px] bg-slate-800 hover:bg-slate-700 rounded cursor-pointer"
+          title={`Increase Block Size / Font Size (Current: ${(block as any).fontSize || 10.5}pt)`}
+        >
+          <ZoomIn className="w-2.5 h-2.5 mr-0.5" />
+          <span>A+</span>
+        </button>
+
         <button
           type="button"
           onClick={e => {
@@ -187,7 +283,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
 };
 
 /* =========================================================================
-   QUESTION BLOCK ITEM (WITH LIVE EDITING OF QUESTIONS & OPTIONS & DROP SUPPORT)
+   QUESTION BLOCK ITEM (WITH DYNAMIC SIZING, QUESTION/OPTION EDITING & DROP)
    ========================================================================= */
 const QuestionBlockItem: React.FC<{
   qb: QuestionBlock;
@@ -197,10 +293,23 @@ const QuestionBlockItem: React.FC<{
   const [isEditingStatement, setIsEditingStatement] = useState(false);
   const q = qb.question;
   const [statementText, setStatementText] = useState(q.rawText || '');
+  const fontSize = qb.fontSize || 10.5;
+  const scale = qb.scale || 1.0;
 
   useEffect(() => {
     setStatementText(q.rawText || '');
   }, [q.rawText]);
+
+  // Set block font size & scale
+  const setBlockFontSize = (newSize: number) => {
+    if (!onUpdateBlock) return;
+    const clamped = Math.max(7, Math.min(22, Math.round(newSize * 10) / 10));
+    onUpdateBlock({
+      ...qb,
+      fontSize: clamped,
+      scale: Math.round((clamped / 10.5) * 100) / 100
+    });
+  };
 
   // Drop handler: drop formulas/symbols from Science Drawer directly onto the question
   const handleDropOnQuestion = (e: React.DragEvent) => {
@@ -249,9 +358,13 @@ const QuestionBlockItem: React.FC<{
 
   return (
     <div
+      style={{
+        fontSize: `${fontSize}pt`,
+        lineHeight: 1.35
+      }}
       onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }}
       onDrop={handleDropOnQuestion}
-      className="my-2 text-[10.5pt] leading-snug select-text border border-transparent hover:border-sky-300 hover:bg-sky-50/20 p-2 rounded-lg text-black transition-all group/qcard"
+      className="my-2 select-text border border-transparent hover:border-sky-300 hover:bg-sky-50/20 p-2 rounded-lg text-black transition-all group/qcard"
     >
       {/* Question Header & Statement */}
       <div className="flex items-start gap-1.5">
@@ -266,7 +379,7 @@ const QuestionBlockItem: React.FC<{
               question: { ...q, questionNumber: isNaN(val) ? 1 : val }
             });
           }}
-          className="font-black text-black min-w-[22px] outline-hidden hover:bg-slate-100 rounded px-0.5 cursor-text select-text"
+          className="font-black text-black min-w-[22px] outline-hidden hover:bg-slate-100 rounded px-0.5 cursor-text select-text shrink-0"
         >
           {q.questionNumber ? `${q.questionNumber}.` : 'Q.'}
         </span>
@@ -294,7 +407,7 @@ const QuestionBlockItem: React.FC<{
                 });
               }
             }}
-            className="flex-1 font-semibold text-black px-1.5 py-0.5 border border-sky-400 rounded bg-white outline-hidden text-sm shadow-2xs"
+            className="flex-1 font-semibold text-black px-1.5 py-0.5 border border-sky-400 rounded bg-white outline-hidden shadow-2xs"
           />
         ) : (
           <div
@@ -319,16 +432,46 @@ const QuestionBlockItem: React.FC<{
               question: { ...q, marks: marksVal }
             });
           }}
-          className="text-[9.5px] font-bold text-sky-800 whitespace-nowrap ml-1 px-1.5 py-0.5 bg-sky-50 rounded border border-sky-300 outline-hidden cursor-text"
+          className="text-[9.5px] font-bold text-sky-800 whitespace-nowrap ml-1 px-1.5 py-0.5 bg-sky-50 rounded border border-sky-300 outline-hidden cursor-text shrink-0"
         >
           [{q.marks}{q.negativeMarks ? `, -${q.negativeMarks}` : ''}M]
         </span>
+
+        {/* Quick Block Size Stepper on Hover */}
+        <div className="flex items-center gap-0.5 ml-1 opacity-0 group-hover/qcard:opacity-100 transition-opacity no-print bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded px-1 py-0.5 text-[9px] shrink-0">
+          <span className="text-slate-500 font-bold hidden sm:inline">Size:</span>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setBlockFontSize(fontSize - 1);
+            }}
+            className="w-4 h-4 flex items-center justify-center font-black bg-white hover:bg-slate-300 border border-slate-300 rounded text-slate-800 cursor-pointer transition-colors shadow-2xs"
+            title="Decrease Block Size (-1pt)"
+          >
+            -
+          </button>
+          <span className="font-mono font-bold px-0.5 text-slate-900 min-w-[28px] text-center">
+            {fontSize}pt
+          </span>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setBlockFontSize(fontSize + 1);
+            }}
+            className="w-4 h-4 flex items-center justify-center font-black bg-white hover:bg-slate-300 border border-slate-300 rounded text-slate-800 cursor-pointer transition-colors shadow-2xs"
+            title="Increase Block Size (+1pt)"
+          >
+            +
+          </button>
+        </div>
 
         {/* Quick Builder Button on Hover */}
         <button
           type="button"
           onClick={() => onEditQuestion && onEditQuestion(qb)}
-          className="opacity-0 group-hover/qcard:opacity-100 p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-all cursor-pointer no-print ml-1"
+          className="opacity-0 group-hover/qcard:opacity-100 p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-all cursor-pointer no-print ml-0.5 shrink-0"
           title="Open MathType & Diagram Studio for this question"
         >
           <Edit3 className="w-3.5 h-3.5" />
@@ -341,7 +484,8 @@ const QuestionBlockItem: React.FC<{
           <img
             src={q.imageUrl || q.diagramUrl}
             alt="Question illustration"
-            className="max-h-44 max-w-full object-contain rounded shadow-2xs"
+            style={{ maxHeight: `${Math.round(176 * scale)}px` }}
+            className="max-w-full object-contain rounded shadow-2xs"
           />
           <button
             type="button"
@@ -363,7 +507,10 @@ const QuestionBlockItem: React.FC<{
       {/* Render Attached Diagram SVG if present */}
       {q.diagramSvg && (
         <div className="my-2 p-2 bg-slate-50 rounded-lg flex items-center justify-center border border-slate-200 overflow-hidden relative group/diag">
-          <div dangerouslySetInnerHTML={{ __html: q.diagramSvg }} />
+          <div
+            style={{ transform: `scale(${scale})`, transformOrigin: 'center center' }}
+            dangerouslySetInnerHTML={{ __html: q.diagramSvg }}
+          />
           <button
             type="button"
             onClick={e => {
@@ -806,6 +953,7 @@ function renderBlockContent(
       const eq = block as EquationBlock;
       return (
         <div
+          style={{ fontSize: eq.fontSize ? `${eq.fontSize}pt` : undefined }}
           onDoubleClick={() => onEditEquation && onEditEquation(eq)}
           className="my-2 cursor-pointer p-1 rounded hover:bg-sky-50/50 border border-transparent hover:border-sky-300 transition-all text-black"
           title="Double-click to edit equation in Math AST editor"
