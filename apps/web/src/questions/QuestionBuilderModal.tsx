@@ -158,6 +158,12 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
     }
   };
 
+  const handleOptionImageChange = (index: number, url: string) => {
+    const updated = [...options];
+    updated[index] = { ...updated[index], imageUrl: url };
+    setOptions(updated);
+  };
+
   const handleRemoveOptionImage = (index: number) => {
     const updated = [...options];
     updated[index] = { ...updated[index], imageUrl: undefined };
@@ -430,6 +436,7 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
               <RichTextEditor
                 value={rawText}
                 onChange={setRawText}
+                onImagePasted={url => setImageUrls(prev => [...prev, url])}
                 placeholder="Enter question statement (e.g. In the circuit shown below, determine the equivalent resistance...)"
                 className="w-full"
                 showPreview
@@ -580,6 +587,7 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
                         compact
                         value={opt.rawText || ''}
                         onChange={val => handleOptionTextChange(idx, val)}
+                        onImagePasted={url => handleOptionImageChange(idx, url)}
                         placeholder={`Option (${opt.key}) text or formula (e.g. H = \\frac{u^2}{2g})`}
                         className="flex-1"
                       />

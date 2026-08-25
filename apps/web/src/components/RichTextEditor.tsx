@@ -8,8 +8,9 @@ import Placeholder from '@tiptap/extension-placeholder';
 import {
   Bold, Italic, Underline as UnderlineIcon, Subscript as SubscriptIcon,
   Superscript as SuperscriptIcon, List, ListOrdered, Sigma, Sparkles,
-  RotateCcw, RotateCw, Eye, EyeOff
+  RotateCcw, RotateCw, Eye, EyeOff, Image as ImageIcon, Loader2
 } from 'lucide-react';
+import { api } from '../services/api.js';
 import { MathTextRenderer } from '../equation/MathTextRenderer.js';
 
 export interface RichTextEditorProps {
@@ -20,6 +21,7 @@ export interface RichTextEditorProps {
   autoFocus?: boolean;
   className?: string;
   showPreview?: boolean;
+  onImagePasted?: (url: string) => void;
   onBlur?: () => void;
   onKeyDown?: (e: React.KeyboardEvent) => void;
 }
@@ -54,11 +56,13 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   autoFocus = false,
   className = '',
   showPreview = false,
+  onImagePasted,
   onBlur,
   onKeyDown
 }) => {
   const [showMathMenu, setShowMathMenu] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(showPreview);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const mathMenuRef = useRef<HTMLDivElement>(null);
 
   // Convert HTML or plain text from TipTap to text
@@ -134,12 +138,54 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     }
   };
 
+  // Copy-paste handler for images & screenshots
+  const handlePaste = async (e: React.ClipboardEvent) => {
+    const clipboardData = e.clipboardData;
+    if (!clipboardData) return;
+
+    const items = Array.from(clipboardData.items || []);
+    const imageItems = items.filter(item => item.type.startsWith('image/'));
+
+    if (imageItems.length > 0) {
+      e.preventDefault();
+      setIsUploadingImage(true);
+      try {
+        for (const item of imageItems) {
+          const file = item.getAsFile();
+          if (file) {
+            const res = await api.uploadImage(file);
+            if (res.url) {
+              if (onImagePasted) {
+                onImagePasted(res.url);
+              }
+              // Insert image marker in text
+              editor.chain().focus().insertContent(` [Figure: ${file.name || 'Pasted Image'}] `).run();
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error uploading pasted image:', err);
+      } finally {
+        setIsUploadingImage(false);
+      }
+    }
+  };
+
   return (
     <div
       onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }}
       onDrop={handleDrop}
-      className={`rounded-lg border border-slate-300 bg-white transition-all focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 overflow-hidden shadow-2xs ${className}`}
+      onPaste={handlePaste}
+      className={`rounded-lg border border-slate-300 bg-white transition-all focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 overflow-hidden shadow-2xs relative ${className}`}
     >
+      {/* Uploading overlay banner if image being pasted */}
+      {isUploadingImage && (
+        <div className="absolute inset-0 bg-white/80 backdrop-blur-xs flex items-center justify-center gap-2 z-50 text-xs font-bold text-indigo-700">
+          <Loader2 className="w-4 h-4 animate-spin text-indigo-600" />
+          <span>Uploading pasted image...</span>
+        </div>
+      )}
+
       {/* Top Formatting Ribbon / Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-1 border-b border-slate-200 bg-slate-50 px-2 py-1 select-none">
         <div className="flex flex-wrap items-center gap-0.5 text-slate-700">

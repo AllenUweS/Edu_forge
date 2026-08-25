@@ -405,6 +405,47 @@ const QuestionBlockItem: React.FC<{
     }
   };
 
+  // Copy-paste handler for images/diagrams directly onto the question card
+  const handlePasteOnQuestion = async (e: React.ClipboardEvent) => {
+    const clipboardData = e.clipboardData;
+    if (!clipboardData) return;
+
+    const items = Array.from(clipboardData.items || []);
+    const imageItems = items.filter(item => item.type.startsWith('image/'));
+
+    if (imageItems.length > 0) {
+      e.preventDefault();
+      e.stopPropagation();
+      try {
+        setIsUploading(true);
+        const newUrls: string[] = [];
+        for (const item of imageItems) {
+          const file = item.getAsFile();
+          if (file) {
+            const res = await api.uploadImage(file);
+            if (res.url) newUrls.push(res.url);
+          }
+        }
+        if (newUrls.length > 0 && onUpdateBlock) {
+          const existing = q.imageUrls && q.imageUrls.length > 0 ? q.imageUrls : (q.imageUrl ? [q.imageUrl] : []);
+          const merged = [...existing, ...newUrls];
+          onUpdateBlock({
+            ...qb,
+            question: {
+              ...q,
+              imageUrls: merged,
+              imageUrl: merged[0]
+            }
+          });
+        }
+      } catch (err) {
+        console.error('Error pasting image onto question:', err);
+      } finally {
+        setIsUploading(false);
+      }
+    }
+  };
+
   const handleAddOption = () => {
     if (!onUpdateBlock) return;
     const currentOpts = q.options || [];
@@ -430,6 +471,7 @@ const QuestionBlockItem: React.FC<{
       }}
       onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }}
       onDrop={handleDropOnQuestion}
+      onPaste={handlePasteOnQuestion}
       className="my-2 select-text border border-transparent hover:border-sky-300 hover:bg-sky-50/20 p-2 rounded-lg text-black transition-all group/qcard relative"
     >
       {/* Floating Action Controls on Hover */}
@@ -515,6 +557,20 @@ const QuestionBlockItem: React.FC<{
                   ...qb,
                   question: { ...q, rawText: val }
                 });
+              }}
+              onImagePasted={url => {
+                if (onUpdateBlock) {
+                  const existing = q.imageUrls && q.imageUrls.length > 0 ? q.imageUrls : (q.imageUrl ? [q.imageUrl] : []);
+                  const merged = [...existing, url];
+                  onUpdateBlock({
+                    ...qb,
+                    question: {
+                      ...q,
+                      imageUrls: merged,
+                      imageUrl: merged[0]
+                    }
+                  });
+                }
               }}
               onBlur={() => setIsEditingStatement(false)}
               className="w-full"

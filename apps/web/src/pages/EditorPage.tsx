@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { api } from '../services/api.js';
 import {
   DocumentModel, DocumentBlock, QuestionBlock, EquationBlock, ParagraphBlock, HeadingBlock,
-  Question, OptionLayoutType, WordArtStyle, ShapeType, Alignment, TableBlock, TextRun
+  Question, OptionLayoutType, WordArtStyle, ShapeType, Alignment, TableBlock, TextRun, ImageBlock
 } from '@eduforge/shared';
 import { EditorRibbon, RibbonTab, FormattingState } from '../editor/EditorRibbon.js';
 import { A4Canvas } from '../editor/A4Canvas.js';
@@ -746,9 +746,33 @@ export const EditorPage: React.FC<EditorPageProps> = ({
     setIsFormatPainterActive(false);
   };
 
-  // Clipboard operations
+  // Clipboard operations (Text and Images/Screenshots)
   const handlePasteText = async (mode: 'formatted' | 'plain' = 'formatted') => {
     try {
+      if (navigator.clipboard && 'read' in navigator.clipboard) {
+        const clipboardItems = await navigator.clipboard.read();
+        for (const item of clipboardItems) {
+          const imageType = item.types.find(t => t.startsWith('image/'));
+          if (imageType) {
+            const blob = await item.getType(imageType);
+            const file = new File([blob], 'pasted-image.png', { type: imageType });
+            const res = await api.uploadImage(file);
+            if (res.url) {
+              const imgBlock: ImageBlock = {
+                id: `img-${Date.now()}`,
+                type: 'image',
+                src: res.url,
+                alt: 'Pasted Image',
+                alignment: 'center',
+                width: 420
+              };
+              handleAddBlockToSection(imgBlock);
+              return;
+            }
+          }
+        }
+      }
+
       const text = await navigator.clipboard.readText();
       if (text) {
         const p: ParagraphBlock = {
@@ -781,6 +805,72 @@ export const EditorPage: React.FC<EditorPageProps> = ({
       }
     }
   };
+
+  // Global paste handler for pasting screenshots/images directly onto the document canvas
+  useEffect(() => {
+    const handleCanvasImagePaste = async (e: ClipboardEvent) => {
+      const target = e.target as HTMLElement;
+      // Skip if typing in an input, textarea, or TipTap editor (handled locally)
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.closest('.tiptap') || target.closest('[contenteditable="true"]'))) {
+        return;
+      }
+
+      const items = Array.from(e.clipboardData?.items || []);
+      const imageItems = items.filter(item => item.type.startsWith('image/'));
+      if (imageItems.length > 0) {
+        e.preventDefault();
+        try {
+          for (const item of imageItems) {
+            const file = item.getAsFile();
+            if (file) {
+              const res = await api.uploadImage(file);
+              if (res.url) {
+                // If a question block is currently selected, attach image to it
+                if (selectedBlockId && doc) {
+                  let found = false;
+                  for (const sec of doc.sections) {
+                    const blk = sec.blocks.find(b => b.id === selectedBlockId);
+                    if (blk && blk.type === 'question') {
+                      const qb = blk as QuestionBlock;
+                      const existing = qb.question.imageUrls && qb.question.imageUrls.length > 0 ? qb.question.imageUrls : (qb.question.imageUrl ? [qb.question.imageUrl] : []);
+                      const merged = [...existing, res.url];
+                      handleUpdateBlock(sec.id, {
+                        ...qb,
+                        question: {
+                          ...qb.question,
+                          imageUrls: merged,
+                          imageUrl: merged[0]
+                        }
+                      });
+                      found = true;
+                      break;
+                    }
+                  }
+                  if (found) return;
+                }
+
+                // Otherwise, insert as an ImageBlock in the active section
+                const imgBlock: ImageBlock = {
+                  id: `img-${Date.now()}`,
+                  type: 'image',
+                  src: res.url,
+                  alt: 'Pasted Image',
+                  alignment: 'center',
+                  width: 420
+                };
+                handleAddBlockToSection(imgBlock);
+              }
+            }
+          }
+        } catch (err) {
+          console.error('Canvas image paste error:', err);
+        }
+      }
+    };
+
+    window.addEventListener('paste', handleCanvasImagePaste);
+    return () => window.removeEventListener('paste', handleCanvasImagePaste);
+  }, [selectedBlockId, doc]);
 
   const handleCopyText = () => {
     if (!doc || !selectedBlockId) return;

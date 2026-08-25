@@ -101,10 +101,33 @@ const EditableOptionItem: React.FC<{
     }
   };
 
+  // Copy-paste handler for images on option item
+  const handlePasteOnOption = async (e: React.ClipboardEvent) => {
+    const items = Array.from(e.clipboardData?.items || []);
+    const imageItems = items.filter(item => item.type.startsWith('image/'));
+    if (imageItems.length > 0 && onUpdateOptionImage) {
+      e.preventDefault();
+      e.stopPropagation();
+      try {
+        setIsUploading(true);
+        const file = imageItems[0].getAsFile();
+        if (file) {
+          const res = await api.uploadImage(file);
+          if (res.url) onUpdateOptionImage(opt.id, res.url);
+        }
+      } catch (err) {
+        console.error('Error pasting image to option:', err);
+      } finally {
+        setIsUploading(false);
+      }
+    }
+  };
+
   return (
     <div
       onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }}
       onDrop={handleDropOnOption}
+      onPaste={handlePasteOnOption}
       className={`flex items-start gap-1.5 text-sm leading-snug p-1 rounded-md transition-all group/opt ${
         isCorrect && showAnswers ? 'bg-emerald-50 text-emerald-950 font-bold' : ''
       } ${textColorClass}`}
@@ -131,6 +154,9 @@ const EditableOptionItem: React.FC<{
               onChange={val => {
                 setOptText(val);
                 if (onUpdateOptionText) onUpdateOptionText(opt.id, val);
+              }}
+              onImagePasted={url => {
+                if (onUpdateOptionImage) onUpdateOptionImage(opt.id, url);
               }}
               onBlur={handleCommitText}
               className="w-full"
