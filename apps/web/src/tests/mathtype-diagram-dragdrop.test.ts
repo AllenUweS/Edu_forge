@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { Question, DocumentModel, EquationBlock, ParagraphBlock } from '@eduforge/shared';
+import { Question, DocumentModel, EquationBlock, ParagraphBlock, QuestionBlock } from '@eduforge/shared';
+import { paginateDocument } from '../editor/PaginationEngine.js';
 
 describe('MathType Separate Numerator & Denominator Construction', () => {
   const constructFraction = (num: string, den: string, type: 'standard' | 'derivative' | 'partial' | 'slash') => {
@@ -232,5 +233,162 @@ describe('Question Block Size Increase & Decrease Controls', () => {
     expect(compact.scale).toBe(0.81);
   });
 });
+
+describe('Two-Column Exam Layout Flow & Drag Column Placement', () => {
+  it('flows questions into right column of same page before advancing to page 2', () => {
+    // Build a mock 2-column exam paper with 6 questions
+    const mockQuestions: QuestionBlock[] = Array.from({ length: 6 }, (_, i) => ({
+      id: `q-${i + 1}`,
+      type: 'question',
+      fontSize: 10.5,
+      question: {
+        id: `q-data-${i + 1}`,
+        questionNumber: i + 1,
+        questionType: 'MCQ_SINGLE',
+        content: [],
+        rawText: `Question ${i + 1}: Calculate force applied on a body of mass 5kg moving with acceleration 2m/s^2.`,
+        options: [
+          { id: `o1-${i}`, key: 'a', rawText: '10 N', isCorrect: true, content: [] },
+          { id: `o2-${i}`, key: 'b', rawText: '20 N', isCorrect: false, content: [] }
+        ],
+        marks: 4,
+        difficulty: 'Easy',
+        tags: [],
+        optionLayout: 'grid_2x2',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    }));
+
+    const mockDoc: DocumentModel = {
+      id: 'doc-two-col',
+      title: 'Mock 2-Column Exam Paper',
+      settings: {
+        pageSize: 'A4',
+        orientation: 'portrait',
+        columns: 2,
+        columnGap: 8,
+        columnDivider: true,
+        margins: { top: 15, bottom: 15, left: 15, right: 15 },
+        defaultFont: 'Calibri',
+        defaultFontSize: 10.5,
+        showPageNumbers: true,
+        questionSpacing: 6,
+        optionSpacing: 4,
+        lineSpacing: 1.15,
+        paragraphSpacing: 4
+      },
+      metadata: {
+        instituteName: 'APEX INSTITUTE OF SCIENCE',
+        examName: 'MOCK EXAM 2026',
+        subject: 'Physics',
+        timeAllowedMinutes: 180,
+        maxMarks: 100
+      },
+      sections: [
+        {
+          id: 'sec-1',
+          title: 'SECTION I - PHYSICS',
+          instructions: 'Answer all questions',
+          blocks: mockQuestions
+        }
+      ],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    const pages = paginateDocument(mockDoc);
+
+    // Page 1 must contain both column 0 (left) and column 1 (right)
+    expect(pages.length).toBeGreaterThanOrEqual(1);
+    const page1 = pages[0];
+    expect(page1.columns.length).toBe(2);
+
+    // Left column contains initial questions, right column contains wrapped questions on the same page
+    expect(page1.columns[0].blocks.length).toBeGreaterThan(0);
+    expect(page1.columns[1].blocks.length).toBeGreaterThan(0);
+  });
+
+  it('honors explicit column assignment (e.g. dragged directly to right column)', () => {
+    const questionLeft: QuestionBlock = {
+      id: 'q-left',
+      type: 'question',
+      column: 0,
+      question: {
+        id: 'qd-left',
+        questionType: 'MCQ_SINGLE',
+        content: [],
+        rawText: 'Question on left side',
+        options: [],
+        marks: 4,
+        difficulty: 'Easy',
+        tags: [],
+        optionLayout: 'grid_2x2',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    };
+
+    const questionRight: QuestionBlock = {
+      id: 'q-right',
+      type: 'question',
+      column: 1,
+      question: {
+        id: 'qd-right',
+        questionType: 'MCQ_SINGLE',
+        content: [],
+        rawText: 'Question on right side (explicitly dragged to right)',
+        options: [],
+        marks: 4,
+        difficulty: 'Easy',
+        tags: [],
+        optionLayout: 'grid_2x2',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    };
+
+    const mockDoc: DocumentModel = {
+      id: 'doc-explicit-col',
+      title: 'Explicit Column Test',
+      settings: {
+        pageSize: 'A4',
+        orientation: 'portrait',
+        columns: 2,
+        columnGap: 8,
+        columnDivider: true,
+        margins: { top: 15, bottom: 15, left: 15, right: 15 },
+        defaultFont: 'Calibri',
+        defaultFontSize: 10.5,
+        showPageNumbers: true,
+        questionSpacing: 6,
+        optionSpacing: 4,
+        lineSpacing: 1.15,
+        paragraphSpacing: 4
+      },
+      metadata: {},
+      sections: [
+        {
+          id: 'sec-1',
+          title: 'SECTION I',
+          blocks: [questionLeft, questionRight]
+        }
+      ],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    const pages = paginateDocument(mockDoc);
+    const page1 = pages[0];
+
+    // questionLeft should be in column 0, and questionRight in column 1
+    const col0HasLeft = page1.columns[0].blocks.some(b => b.block.id === 'q-left');
+    const col1HasRight = page1.columns[1].blocks.some(b => b.block.id === 'q-right');
+
+    expect(col0HasLeft).toBe(true);
+    expect(col1HasRight).toBe(true);
+  });
+});
+
 
 

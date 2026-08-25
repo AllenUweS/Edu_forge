@@ -43,6 +43,7 @@ export type BlockType =
 export interface BaseBlock {
   id: string;
   type: BlockType;
+  column?: 0 | 1 | 'auto';
 }
 
 export interface ParagraphBlock extends BaseBlock {

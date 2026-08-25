@@ -323,7 +323,7 @@ export const EditorPage: React.FC<EditorPageProps> = ({
     setSelectedBlockId(block.id);
   };
 
-  const handleInsertQuestion = (q: Question, afterBlockId?: string) => {
+  const handleInsertQuestion = (q: Question, afterBlockId?: string, targetColumn?: 0 | 1) => {
     if (!doc) return;
     const sec = doc.sections[0];
     if (!sec) return;
@@ -331,7 +331,8 @@ export const EditorPage: React.FC<EditorPageProps> = ({
     const qBlock: QuestionBlock = {
       id: `qblk-${q.id}-${Date.now()}`,
       type: 'question',
-      question: q
+      question: q,
+      column: targetColumn
     };
 
     const targetId = afterBlockId || selectedBlockId;
@@ -409,6 +410,79 @@ export const EditorPage: React.FC<EditorPageProps> = ({
         newBlocks[idx] = newBlocks[targetIdx];
         newBlocks[targetIdx] = temp;
         return { ...s, blocks: newBlocks };
+      }
+      return s;
+    });
+    pushState({ ...doc, sections: updatedSections });
+  };
+
+  const handleReorderBlock = (
+    secId: string,
+    sourceBlockId: string,
+    targetBlockId?: string,
+    targetColumn?: 0 | 1,
+    position: 'before' | 'after' = 'after'
+  ) => {
+    if (!doc) return;
+    let movedBlock: DocumentBlock | null = null;
+
+    // Find and remove source block
+    const strippedSections = doc.sections.map(s => {
+      const found = s.blocks.find(b => b.id === sourceBlockId);
+      if (found) {
+        movedBlock = JSON.parse(JSON.stringify(found));
+        return { ...s, blocks: s.blocks.filter(b => b.id !== sourceBlockId) };
+      }
+      return s;
+    });
+
+    if (!movedBlock) return;
+
+    // Assign target column if specified
+    if (targetColumn !== undefined) {
+      (movedBlock as DocumentBlock).column = targetColumn;
+    }
+
+    const updatedSections = strippedSections.map(s => {
+      if (s.id === secId || (!s.blocks.some(b => b.id === targetBlockId) && s.id === doc.sections[0]?.id)) {
+        const blocks = [...s.blocks];
+        if (targetBlockId) {
+          const idx = blocks.findIndex(b => b.id === targetBlockId);
+          if (idx >= 0) {
+            const insertIdx = position === 'before' ? idx : idx + 1;
+            blocks.splice(insertIdx, 0, movedBlock!);
+            return { ...s, blocks };
+          }
+        }
+        // Fallback: append or prepend
+        if (targetColumn === 0 && blocks.length > 0 && !targetBlockId) {
+          blocks.unshift(movedBlock!);
+        } else {
+          blocks.push(movedBlock!);
+        }
+        return { ...s, blocks };
+      }
+      return s;
+    });
+
+    pushState({ ...doc, sections: updatedSections });
+  };
+
+  const handleToggleBlockColumn = (secId: string, blockId: string, targetCol?: 0 | 1) => {
+    if (!doc) return;
+    const updatedSections = doc.sections.map(s => {
+      if (s.id === secId) {
+        return {
+          ...s,
+          blocks: s.blocks.map(b => {
+            if (b.id === blockId) {
+              const current = b.column ?? 0;
+              const nextCol = targetCol !== undefined ? targetCol : (current === 0 ? 1 : 0);
+              return { ...b, column: nextCol };
+            }
+            return b;
+          })
+        };
       }
       return s;
     });
@@ -1003,6 +1077,8 @@ export const EditorPage: React.FC<EditorPageProps> = ({
           onDeleteBlock={handleDeleteBlock}
           onDuplicateBlock={handleDuplicateBlock}
           onMoveBlock={handleMoveBlock}
+          onReorderBlock={handleReorderBlock}
+          onToggleBlockColumn={handleToggleBlockColumn}
           onInsertNextParagraph={handleInsertNextParagraph}
           onFocusPreviousBlock={handleFocusPreviousBlock}
           onApplyFormatPainter={handleApplyFormatPainter}
@@ -1028,7 +1104,7 @@ export const EditorPage: React.FC<EditorPageProps> = ({
               if (el) el.focus();
             }, 50);
           }}
-          onDropQuestion={(q, targetBlockId) => handleInsertQuestion(q, targetBlockId)}
+          onDropQuestion={(q, targetBlockId, targetColumn) => handleInsertQuestion(q, targetBlockId, targetColumn)}
           onDropItemOnSection={(secId, item) => {
             if (item.category === 'questions' || item.type === 'question') {
               handleInsertQuestion(item.questionData || item.data);

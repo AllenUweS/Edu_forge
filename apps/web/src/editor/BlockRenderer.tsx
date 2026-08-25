@@ -9,7 +9,8 @@ import { MathTextRenderer } from '../equation/MathTextRenderer.js';
 import { OptionLayoutRenderer } from '../questions/OptionLayoutRenderer.js';
 import {
   Trash2, Copy, ArrowUp, ArrowDown, Edit3, Type, Wand2, Plus,
-  Sigma, Sparkles, ZoomIn, ZoomOut, Maximize2, Minimize2
+  Sigma, Sparkles, ZoomIn, ZoomOut, Maximize2, Minimize2, GripVertical,
+  ArrowRight, ArrowLeft
 } from 'lucide-react';
 import { FormattingState } from './EditorRibbon.js';
 
@@ -17,6 +18,8 @@ interface BlockRendererProps {
   block: DocumentBlock;
   sectionId: string;
   isSelected?: boolean;
+  isTwoColumn?: boolean;
+  currentColumnIndex?: number;
   isFormatPainterActive?: boolean;
   showFormattingMarks?: boolean;
   onSelect?: () => void;
@@ -25,6 +28,7 @@ interface BlockRendererProps {
   onDuplicateBlock?: () => void;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
+  onToggleColumn?: (targetCol: 0 | 1) => void;
   onInsertNextParagraph?: (currentBlockId: string) => void;
   onFocusPreviousBlock?: (currentBlockId: string) => void;
   onApplyFormatPainter?: (targetBlock: DocumentBlock) => void;
@@ -37,6 +41,8 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
   block,
   sectionId,
   isSelected = false,
+  isTwoColumn = false,
+  currentColumnIndex = 0,
   isFormatPainterActive = false,
   showFormattingMarks = false,
   onSelect,
@@ -45,6 +51,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
   onDuplicateBlock,
   onMoveUp,
   onMoveDown,
+  onToggleColumn,
   onInsertNextParagraph,
   onFocusPreviousBlock,
   onApplyFormatPainter,
@@ -218,6 +225,32 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
           <ZoomIn className="w-2.5 h-2.5 mr-0.5" />
           <span>A+</span>
         </button>
+
+        {/* 1-Click Column Switch in 2-Column Mode (Left <-> Right) */}
+        {isTwoColumn && (
+          <button
+            type="button"
+            onClick={e => {
+              e.stopPropagation();
+              const nextCol = (block.column === 1 || currentColumnIndex === 1) ? 0 : 1;
+              onToggleColumn && onToggleColumn(nextCol);
+            }}
+            className="px-1.5 py-0.5 hover:text-sky-300 transition-colors flex items-center gap-0.5 font-bold text-[10px] bg-slate-800 hover:bg-slate-700 rounded cursor-pointer"
+            title={(block.column === 1 || currentColumnIndex === 1) ? "Move Question to Left Column" : "Move Question to Right Column"}
+          >
+            {(block.column === 1 || currentColumnIndex === 1) ? (
+              <>
+                <ArrowLeft className="w-2.5 h-2.5" />
+                <span>Left Col</span>
+              </>
+            ) : (
+              <>
+                <span>Right Col</span>
+                <ArrowRight className="w-2.5 h-2.5" />
+              </>
+            )}
+          </button>
+        )}
 
         <button
           type="button"

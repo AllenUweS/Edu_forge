@@ -171,6 +171,15 @@ export function paginateDocument(doc: DocumentModel): PageLayout[] {
         continue;
       }
 
+      // If block explicitly specifies column placement in two-column mode
+      if (isTwoColumn && block.column !== undefined && block.column !== 'auto') {
+        if (block.column === 1 && currentColumnIndex === 0) {
+          advanceColumnOrPage();
+        } else if (block.column === 0 && currentColumnIndex === 1) {
+          advanceColumnOrPage();
+        }
+      }
+
       const blockHeight = estimateBlockHeight(block);
 
       // If block does not fit in current column and we're not at the very top of a blank column
