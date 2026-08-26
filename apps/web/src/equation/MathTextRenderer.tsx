@@ -10,6 +10,40 @@ interface MathTextRendererProps {
 // Helper to check if a character is whitespace or punctuation
 const isBoundary = (ch: string) => /\s|[.,;:!?"'()\[\]{}]/.test(ch);
 
+export function resolveImageUrl(src: string | undefined): string {
+  if (!src) return '';
+  let imgSrc = src.trim();
+  imgSrc = imgSrc.replace(/&amp;/g, '&');
+
+  if (imgSrc.startsWith('http://') || imgSrc.startsWith('https://') || imgSrc.startsWith('data:') || imgSrc.startsWith('blob:')) {
+    return imgSrc;
+  }
+
+  if (!imgSrc.startsWith('/')) {
+    imgSrc = `/${imgSrc}`;
+  }
+
+  return imgSrc;
+}
+
+export function cleanHtmlTags(text: string): string {
+  if (!text) return '';
+  let str = text.trim();
+  // Decode HTML entities
+  str = str
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, '&');
+
+  // Strip HTML wrapper and text formatting tags (except <img>)
+  str = str.replace(/<\/?(p|div|br|span|h[1-6]|ul|ol|li|strong|b|em|i|u|del|sub|sup)[^>]*>/gi, ' ');
+
+  // Collapse multiple whitespace
+  return str.replace(/\s+/g, ' ').trim();
+}
+
 // Helper to consume a balanced bracket/brace block e.g. {...} or [...]
 function consumeBalanced(str: string, startIndex: number, openChar = '{', closeChar = '}'): { content: string; endIndex: number } | null {
   if (str[startIndex] !== openChar) return null;
@@ -89,7 +123,77 @@ export const MathTextRenderer: React.FC<MathTextRendererProps> = ({
 }) => {
   if (!text || typeof text !== 'string') return null;
 
-  const trimmed = text.trim();
+  // First decode HTML entities if encoded like &lt;p&gt;
+  let decoded = text
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, '&');
+
+  // 0. Support HTML <img> tags embedded directly in TipTap editor text
+  if (/<img\s+/i.test(decoded)) {
+    const htmlImgRegex = /<img\s+[^>]*src=["']([^"']+)["'][^>]*\/?>/gi;
+    const parts: React.ReactNode[] = [];
+    let lastIdx = 0;
+    let imgMatch: RegExpExecArray | null;
+    const re = new RegExp(htmlImgRegex.source, 'gi');
+    while ((imgMatch = re.exec(decoded)) !== null) {
+      if (imgMatch.index > lastIdx) {
+        const rawSlice = decoded.substring(lastIdx, imgMatch.index);
+        const cleanText = cleanHtmlTags(rawSlice);
+        if (cleanText) {
+          parts.push(
+            <MathTextRenderer
+              key={`html-txt-${lastIdx}`}
+              text={cleanText}
+            />
+          );
+        }
+      }
+      const rawImgSrc = imgMatch[1] || '';
+      const imgSrc = resolveImageUrl(rawImgSrc);
+
+      parts.push(
+        <span key={`html-img-${imgMatch.index}`} className="block my-2 text-center">
+          <img
+            src={imgSrc}
+            alt="Question Diagram"
+            onError={(e) => {
+              const target = e.currentTarget;
+              if (!target.dataset.triedFallback && imgSrc.includes('/api/assets/')) {
+                target.dataset.triedFallback = 'true';
+                if (!imgSrc.includes('/raw/')) {
+                  target.src = imgSrc.replace('/api/assets/', '/api/assets/raw/');
+                }
+              }
+            }}
+            className="max-h-52 max-w-full rounded-md border border-slate-200 bg-white p-1 object-contain inline-block shadow-2xs"
+          />
+        </span>
+      );
+      lastIdx = re.lastIndex;
+    }
+    if (lastIdx < decoded.length) {
+      const rawSlice = decoded.substring(lastIdx);
+      const cleanText = cleanHtmlTags(rawSlice);
+      if (cleanText) {
+        parts.push(
+          <MathTextRenderer
+            key={`html-txt-end-${lastIdx}`}
+            text={cleanText}
+          />
+        );
+      }
+    }
+    return <span className={`block w-full ${className}`}>{parts}</span>;
+  }
+
+  // Clean HTML wrapper tags like <p>...</p> or <div>...</div>
+  let trimmed = cleanHtmlTags(decoded);
+  if (!trimmed) return null;
+
+
 
   // 1. Explicit $...$ or $$...$$ delimiters
   if (trimmed.includes('$')) {

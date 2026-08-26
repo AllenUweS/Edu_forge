@@ -9,7 +9,18 @@ export const templatesRouter = Router();
 templatesRouter.get('/', (req: Request, res: Response) => {
   try {
     const rows = defaultDb.prepare('SELECT * FROM templates ORDER BY is_system DESC, created_at ASC').all() as any[];
-    const templates: Template[] = rows.map(r => JSON.parse(r.template_json));
+    const templates: Template[] = rows.map(r => {
+      const parsed: Template = JSON.parse(r.template_json);
+      if (parsed.settings) {
+        parsed.settings.columns = 1;
+        parsed.settings.columnGap = 0;
+        parsed.settings.columnDivider = false;
+      }
+      if (parsed.description && parsed.description.includes('2-Column')) {
+        parsed.description = parsed.description.replace('2-Column', 'Single-Column');
+      }
+      return parsed;
+    });
     res.json({ success: true, data: templates });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -46,9 +57,9 @@ templatesRouter.post('/', (req: Request, res: Response) => {
         pageSize: 'A4',
         orientation: 'portrait',
         margins: { top: 15, bottom: 15, left: 15, right: 15 },
-        columns: 2,
-        columnGap: 8,
-        columnDivider: true,
+        columns: 1,
+        columnGap: 0,
+        columnDivider: false,
         defaultFont: 'Inter',
         defaultFontSize: 10.5,
         questionSpacing: 12,

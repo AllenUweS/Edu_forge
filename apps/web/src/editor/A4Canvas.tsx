@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { api } from '../services/api.js';
 import { DocumentModel, DocumentBlock, QuestionBlock, EquationBlock, Question } from '@eduforge/shared';
 import { paginateDocument, PageLayout } from './PaginationEngine.js';
 import { BlockRenderer } from './BlockRenderer.js';
@@ -63,7 +64,7 @@ export const A4Canvas: React.FC<A4CanvasProps> = ({
   onDropItemOnSection
 }) => {
   const pages: PageLayout[] = React.useMemo(() => paginateDocument(doc), [doc]);
-  const isTwoColumn = doc.settings.columns === 2;
+  const isTwoColumn = false; // Always 1 Single Full A4 Paper Layout
   const margins = doc.settings.margins || { top: 15, bottom: 15, left: 15, right: 15 };
 
   // Drag and drop state for live interactive movement between left/right sides
@@ -133,6 +134,40 @@ export const A4Canvas: React.FC<A4CanvasProps> = ({
     setDropTarget(null);
   };
 
+  // Paste handler for pasting images directly onto the paper canvas sheet
+  const handlePagePaste = async (e: React.ClipboardEvent) => {
+    const clipboardData = e.clipboardData;
+    if (!clipboardData) return;
+
+    const items = Array.from(clipboardData.items || []);
+    const imageItems = items.filter(item => item.type.startsWith('image/'));
+
+    if (imageItems.length > 0) {
+      e.preventDefault();
+      e.stopPropagation();
+      for (const item of imageItems) {
+        const file = item.getAsFile();
+        if (file) {
+          try {
+            const res = await api.uploadImage(file);
+            if (res.url && onDropItemOnSection) {
+              const targetSecId = doc.sections[0]?.id || 'sec-0';
+              onDropItemOnSection(targetSecId, {
+                id: `img-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+                type: 'image',
+                src: res.url,
+                alt: file.name || 'Pasted image',
+                width: 550
+              });
+            }
+          } catch (err) {
+            console.error('Error pasting image onto canvas:', err);
+          }
+        }
+      }
+    }
+  };
+
   return (
     <div className="flex flex-col items-center gap-8 py-8 w-full select-text">
       {pages.map((page) => (
@@ -156,6 +191,7 @@ export const A4Canvas: React.FC<A4CanvasProps> = ({
             e.dataTransfer.dropEffect = 'move';
           }}
           onDrop={(e) => handleContainerDrop(e)}
+          onPaste={handlePagePaste}
           onClick={(e) => {
             // If user clicks on the empty page area, create/focus a new paragraph
             if (e.target === e.currentTarget && onAddBlankParagraph) {

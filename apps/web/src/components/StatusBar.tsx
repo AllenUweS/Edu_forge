@@ -40,7 +40,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
         </span>
         <span className="text-slate-400">|</span>
         <span className="px-1.5 py-0.2 bg-sky-100 text-sky-800 border border-sky-300 rounded font-semibold text-[10px]">
-          {columns} Column{columns > 1 ? 's' : ''}
+          Single Column (A4)
         </span>
       </div>
 

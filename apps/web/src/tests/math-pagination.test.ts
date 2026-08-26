@@ -109,7 +109,7 @@ describe('Pagination Engine Tests', () => {
     const pages = paginateDocument(doc);
     expect(pages.length).toBeGreaterThanOrEqual(2);
     expect(pages[0].pageNumber).toBe(1);
-    expect(pages[0].columns.length).toBe(2); // Two-column layout
+    expect(pages[0].columns.length).toBe(1); // Single-column layout
     expect(pages[1].pageNumber).toBe(2);
   });
 });

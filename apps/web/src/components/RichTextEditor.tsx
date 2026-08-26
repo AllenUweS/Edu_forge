@@ -13,6 +13,8 @@ import {
 import { api } from '../services/api.js';
 import { MathTextRenderer } from '../equation/MathTextRenderer.js';
 
+import Image from '@tiptap/extension-image';
+
 export interface RichTextEditorProps {
   value: string;
   onChange: (value: string) => void;
@@ -78,13 +80,19 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       Superscript,
       Placeholder.configure({
         placeholder
+      }),
+      Image.configure({
+        inline: false,
+        HTMLAttributes: {
+          class: 'max-h-52 max-w-full rounded-md border border-slate-200 shadow-2xs my-2 block mx-auto object-contain'
+        }
       })
     ],
     content: value || '',
     autofocus: autoFocus,
     onUpdate: ({ editor }) => {
-      const text = editor.getText();
-      onChange(text);
+      const html = editor.getHTML();
+      onChange(html);
     },
     onBlur: () => {
       if (onBlur) onBlur();
@@ -93,7 +101,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
   // Keep content in sync with external value prop
   useEffect(() => {
-    if (editor && value !== editor.getText()) {
+    if (editor && value !== editor.getHTML() && value !== editor.getText()) {
       editor.commands.setContent(value || '', { emitUpdate: false });
     }
   }, [value, editor]);
@@ -118,9 +126,35 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     setShowMathMenu(false);
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
+    // Handle dropped image files
+    const files = Array.from(e.dataTransfer.files || []);
+    const imageFiles = files.filter(f => f.type.startsWith('image/'));
+    if (imageFiles.length > 0) {
+      setIsUploadingImage(true);
+      try {
+        for (const file of imageFiles) {
+          const res = await api.uploadImage(file);
+          if (res.url) {
+            if (editor) {
+              editor.chain().focus().setImage({ src: res.url }).run();
+            }
+            if (onImagePasted) {
+              onImagePasted(res.url);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error uploading dropped image:', err);
+      } finally {
+        setIsUploadingImage(false);
+      }
+      return;
+    }
+
     try {
       const eduData = e.dataTransfer.getData('application/eduforge-item');
       let inserted = '';
@@ -130,7 +164,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       } else {
         inserted = e.dataTransfer.getData('text/plain') || '';
       }
-      if (inserted) {
+      if (inserted && editor) {
         editor.chain().focus().insertContent(` ${inserted} `).run();
       }
     } catch (err) {
@@ -138,7 +172,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     }
   };
 
-  // Copy-paste handler for images & screenshots
+  // Copy-paste handler for images & screenshots (Ctrl+C image, Ctrl+V in editor)
   const handlePaste = async (e: React.ClipboardEvent) => {
     const clipboardData = e.clipboardData;
     if (!clipboardData) return;
@@ -155,11 +189,12 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
           if (file) {
             const res = await api.uploadImage(file);
             if (res.url) {
+              if (editor) {
+                editor.chain().focus().setImage({ src: res.url }).run();
+              }
               if (onImagePasted) {
                 onImagePasted(res.url);
               }
-              // Insert image marker in text
-              editor.chain().focus().insertContent(` [Figure: ${file.name || 'Pasted Image'}] `).run();
             }
           }
         }

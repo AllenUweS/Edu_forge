@@ -62,6 +62,7 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
 
   // Diagram Studio integration
   const [isDiagramStudioOpen, setIsDiagramStudioOpen] = useState<boolean>(false);
+  const [diagramStudioTarget, setDiagramStudioTarget] = useState<{ field: 'statement' } | { field: 'option'; index: number }>({ field: 'statement' });
 
   const [options, setOptions] = useState<QuestionOption[]>(
     initialQuestion?.options && initialQuestion.options.length > 0
@@ -120,10 +121,15 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
     try {
       setIsUploadingQuestionImage(true);
       const newUrls: string[] = [];
+      let updatedHtml = rawText || '';
       for (let i = 0; i < files.length; i++) {
         const res = await api.uploadImage(files[i]);
-        if (res.url) newUrls.push(res.url);
+        if (res.url) {
+          newUrls.push(res.url);
+          updatedHtml += `<p><img src="${res.url}" /></p>`;
+        }
       }
+      setRawText(updatedHtml);
       setImageUrls(prev => [...prev, ...newUrls]);
     } catch (err) {
       console.error('Question image upload error:', err);
@@ -137,16 +143,28 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
     setImageUrls(prev => prev.filter((_, idx) => idx !== idxToRemove));
   };
 
-  // Upload Option Image from local file
+  // Upload Option Image from local file (supports multiple & inline text placement)
   const handleOptionImageUpload = async (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
     try {
       setUploadingOptionIdx(index);
-      const res = await api.uploadImage(file);
+      let updatedText = options[index].rawText || '';
+      let lastUrl = options[index].imageUrl;
+      for (let i = 0; i < files.length; i++) {
+        const res = await api.uploadImage(files[i]);
+        if (res.url) {
+          lastUrl = res.url;
+          updatedText += `<p><img src="${res.url}" /></p>`;
+        }
+      }
       const updated = [...options];
-      updated[index] = { ...updated[index], imageUrl: res.url };
+      updated[index] = {
+        ...updated[index],
+        rawText: updatedText,
+        imageUrl: lastUrl
+      };
       setOptions(updated);
     } catch (err) {
       console.error('Option image upload error:', err);
@@ -168,6 +186,29 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
     const updated = [...options];
     updated[index] = { ...updated[index], imageUrl: undefined };
     setOptions(updated);
+  };
+
+  const openDiagramStudioForStatement = () => {
+    setDiagramStudioTarget({ field: 'statement' });
+    setIsDiagramStudioOpen(true);
+  };
+
+  const openDiagramStudioForOption = (index: number) => {
+    setDiagramStudioTarget({ field: 'option', index });
+    setIsDiagramStudioOpen(true);
+  };
+
+  const handleSaveDiagram = (svg: string) => {
+    if (diagramStudioTarget.field === 'statement') {
+      setDiagramSvg(svg);
+    } else if (diagramStudioTarget.field === 'option') {
+      const updated = [...options];
+      updated[diagramStudioTarget.index] = {
+        ...updated[diagramStudioTarget.index],
+        diagramSvg: svg
+      };
+      setOptions(updated);
+    }
   };
 
   const openMathTypeForStatement = () => {
@@ -255,7 +296,7 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-        <div className="bg-white text-black rounded-xl shadow-2xl border border-slate-200 w-full max-w-4xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150 max-h-[90vh]">
+        <div className="bg-white text-black rounded-xl shadow-2xl border border-slate-200 w-full md:w-[60vw] max-w-[60vw] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150 max-h-[90vh]">
           
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50">
@@ -442,54 +483,7 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
                 showPreview
               />
 
-              {/* Uploaded Question Images Gallery Preview */}
-              {imageUrls.length > 0 && (
-                <div className="mt-2.5 p-3 bg-amber-50/70 border-2 border-amber-300 rounded-xl space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
-                      <Check className="w-4 h-4 text-amber-600" />
-                      {imageUrls.length} Question {imageUrls.length === 1 ? 'Image' : 'Images'} Attached
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => questionImageInputRef.current?.click()}
-                      className="text-xs font-bold text-amber-800 hover:text-amber-950 underline cursor-pointer"
-                    >
-                      + Attach More
-                    </button>
-                  </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 pt-1">
-                    {imageUrls.map((imgSrc, imgIdx) => (
-                      <div
-                        key={imgIdx}
-                        className="relative group/qimg bg-white border border-amber-300 rounded-lg p-1 flex flex-col items-center justify-center min-h-[80px]"
-                      >
-                        <img
-                          src={imgSrc}
-                          alt={`Question asset ${imgIdx + 1}`}
-                          onError={(e) => {
-                            const target = e.currentTarget;
-                            if (target.src.endsWith('.heic') || target.src.endsWith('.HEIC')) {
-                              target.src = target.src.replace(/\.heic$/i, '.jpg');
-                            }
-                          }}
-                          className="max-h-18 max-w-full object-contain rounded"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveQuestionImage(imgIdx)}
-                          className="absolute -top-1.5 -right-1.5 p-1 bg-red-600 hover:bg-red-700 text-white rounded-full opacity-0 group-hover/qimg:opacity-100 transition-opacity cursor-pointer shadow-xs text-[10px]"
-                          title="Remove this image"
-                        >
-                          ✕
-                        </button>
-                        <span className="text-[9px] text-slate-500 font-bold mt-1">Figure {imgIdx + 1}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
 
               {/* Attached SVG Diagram Preview */}
               {diagramSvg && (
@@ -567,9 +561,10 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
               {/* Options List */}
               <div className="space-y-3">
                 {options.map((opt, idx) => (
-                  <div key={opt.id || idx} className="bg-white p-3 rounded-lg border border-slate-200 shadow-2xs space-y-2">
-                    <div className="flex items-start gap-2.5">
-                      <label className="flex items-center gap-1.5 cursor-pointer mt-2" title="Mark as correct answer">
+                  <div key={opt.id || idx} className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
+                    {/* Header bar matching Question Statement style */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2">
+                      <label className="flex items-center gap-2 cursor-pointer" title="Mark as correct answer">
                         <input
                           type="radio"
                           name="correct_option"
@@ -577,99 +572,113 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
                           onChange={() => handleSetCorrect(idx)}
                           className="w-4 h-4 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                         />
-                        <span className={`text-xs font-bold uppercase min-w-[20px] ${opt.isCorrect ? 'text-emerald-700 font-black' : 'text-black'}`}>
-                          ({opt.key})
+                        <span className={`text-xs font-bold uppercase tracking-wider ${opt.isCorrect ? 'text-emerald-700 font-black' : 'text-black'}`}>
+                          Option ({opt.key}) {opt.isCorrect && '— Correct Answer'}
                         </span>
                       </label>
 
-                      {/* TipTap Rich Text Editor for Option */}
-                      <RichTextEditor
-                        compact
-                        value={opt.rawText || ''}
-                        onChange={val => handleOptionTextChange(idx, val)}
-                        onImagePasted={url => handleOptionImageChange(idx, url)}
-                        placeholder={`Option (${opt.key}) text or formula (e.g. H = \\frac{u^2}{2g})`}
-                        className="flex-1"
-                      />
-
-                      {/* MathType Button for Option */}
-                      <button
-                        type="button"
-                        onClick={() => openMathTypeForOption(idx, opt.key, opt.rawText || '')}
-                        className="p-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg transition-colors cursor-pointer flex items-center gap-1 text-xs font-bold mt-1"
-                        title={`Open MathType Formula Editor for Option (${opt.key})`}
-                      >
-                        <Sigma className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline text-[11px]">Math</span>
-                      </button>
-
-                      {/* Option Image Upload Trigger */}
-                      <input
-                        ref={el => (optionImageInputRefs.current[idx] = el)}
-                        type="file"
-                        accept="image/*"
-                        onChange={e => handleOptionImageUpload(idx, e)}
-                        className="hidden"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => optionImageInputRefs.current[idx]?.click()}
-                        disabled={uploadingOptionIdx === idx}
-                        className={`p-2 border rounded-lg transition-colors cursor-pointer flex items-center gap-1 text-xs font-bold mt-1 ${
-                          opt.imageUrl
-                            ? 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200'
-                            : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
-                        }`}
-                        title={`Upload local image for Option (${opt.key})`}
-                      >
-                        {uploadingOptionIdx === idx ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <ImageIcon className="w-3.5 h-3.5" />
-                        )}
-                        <span className="hidden sm:inline text-[11px]">
-                          {opt.imageUrl ? 'Image' : 'Add Img'}
-                        </span>
-                      </button>
-
-                      {options.length > 2 && (
+                      <div className="flex items-center gap-2">
+                        {/* Upload Option Images */}
+                        <input
+                          ref={el => (optionImageInputRefs.current[idx] = el)}
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={e => handleOptionImageUpload(idx, e)}
+                          className="hidden"
+                        />
                         <button
                           type="button"
-                          onClick={() => handleRemoveOption(idx)}
-                          className="p-2 text-slate-400 hover:text-red-600 rounded transition-colors cursor-pointer mt-1"
-                          title="Remove option"
+                          onClick={() => optionImageInputRefs.current[idx]?.click()}
+                          disabled={uploadingOptionIdx === idx}
+                          className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all shadow-xs active:scale-95 cursor-pointer disabled:opacity-50"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          {uploadingOptionIdx === idx ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <ImageIcon className="w-3.5 h-3.5" />
+                          )}
+                          <span>{opt.imageUrl ? 'Option Image' : 'Add Option Images'}</span>
                         </button>
-                      )}
-                    </div>
 
-                    {/* Option Image Preview Thumbnail */}
-                    {opt.imageUrl && (
-                      <div className="pl-7 pt-1 flex items-center gap-3">
-                        <div className="w-16 h-12 bg-slate-100 border border-amber-300 rounded p-0.5 flex items-center justify-center overflow-hidden">
-                          <img
-                            src={opt.imageUrl}
-                            alt={`Option (${opt.key}) image`}
-                            onError={(e) => {
-                              const target = e.currentTarget;
-                              if (target.src.endsWith('.heic') || target.src.endsWith('.HEIC')) {
-                                target.src = target.src.replace(/\.heic$/i, '.jpg');
-                              }
-                            }}
-                            className="max-h-full max-w-full object-contain rounded"
-                          />
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[11px] font-bold text-amber-900">
-                            Option ({opt.key}) Image Attached
-                          </span>
+                        {/* MathType Formula for Option */}
+                        <button
+                          type="button"
+                          onClick={() => openMathTypeForOption(idx, opt.key, opt.rawText || '')}
+                          className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all shadow-xs active:scale-95 cursor-pointer"
+                        >
+                          <Sigma className="w-3.5 h-3.5 stroke-[2.5]" />
+                          <span>MathType Formula</span>
+                        </button>
+
+                        {/* Draw Shapes / Diagram Studio for Option */}
+                        <button
+                          type="button"
+                          onClick={() => openDiagramStudioForOption(idx)}
+                          className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all shadow-xs active:scale-95 cursor-pointer"
+                        >
+                          <Palette className="w-3.5 h-3.5" />
+                          <span>{opt.diagramSvg ? 'Edit Diagram' : 'Draw Shapes'}</span>
+                        </button>
+
+                        {/* Remove Option */}
+                        {options.length > 2 && (
                           <button
                             type="button"
-                            onClick={() => handleRemoveOptionImage(idx)}
-                            className="text-[10px] text-red-600 hover:text-red-800 underline font-semibold cursor-pointer"
+                            onClick={() => handleRemoveOption(idx)}
+                            className="p-1 text-slate-400 hover:text-red-600 rounded transition-colors cursor-pointer"
+                            title="Remove option"
                           >
-                            Remove
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* TipTap RichTextEditor for Option with live preview */}
+                    <RichTextEditor
+                      value={opt.rawText || ''}
+                      onChange={val => handleOptionTextChange(idx, val)}
+                      onImagePasted={url => handleOptionImageChange(idx, url)}
+                      placeholder={`Enter Option (${opt.key}) text or formula (e.g. H = \\frac{u^2}{2g})`}
+                      className="w-full"
+                      showPreview
+                    />
+
+                    {/* Option Attached Diagram SVG Preview */}
+                    {opt.diagramSvg && (
+                      <div className="mt-2 p-2.5 bg-slate-50 border-2 border-emerald-300 rounded-xl flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-20 h-14 bg-white border border-slate-300 rounded-lg p-1 overflow-hidden flex items-center justify-center">
+                            <div className="w-full h-full scale-90" dangerouslySetInnerHTML={{ __html: opt.diagramSvg }} />
+                          </div>
+                          <div>
+                            <span className="text-xs font-bold text-emerald-900 block flex items-center gap-1">
+                              <Check className="w-3.5 h-3.5 text-emerald-600" /> SVG Diagram Attached
+                            </span>
+                            <span className="text-[10px] text-slate-500">Will render for Option ({opt.key})</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => openDiagramStudioForOption(idx)}
+                            className="px-2 py-0.5 bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-300 rounded-lg text-xs font-bold cursor-pointer"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = [...options];
+                              updated[idx] = { ...updated[idx], diagramSvg: undefined };
+                              setOptions(updated);
+                            }}
+                            className="p-1 text-slate-400 hover:text-rose-600 rounded-lg cursor-pointer"
+                            title="Remove diagram"
+                          >
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
@@ -697,6 +706,7 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
                 <RichTextEditor
                   value={explanationText}
                   onChange={setExplanationText}
+                  onImagePasted={url => setImageUrls(prev => [...prev, url])}
                   placeholder="Detailed step-by-step solution or rationale..."
                   className="w-full"
                 />
@@ -755,9 +765,13 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
       {/* Embedded Diagram Studio Modal */}
       <DiagramStudioModal
         isOpen={isDiagramStudioOpen}
-        initialSvg={diagramSvg}
+        initialSvg={
+          diagramStudioTarget.field === 'statement'
+            ? diagramSvg
+            : (options[diagramStudioTarget.index]?.diagramSvg || '')
+        }
         onClose={() => setIsDiagramStudioOpen(false)}
-        onSaveDiagram={svg => setDiagramSvg(svg)}
+        onSaveDiagram={handleSaveDiagram}
       />
     </>
   );

@@ -437,75 +437,74 @@ def seed_questions(cursor):
 
 
 def seed_templates(cursor):
+    cursor.execute("DELETE FROM templates")
     templates = [
         {
-            "id": "tpl-cbse-12",
-            "name": "CBSE Class 12 Board Standard",
-            "description": "2-Column standard layout with Section A (MCQs), Section B (Short), Section C (Long)",
-            "category": "CBSE",
+            "id": "a4-single-column",
+            "name": "A4 Single Column MCQ Paper",
+            "description": "Clean, spacious single-column format with ample space for diagrams, comprehensive tables, and detailed question explanations.",
+            "category": "generic",
             "settings": json.dumps({
                 "pageSize": "A4",
-                "columns": 2,
-                "columnGap": 8,
-                "columnDivider": True,
-                "margins": {"top": 12, "bottom": 12, "left": 12, "right": 12},
+                "orientation": "portrait",
+                "columns": 1,
+                "columnGap": 0,
+                "columnDivider": False,
+                "margins": {"top": 15, "bottom": 15, "left": 15, "right": 15},
                 "defaultFont": "Inter",
-                "defaultFontSize": 10.5,
+                "defaultFontSize": 11,
                 "showPageNumbers": True
             }),
             "default_metadata": json.dumps({
-                "instituteName": "DELHI PUBLIC ACADEMY",
-                "examName": "ALL INDIA SENIOR SCHOOL CERTIFICATE EXAMINATION 2026",
-                "subject": "PHYSICS (THEORY)",
-                "grade": "CLASS XII",
+                "instituteName": "APEX ACADEMY OF SCIENCE & TECHNOLOGY",
+                "examName": "ALL INDIA MOCK TEST SERIES — 2026",
+                "subject": "PHYSICS & CHEMISTRY",
                 "timeAllowedMinutes": 180,
-                "maxMarks": 70,
+                "maxMarks": 180,
                 "generalInstructions": [
-                    "All questions are compulsory. There are 33 questions in total.",
-                    "Section A contains 16 MCQs carrying 1 mark each.",
-                    "Section B contains 5 Short Answer questions of 2 marks each.",
-                    "Use of log tables and mathematical tables is permitted."
+                    "The test contains objective questions with 4 choices each.",
+                    "Each correct response awards +4 marks; incorrect response deducts -1 mark.",
+                    "Use of scientific calculators and electronic devices is strictly prohibited."
                 ]
             }),
             "default_sections": json.dumps([
-                {"id": "sec-1", "defaultTitle": "SECTION A (MCQs)", "defaultInstructions": "Q.1 to Q.16 carry 1 mark each. Select the correct option.", "defaultMarks": 16},
-                {"id": "sec-2", "defaultTitle": "SECTION B (Short Answer I)", "defaultInstructions": "Q.17 to Q.21 carry 2 marks each.", "defaultMarks": 10},
-                {"id": "sec-3", "defaultTitle": "SECTION C (Long Answer)", "defaultInstructions": "Q.22 to Q.28 carry 3 marks each.", "defaultMarks": 21}
+                {"id": "sec-1", "defaultTitle": "SECTION A: PHYSICS", "defaultInstructions": "Questions carry 4 marks each with -1 negative marking.", "defaultMarks": 100},
+                {"id": "sec-2", "defaultTitle": "SECTION B: CHEMISTRY", "defaultInstructions": "Questions carry 4 marks each with -1 negative marking.", "defaultMarks": 80}
             ]),
             "created_at": datetime.utcnow().isoformat()
         },
         {
-            "id": "tpl-jee-main",
-            "name": "JEE Main / Advanced NTA Format",
-            "description": "Standard engineering entrance exam format with Section 1 (Single Correct) and Section 2 (Numerical).",
-            "category": "Competitive",
+            "id": "school-exam",
+            "name": "School & Board Examination Paper",
+            "description": "Classic single-column board examination layout with formal header, candidate roll number fields, and structured sectional breakdown.",
+            "category": "school",
             "settings": json.dumps({
                 "pageSize": "A4",
-                "columns": 2,
-                "columnGap": 8,
-                "columnDivider": True,
-                "margins": {"top": 10, "bottom": 10, "left": 10, "right": 10},
-                "defaultFont": "Inter",
-                "defaultFontSize": 10.0,
+                "orientation": "portrait",
+                "columns": 1,
+                "columnGap": 0,
+                "columnDivider": False,
+                "margins": {"top": 18, "bottom": 18, "left": 18, "right": 18},
+                "defaultFont": "Arial",
+                "defaultFontSize": 11,
                 "showPageNumbers": True
             }),
             "default_metadata": json.dumps({
-                "instituteName": "NATIONAL TESTING AGENCY",
-                "examName": "JOINT ENTRANCE EXAMINATION (MAIN) - 2026",
-                "subject": "PHYSICS, CHEMISTRY & MATHEMATICS",
-                "grade": "JEE ADVANCED / MAIN",
+                "instituteName": "ST. XAVIER'S SENIOR SECONDARY SCHOOL",
+                "examName": "ANNUAL BOARD PREPARATORY EXAMINATION 2026",
+                "subject": "SCIENCE (PHYSICS & CHEMISTRY)",
                 "timeAllowedMinutes": 180,
-                "maxMarks": 300,
+                "maxMarks": 80,
                 "generalInstructions": [
-                    "This question paper contains 90 questions divided into 3 parts: Physics, Chemistry, and Mathematics.",
-                    "Each part contains Section A (+4, -1) and Section B (+4, 0).",
-                    "Calculators and electronic devices are strictly prohibited."
+                    "Please check that this question paper contains all printed pages.",
+                    "15 minutes reading time will be allotted before writing starts.",
+                    "Attempt all questions in Section A, B, and C."
                 ]
             }),
             "default_sections": json.dumps([
-                {"id": "sec-jee-1", "defaultTitle": "SECTION I - PHYSICS (Single Choice)", "defaultInstructions": "+4 for correct, -1 for incorrect", "defaultMarks": 80},
-                {"id": "sec-jee-2", "defaultTitle": "SECTION II - CHEMISTRY (Single Choice)", "defaultInstructions": "+4 for correct, -1 for incorrect", "defaultMarks": 80},
-                {"id": "sec-jee-3", "defaultTitle": "SECTION III - MATHEMATICS (Single Choice)", "defaultInstructions": "+4 for correct, -1 for incorrect", "defaultMarks": 80}
+                {"id": "sec-s1", "defaultTitle": "SECTION A (Objective Type Questions - 1 Mark each)", "defaultMarks": 20},
+                {"id": "sec-s2", "defaultTitle": "SECTION B (Short Answer Questions - 2 Marks each)", "defaultMarks": 20},
+                {"id": "sec-s3", "defaultTitle": "SECTION C (Long Answer Questions - 5 Marks each)", "defaultMarks": 40}
             ]),
             "created_at": datetime.utcnow().isoformat()
         }
@@ -1578,6 +1577,11 @@ async def upload_asset(file: Optional[UploadFile] = None, image: Optional[Upload
 @app.head("/api/assets/{filename:path}")
 @app.head("/api/uploads/{filename:path}")
 async def get_uploaded_asset(filename: str):
+    if filename.startswith("raw/"):
+        filename = filename[4:]
+    elif filename.startswith("raw\\"):
+        filename = filename[4:]
+
     # Search in multiple potential uploads folders
     candidates = [
         os.path.join(UPLOADS_DIR, filename),

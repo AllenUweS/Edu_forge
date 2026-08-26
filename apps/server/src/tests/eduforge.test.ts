@@ -47,12 +47,14 @@ describe('EduForge Backend & Core Engines Test Suite', () => {
     expect(constants.length).toBeGreaterThanOrEqual(10);
   });
 
-  it('should seed built-in exam templates including A4 two-column format', () => {
+  it('should seed built-in exam templates including A4 single-column format', () => {
     const templates = db.prepare('SELECT * FROM templates').all();
-    expect(templates.length).toBeGreaterThanOrEqual(5);
+    expect(templates.length).toBe(2);
 
-    const twoCol = db.prepare('SELECT * FROM templates WHERE id = ?').get('a4-two-column');
-    expect(twoCol).toBeDefined();
+    const singleCol = db.prepare('SELECT * FROM templates WHERE id = ?').get('a4-single-column');
+    expect(singleCol).toBeDefined();
+    const parsed = JSON.parse(singleCol.template_json);
+    expect(parsed.settings.columns).toBe(1);
   });
 
   it('should support document CRUD in SQLite', () => {
@@ -60,7 +62,7 @@ describe('EduForge Backend & Core Engines Test Suite', () => {
     const testDoc: DocumentModel = {
       id: docId,
       title: 'Physics Mid-Term Exam 2026',
-      templateId: 'a4-two-column',
+      templateId: 'a4-single-column',
       metadata: {
         instituteName: 'TEST ACADEMY',
         examName: 'MID-TERM EXAM',
@@ -73,9 +75,9 @@ describe('EduForge Backend & Core Engines Test Suite', () => {
         pageSize: 'A4',
         orientation: 'portrait',
         margins: { top: 15, bottom: 15, left: 15, right: 15 },
-        columns: 2,
-        columnGap: 8,
-        columnDivider: true,
+        columns: 1,
+        columnGap: 0,
+        columnDivider: false,
         defaultFont: 'Inter',
         defaultFontSize: 10.5,
         questionSpacing: 12,

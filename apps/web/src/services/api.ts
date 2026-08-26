@@ -550,7 +550,13 @@ export const api = {
       }
 
       const json = await res.json();
-      return json.data || json;
+      const result = json.data || json;
+      let url = result.url || '';
+      if (url && !url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('data:')) {
+        const backendOrigin = API_BASE.replace(/\/api\/?$/, '');
+        url = `${backendOrigin}${url.startsWith('/') ? '' : '/'}${url}`;
+      }
+      return { ...result, url };
     } catch {
       // Create local Base64 Data URL as robust fallback
       return new Promise((resolve) => {

@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@eduforge/shared": "file:../../packages/shared",
+    "@tiptap/extension-image": "^3.30.3",
     "@tiptap/extension-placeholder": "^3.30.3",
     "@tiptap/extension-subscript": "^3.30.3",
     "@tiptap/extension-superscript": "^3.30.3",

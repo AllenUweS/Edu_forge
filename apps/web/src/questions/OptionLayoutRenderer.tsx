@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { QuestionOption, OptionLayoutType } from '@eduforge/shared';
-import { MathTextRenderer } from '../equation/MathTextRenderer.js';
+import { MathTextRenderer, resolveImageUrl } from '../equation/MathTextRenderer.js';
 import { RichTextEditor } from '../components/RichTextEditor.js';
 import { api } from '../services/api.js';
 import { Edit3, Check, Sparkles, Plus, Trash2, Image as ImageIcon, Loader2 } from 'lucide-react';
@@ -143,10 +143,53 @@ const EditableOptionItem: React.FC<{
         {label}
       </span>
 
-      <div className="flex-1 flex flex-col gap-1 min-w-0">
+      <div className="flex-1 flex flex-col md:flex-row items-start md:items-center gap-2.5 min-w-0">
+        {/* Option Image Rendering (Rendered side-by-side with statement text) */}
+        {opt.imageUrl && (() => {
+          const imgSrc = resolveImageUrl(opt.imageUrl);
+          return (
+            <div className="relative group/optimg shrink-0 my-0.5">
+              <img
+                src={imgSrc}
+                alt={`Option ${label}`}
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  if (!target.dataset.triedFallback && imgSrc.includes('/api/assets/')) {
+                    target.dataset.triedFallback = 'true';
+                    if (!imgSrc.includes('/raw/')) {
+                      target.src = imgSrc.replace('/api/assets/', '/api/assets/raw/');
+                    }
+                  }
+                }}
+                className="max-h-20 max-w-[140px] rounded border border-slate-200 bg-white p-0.5 object-contain shadow-2xs"
+              />
+              {isEditable && onUpdateOptionImage && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onUpdateOptionImage(opt.id, undefined);
+                  }}
+                  className="absolute -top-1.5 -right-1.5 bg-red-600 hover:bg-red-700 text-white rounded-full p-0.5 opacity-0 group-hover/optimg:opacity-100 transition-opacity text-[10px] cursor-pointer shadow-xs no-print"
+                  title="Remove option image"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* Option SVG Diagram Rendering */}
+        {opt.diagramSvg && (
+          <div className="shrink-0 my-0.5 max-h-20 max-w-[140px] rounded border border-slate-200 bg-white p-0.5 overflow-hidden flex items-center justify-center shadow-2xs">
+            <div className="w-full h-full scale-90" dangerouslySetInnerHTML={{ __html: opt.diagramSvg }} />
+          </div>
+        )}
+
         {/* Option Body (Editable & Formatted as Equation with TipTap) */}
         {isEditing && isEditable ? (
-          <div className="w-full my-0.5">
+          <div className="flex-1 w-full my-0.5">
             <RichTextEditor
               compact
               autoFocus
@@ -179,7 +222,7 @@ const EditableOptionItem: React.FC<{
                 onSelectOption(opt.id);
               }
             }}
-            className={`font-semibold ${
+            className={`font-semibold flex-1 ${
               isEditable
                 ? 'cursor-pointer hover:bg-sky-50/70 hover:border-sky-300 border border-transparent rounded px-1 transition-all'
                 : ''
@@ -191,36 +234,6 @@ const EditableOptionItem: React.FC<{
             ) : !opt.imageUrl ? (
               <span className="text-slate-400 italic text-xs">Empty option...</span>
             ) : null}
-          </div>
-        )}
-
-        {/* Option Image Rendering */}
-        {opt.imageUrl && (
-          <div className="relative group/optimg inline-block my-0.5">
-            <img
-              src={opt.imageUrl}
-              alt={`Option ${label}`}
-              onError={(e) => {
-                const target = e.currentTarget;
-                if (target.src.endsWith('.heic') || target.src.endsWith('.HEIC')) {
-                  target.src = target.src.replace(/\.heic$/i, '.jpg');
-                }
-              }}
-              className="max-h-24 max-w-full rounded border border-slate-200 bg-white p-0.5 object-contain shadow-2xs"
-            />
-            {isEditable && onUpdateOptionImage && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onUpdateOptionImage(opt.id, undefined);
-                }}
-                className="absolute -top-1.5 -right-1.5 bg-red-600 hover:bg-red-700 text-white rounded-full p-0.5 opacity-0 group-hover/optimg:opacity-100 transition-opacity text-[10px] cursor-pointer shadow-xs no-print"
-                title="Remove option image"
-              >
-                ✕
-              </button>
-            )}
           </div>
         )}
       </div>

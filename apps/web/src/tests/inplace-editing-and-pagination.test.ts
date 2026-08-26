@@ -75,17 +75,16 @@ describe('EduForge In-Place Editing & Pagination Flow Tests', () => {
     // Assert that we have at least 3 pages generated
     expect(pages.length).toBeGreaterThanOrEqual(3);
 
-    // Page 1 assertions: has 2 columns
+    // Page 1 assertions: has 1 column
     expect(pages[0].pageNumber).toBe(1);
     expect(pages[0].isFirstPage).toBe(true);
-    expect(pages[0].columns.length).toBe(2);
-    expect(pages[0].columns[0].blocks.length).toBeGreaterThan(0); // Left side occupied first
-    expect(pages[0].columns[1].blocks.length).toBeGreaterThan(0); // Right side occupied next
+    expect(pages[0].columns.length).toBe(1);
+    expect(pages[0].columns[0].blocks.length).toBeGreaterThan(0);
 
     // Page 2 assertions
     expect(pages[1].pageNumber).toBe(2);
     expect(pages[1].isFirstPage).toBe(false);
-    expect(pages[1].columns.length).toBe(2);
+    expect(pages[1].columns.length).toBe(1);
     expect(pages[1].columns[0].blocks.length).toBeGreaterThan(0);
 
     // Page 3 assertions

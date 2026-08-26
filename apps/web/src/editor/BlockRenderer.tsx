@@ -2,10 +2,10 @@ import React, { useRef, useEffect, useState, memo } from 'react';
 import {
   DocumentBlock, QuestionBlock, TableBlock, ShapeBlock, WordArtBlock,
   EquationBlock, ParagraphBlock, HeadingBlock, SectionHeaderBlock, TextRun,
-  QuestionOption
+  QuestionOption, ImageBlock
 } from '@eduforge/shared';
 import { KaTeXRenderer } from '../equation/KaTeXRenderer.js';
-import { MathTextRenderer } from '../equation/MathTextRenderer.js';
+import { MathTextRenderer, resolveImageUrl } from '../equation/MathTextRenderer.js';
 import { OptionLayoutRenderer } from '../questions/OptionLayoutRenderer.js';
 import {
   Trash2, Copy, ArrowUp, ArrowDown, Edit3, Type, Wand2, Plus,
@@ -613,6 +613,27 @@ const QuestionBlockItem: React.FC<{
               <MathTextRenderer text={q.rawText || ''} />
             </span>
 
+            {/* If rawText does not embed an <img> tag but imageUrl/diagramUrl is present, render it here in the Question Diagram position */}
+            {(!q.rawText || !/<img\s+/i.test(q.rawText)) && (q.imageUrl || q.diagramUrl || (q.imageUrls && q.imageUrls.length > 0)) && (
+              <span className="block my-2 text-center">
+                <img
+                  src={resolveImageUrl(q.imageUrl || q.diagramUrl || q.imageUrls?.[0])}
+                  alt="Question Diagram"
+                  className="max-h-52 max-w-full rounded-md border border-slate-200 bg-white p-1 object-contain inline-block shadow-2xs"
+                  onError={(e) => {
+                    const target = e.currentTarget;
+                    if (!target.dataset.triedFallback) {
+                      target.dataset.triedFallback = 'true';
+                      const src = target.src;
+                      if (src.includes('/api/assets/') && !src.includes('/raw/')) {
+                        target.src = src.replace('/api/assets/', '/api/assets/raw/');
+                      }
+                    }
+                  }}
+                />
+              </span>
+            )}
+
             {/* Marks Badge Inline */}
             <span
               contentEditable
@@ -634,61 +655,6 @@ const QuestionBlockItem: React.FC<{
           </div>
         )}
       </div>
-
-      {/* Render Attached Question Images (Multi-image Gallery) or Diagram URL */}
-      {(() => {
-        const images: string[] = q.imageUrls && q.imageUrls.length > 0
-          ? q.imageUrls
-          : (q.imageUrl ? [q.imageUrl] : (q.diagramUrl && !q.diagramSvg ? [q.diagramUrl] : []));
-
-        if (images.length === 0) return null;
-
-        return (
-          <div className={`my-2 grid gap-2 ${
-            images.length === 1 ? 'grid-cols-1' : images.length === 2 ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3'
-          }`}>
-            {images.map((imgSrc, imgIdx) => (
-              <div
-                key={imgIdx}
-                className="p-1 bg-slate-50 rounded-lg flex items-center justify-center border border-slate-200 overflow-hidden relative group/qimg min-h-[90px]"
-              >
-                <img
-                  src={imgSrc}
-                  alt={`Question figure ${imgIdx + 1}`}
-                  onError={(e) => {
-                    const target = e.currentTarget;
-                    if (target.src.endsWith('.heic') || target.src.endsWith('.HEIC')) {
-                      target.src = target.src.replace(/\.heic$/i, '.jpg');
-                    }
-                  }}
-                  style={{ maxHeight: `${Math.round((images.length === 1 ? 180 : 130) * scale)}px` }}
-                  className="max-w-full object-contain rounded shadow-2xs"
-                />
-                <button
-                  type="button"
-                  onClick={e => {
-                    e.stopPropagation();
-                    const newImages = images.filter((_, idx) => idx !== imgIdx);
-                    onUpdateBlock && onUpdateBlock({
-                      ...qb,
-                      question: {
-                        ...q,
-                        imageUrls: newImages,
-                        imageUrl: newImages[0] || undefined,
-                        diagramUrl: newImages.length === 0 ? undefined : q.diagramUrl
-                      }
-                    });
-                  }}
-                  className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded text-[10px] opacity-0 group-hover/qimg:opacity-100 transition-opacity cursor-pointer no-print shadow-xs"
-                  title="Remove this image"
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
-          </div>
-        );
-      })()}
 
       {/* Render Attached Diagram SVG if present */}
       {q.diagramSvg && (
@@ -932,6 +898,38 @@ const EditableParagraph: React.FC<{
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         onInput={handleInput}
+        onPaste={async (e) => {
+          const clipboardData = e.clipboardData;
+          if (!clipboardData) return;
+          const items = Array.from(clipboardData.items || []);
+          const imageItems = items.filter(item => item.type.startsWith('image/'));
+          if (imageItems.length > 0) {
+            e.preventDefault();
+            e.stopPropagation();
+            for (const item of imageItems) {
+              const file = item.getAsFile();
+              if (file) {
+                try {
+                  const res = await api.uploadImage(file);
+                  if (res.url && onUpdateBlock) {
+                    onUpdateBlock({
+                      ...p,
+                      runs: [
+                        ...(p.runs || []),
+                        {
+                          id: `r-${Date.now()}`,
+                          text: ` [Image: ${res.url}] `
+                        }
+                      ]
+                    });
+                  }
+                } catch (err) {
+                  console.error('Error pasting image in paragraph:', err);
+                }
+              }
+            }
+          }
+        }}
         onSelect={() => {
           onTextSelectionChange && onTextSelectionChange({
             ...f,
@@ -1199,16 +1197,35 @@ function renderBlockContent(
     }
 
     case 'image': {
+      const imgBlock = block as ImageBlock;
+      let imgSrc = imgBlock.src || '';
+      if (imgSrc && !imgSrc.startsWith('http://') && !imgSrc.startsWith('https://') && !imgSrc.startsWith('data:')) {
+        imgSrc = `http://localhost:5001${imgSrc.startsWith('/') ? '' : '/'}${imgSrc}`;
+      }
       return (
-        <div className="my-3 flex flex-col items-center">
+        <div className="my-3 flex flex-col items-center group/img relative">
           <img
-            src={block.src}
-            alt={block.alt || 'Document asset'}
-            style={{ width: block.width ? `${block.width}px` : 'auto', maxHeight: '350px' }}
+            src={imgSrc}
+            alt={imgBlock.alt || 'Pasted image'}
+            style={{
+              width: imgBlock.width ? `${imgBlock.width}px` : '100%',
+              maxWidth: '100%',
+              maxHeight: '500px',
+              objectFit: 'contain'
+            }}
             className="rounded shadow-xs border border-slate-200"
+            onError={(e) => {
+              const target = e.currentTarget;
+              if (imgBlock.src && !target.dataset.tried) {
+                target.dataset.tried = 'true';
+                if (!imgBlock.src.startsWith('http')) {
+                  target.src = `http://localhost:5001${imgBlock.src.startsWith('/') ? '' : '/'}${imgBlock.src}`;
+                }
+              }
+            }}
           />
-          {block.caption && (
-            <span className="text-[10px] text-slate-500 italic mt-1">{block.caption}</span>
+          {imgBlock.caption && (
+            <span className="text-[10px] text-slate-500 italic mt-1">{imgBlock.caption}</span>
           )}
         </div>
       );

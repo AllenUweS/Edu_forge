@@ -96,7 +96,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               Welcome to EduForge
             </h1>
             <p className="text-sm text-slate-300 max-w-2xl leading-relaxed">
-              Professional question paper creator, scientific typesetter, and document editor with full A4 two-column real-time pagination, Math AST, Physics & Chemistry chapters, and offline Question Repository.
+              Professional question paper creator, scientific typesetter, and document editor with full A4 single-column real-time pagination, Math AST, Physics & Chemistry chapters, and offline Question Repository.
             </p>
           </div>
         </div>

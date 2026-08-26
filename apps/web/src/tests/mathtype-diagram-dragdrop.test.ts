@@ -234,9 +234,8 @@ describe('Question Block Size Increase & Decrease Controls', () => {
   });
 });
 
-describe('Two-Column Exam Layout Flow & Drag Column Placement', () => {
-  it('flows questions into right column of same page before advancing to page 2', () => {
-    // Build a mock 2-column exam paper with 6 questions
+describe('Single-Column Exam Layout Flow & Page Pagination', () => {
+  it('flows questions into single column spanning full A4 page width', () => {
     const mockQuestions: QuestionBlock[] = Array.from({ length: 6 }, (_, i) => ({
       id: `q-${i + 1}`,
       type: 'question',
@@ -261,14 +260,14 @@ describe('Two-Column Exam Layout Flow & Drag Column Placement', () => {
     }));
 
     const mockDoc: DocumentModel = {
-      id: 'doc-two-col',
-      title: 'Mock 2-Column Exam Paper',
+      id: 'doc-single-col',
+      title: 'Mock Single Column Exam Paper',
       settings: {
         pageSize: 'A4',
         orientation: 'portrait',
-        columns: 2,
-        columnGap: 8,
-        columnDivider: true,
+        columns: 1,
+        columnGap: 0,
+        columnDivider: false,
         margins: { top: 15, bottom: 15, left: 15, right: 15 },
         defaultFont: 'Calibri',
         defaultFontSize: 10.5,
@@ -299,94 +298,10 @@ describe('Two-Column Exam Layout Flow & Drag Column Placement', () => {
 
     const pages = paginateDocument(mockDoc);
 
-    // Page 1 must contain both column 0 (left) and column 1 (right)
     expect(pages.length).toBeGreaterThanOrEqual(1);
     const page1 = pages[0];
-    expect(page1.columns.length).toBe(2);
-
-    // Left column contains initial questions, right column contains wrapped questions on the same page
+    expect(page1.columns.length).toBe(1);
     expect(page1.columns[0].blocks.length).toBeGreaterThan(0);
-    expect(page1.columns[1].blocks.length).toBeGreaterThan(0);
-  });
-
-  it('honors explicit column assignment (e.g. dragged directly to right column)', () => {
-    const questionLeft: QuestionBlock = {
-      id: 'q-left',
-      type: 'question',
-      column: 0,
-      question: {
-        id: 'qd-left',
-        questionType: 'MCQ_SINGLE',
-        content: [],
-        rawText: 'Question on left side',
-        options: [],
-        marks: 4,
-        difficulty: 'Easy',
-        tags: [],
-        optionLayout: 'grid_2x2',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }
-    };
-
-    const questionRight: QuestionBlock = {
-      id: 'q-right',
-      type: 'question',
-      column: 1,
-      question: {
-        id: 'qd-right',
-        questionType: 'MCQ_SINGLE',
-        content: [],
-        rawText: 'Question on right side (explicitly dragged to right)',
-        options: [],
-        marks: 4,
-        difficulty: 'Easy',
-        tags: [],
-        optionLayout: 'grid_2x2',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }
-    };
-
-    const mockDoc: DocumentModel = {
-      id: 'doc-explicit-col',
-      title: 'Explicit Column Test',
-      settings: {
-        pageSize: 'A4',
-        orientation: 'portrait',
-        columns: 2,
-        columnGap: 8,
-        columnDivider: true,
-        margins: { top: 15, bottom: 15, left: 15, right: 15 },
-        defaultFont: 'Calibri',
-        defaultFontSize: 10.5,
-        showPageNumbers: true,
-        questionSpacing: 6,
-        optionSpacing: 4,
-        lineSpacing: 1.15,
-        paragraphSpacing: 4
-      },
-      metadata: {},
-      sections: [
-        {
-          id: 'sec-1',
-          title: 'SECTION I',
-          blocks: [questionLeft, questionRight]
-        }
-      ],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    const pages = paginateDocument(mockDoc);
-    const page1 = pages[0];
-
-    // questionLeft should be in column 0, and questionRight in column 1
-    const col0HasLeft = page1.columns[0].blocks.some(b => b.block.id === 'q-left');
-    const col1HasRight = page1.columns[1].blocks.some(b => b.block.id === 'q-right');
-
-    expect(col0HasLeft).toBe(true);
-    expect(col1HasRight).toBe(true);
   });
 });
 

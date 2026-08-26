@@ -43,7 +43,7 @@ export const PaperWizardModal: React.FC<PaperWizardModalProps> = ({
       api.getTemplates().then(data => {
         setTemplates(data);
         if (data.length > 0) {
-          const defaultTpl = data.find(t => t.id === 'a4-two-column') || data[0];
+          const defaultTpl = data.find(t => t.id === 'a4-single-column') || data[0];
           setSelectedTemplate(defaultTpl);
         }
       });
@@ -96,7 +96,7 @@ export const PaperWizardModal: React.FC<PaperWizardModalProps> = ({
 
     const newDoc: Partial<DocumentModel> = {
       title: paperTitle,
-      templateId: selectedTemplate?.id || 'a4-two-column',
+      templateId: selectedTemplate?.id || 'a4-single-column',
       metadata: {
         instituteName,
         examName,
@@ -110,11 +110,11 @@ export const PaperWizardModal: React.FC<PaperWizardModalProps> = ({
         pageSize: 'A4',
         orientation: 'portrait',
         margins: { top: 15, bottom: 15, left: 15, right: 15 },
-        columns: 2,
-        columnGap: 8,
-        columnDivider: true,
+        columns: 1,
+        columnGap: 0,
+        columnDivider: false,
         defaultFont: 'Calibri, sans-serif',
-        defaultFontSize: 10.5,
+        defaultFontSize: 11,
         questionSpacing: 6,
         optionSpacing: 4,
         lineSpacing: 1.15,
@@ -129,7 +129,7 @@ export const PaperWizardModal: React.FC<PaperWizardModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-      <div className="bg-white text-black rounded-xl shadow-2xl border border-slate-200 w-full max-w-4xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150 max-h-[90vh]">
+      <div className="bg-white text-black rounded-xl shadow-2xl border border-slate-200 w-full md:w-[60vw] max-w-[60vw] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150 max-h-[90vh]">
         
         {/* Wizard Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50">

@@ -86,12 +86,14 @@ export const TemplatesPage: React.FC<TemplatesPageProps> = ({
                 )}
               </div>
 
-              <p className="text-xs mb-4 leading-relaxed text-slate-600">{tpl.description}</p>
+              <p className="text-xs mb-4 leading-relaxed text-slate-600">
+                {tpl.description?.replace(/2-Column/gi, 'Single-Column')}
+              </p>
 
               <div className="space-y-1.5 text-xs p-3 rounded-xl border border-slate-200 bg-slate-50 mb-4">
                 <div className="flex justify-between">
                   <span className="text-slate-500">Columns:</span>
-                  <span className="font-semibold text-slate-800">{tpl.settings.columns} Column Layout</span>
+                  <span className="font-semibold text-slate-800">Single Column Layout</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Font:</span>

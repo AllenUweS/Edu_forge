@@ -24,6 +24,7 @@ export interface QuestionOption {
   isCorrect?: boolean;
   imageUrl?: string;
   imageSvg?: string;
+  diagramSvg?: string;
 }
 
 export interface Question {

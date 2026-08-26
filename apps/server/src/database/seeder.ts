@@ -9,43 +9,44 @@ const __dirname = path.dirname(__filename);
 export function seedDatabase(db: Database.Database, resourcesDir?: string) {
   const rootResources = resourcesDir || path.resolve(__dirname, '../../../../resources');
 
-  const checkTemplates = db.prepare('SELECT COUNT(*) as count FROM templates').get() as { count: number };
-  if (checkTemplates.count === 0) {
-    const templatesPath = path.join(rootResources, 'templates/templates.json');
-    if (fs.existsSync(templatesPath)) {
-      const templates = JSON.parse(fs.readFileSync(templatesPath, 'utf8'));
-      const insertTemplate = db.prepare(`
-        INSERT INTO templates (id, name, description, category, template_json, is_system, created_at, updated_at)
-        VALUES (@id, @name, @description, @category, @template_json, 1, @created_at, @updated_at)
-      `);
-      const insertSection = db.prepare(`
-        INSERT INTO template_sections (id, template_id, title, instructions, marks, sequence_order)
-        VALUES (@id, @template_id, @title, @instructions, @marks, @sequence_order)
-      `);
+  const templatesPath = path.join(rootResources, 'templates/templates.json');
+  if (fs.existsSync(templatesPath)) {
+    const templates = JSON.parse(fs.readFileSync(templatesPath, 'utf8'));
+    // Always refresh system templates so all old 2-column templates are wiped out completely
+    db.prepare('DELETE FROM template_sections').run();
+    db.prepare('DELETE FROM templates').run();
 
-      for (const t of templates) {
-        insertTemplate.run({
-          id: t.id,
-          name: t.name,
-          description: t.description,
-          category: t.category,
-          template_json: JSON.stringify(t),
-          created_at: t.createdAt || new Date().toISOString(),
-          updated_at: t.updatedAt || new Date().toISOString()
-        });
+    const insertTemplate = db.prepare(`
+      INSERT INTO templates (id, name, description, category, template_json, is_system, created_at, updated_at)
+      VALUES (@id, @name, @description, @category, @template_json, 1, @created_at, @updated_at)
+    `);
+    const insertSection = db.prepare(`
+      INSERT INTO template_sections (id, template_id, title, instructions, marks, sequence_order)
+      VALUES (@id, @template_id, @title, @instructions, @marks, @sequence_order)
+    `);
 
-        if (t.defaultSections && Array.isArray(t.defaultSections)) {
-          t.defaultSections.forEach((sec: any, idx: number) => {
-            insertSection.run({
-              id: `${t.id}-sec-${idx + 1}`,
-              template_id: t.id,
-              title: sec.defaultTitle,
-              instructions: sec.defaultInstructions || '',
-              marks: sec.defaultMarks || null,
-              sequence_order: idx
-            });
+    for (const t of templates) {
+      insertTemplate.run({
+        id: t.id,
+        name: t.name,
+        description: t.description,
+        category: t.category,
+        template_json: JSON.stringify(t),
+        created_at: t.createdAt || new Date().toISOString(),
+        updated_at: t.updatedAt || new Date().toISOString()
+      });
+
+      if (t.defaultSections && Array.isArray(t.defaultSections)) {
+        t.defaultSections.forEach((sec: any, idx: number) => {
+          insertSection.run({
+            id: `${t.id}-sec-${idx + 1}`,
+            template_id: t.id,
+            title: sec.defaultTitle,
+            instructions: sec.defaultInstructions || '',
+            marks: sec.defaultMarks || null,
+            sequence_order: idx
           });
-        }
+        });
       }
     }
   }
@@ -292,5 +293,26 @@ export function seedDatabase(db: Database.Database, resourcesDir?: string) {
       JSON.stringify(defaultSettings),
       new Date().toISOString()
     );
+  }
+
+  // Convert any existing documents in database to single-column layout
+  try {
+    const existingDocs = db.prepare('SELECT id, document_json FROM documents').all() as any[];
+    for (const d of existingDocs) {
+      if (d.document_json) {
+        const parsed = JSON.parse(d.document_json);
+        if (parsed.settings) {
+          parsed.settings.columns = 1;
+          parsed.settings.columnGap = 0;
+          parsed.settings.columnDivider = false;
+          if (parsed.templateId === 'a4-two-column') {
+            parsed.templateId = 'a4-single-column';
+          }
+          db.prepare('UPDATE documents SET document_json = ? WHERE id = ?').run(JSON.stringify(parsed), d.id);
+        }
+      }
+    }
+  } catch (err) {
+    // Ignore migration error if table does not exist
   }
 }

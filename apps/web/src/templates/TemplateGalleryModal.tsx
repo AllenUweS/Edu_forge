@@ -16,7 +16,7 @@ export const TemplateGalleryModal: React.FC<TemplateGalleryModalProps> = ({
 }) => {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedId, setSelectedId] = useState<string>('a4-two-column');
+  const [selectedId, setSelectedId] = useState<string>('a4-single-column');
 
   useEffect(() => {
     if (isOpen) {
@@ -50,7 +50,7 @@ export const TemplateGalleryModal: React.FC<TemplateGalleryModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-      <div className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-4xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150 max-h-[88vh]">
+      <div className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full md:w-[60vw] max-w-[60vw] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150 max-h-[88vh]">
         
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50">
@@ -107,11 +107,13 @@ export const TemplateGalleryModal: React.FC<TemplateGalleryModalProps> = ({
                         )}
                       </div>
 
-                      <p className="text-xs text-slate-600 mb-3 leading-relaxed">{tpl.description}</p>
+                      <p className="text-xs text-slate-600 mb-3 leading-relaxed">
+                        {tpl.description?.replace(/2-Column/gi, 'Single-Column')}
+                      </p>
 
                       <div className="flex flex-wrap gap-1.5 text-[11px] font-medium text-slate-500">
                         <span className="px-2 py-0.5 bg-slate-100 rounded border border-slate-200">
-                          {tpl.settings.columns} Column{tpl.settings.columns > 1 ? 's' : ''}
+                          Single Column
                         </span>
                         <span className="px-2 py-0.5 bg-slate-100 rounded border border-slate-200">
                           Font: {tpl.settings.defaultFont} ({tpl.settings.defaultFontSize}pt)

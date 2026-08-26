@@ -45,6 +45,8 @@ env/
 *.db-journal
 *.sqlite
 *.sqlite3
+server_py/uploads/
+uploads/
 
 # Editor / OS
 .vscode/*

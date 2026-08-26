@@ -69,11 +69,11 @@ export function paginateDocument(doc: DocumentModel): PageLayout[] {
     pageSize: 'A4',
     orientation: 'portrait',
     margins: { top: 15, bottom: 15, left: 15, right: 15 },
-    columns: 2,
-    columnGap: 8,
-    columnDivider: true,
+    columns: 1,
+    columnGap: 0,
+    columnDivider: false,
     defaultFont: 'Calibri, sans-serif',
-    defaultFontSize: 10.5,
+    defaultFontSize: 11,
     questionSpacing: 6,
     optionSpacing: 4,
     lineSpacing: 1.15,
@@ -84,7 +84,7 @@ export function paginateDocument(doc: DocumentModel): PageLayout[] {
   const metadata = doc.metadata || {};
   const sections = Array.isArray(doc.sections) ? doc.sections : [];
 
-  const isTwoColumn = settings.columns === 2;
+  const isTwoColumn = false; // Always 1 Single Full A4 Paper Layout
   const mmToPx = 3.7795;
   const pageHeightPx = 297 * mmToPx; // ~1123px
   const topMarginPx = (margins.top ?? 15) * mmToPx;

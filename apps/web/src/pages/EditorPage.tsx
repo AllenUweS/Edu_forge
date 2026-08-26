@@ -117,6 +117,11 @@ export const EditorPage: React.FC<EditorPageProps> = ({
           ]
         };
       }
+      if (data.settings) {
+        data.settings.columns = 1;
+        data.settings.columnGap = 0;
+        data.settings.columnDivider = false;
+      }
       setDoc(data);
       setLastSavedAt(new Date(data.updatedAt || Date.now()));
       if (data.settings?.defaultFont) {
@@ -131,11 +136,11 @@ export const EditorPage: React.FC<EditorPageProps> = ({
           pageSize: 'A4',
           orientation: 'portrait',
           margins: { top: 15, bottom: 15, left: 15, right: 15 },
-          columns: 2,
-          columnGap: 8,
-          columnDivider: true,
+          columns: 1,
+          columnGap: 0,
+          columnDivider: false,
           defaultFont: 'Calibri, sans-serif',
-          defaultFontSize: 10.5,
+          defaultFontSize: 11,
           questionSpacing: 6,
           optionSpacing: 4,
           lineSpacing: 1.15,
@@ -1212,6 +1217,10 @@ export const EditorPage: React.FC<EditorPageProps> = ({
           }}
           onDropQuestion={(q, targetBlockId, targetColumn) => handleInsertQuestion(q, targetBlockId, targetColumn)}
           onDropItemOnSection={(secId, item) => {
+            if (item.type === 'image') {
+              handleAddBlockToSection(item, secId);
+              return;
+            }
             if (item.category === 'questions' || item.type === 'question') {
               handleInsertQuestion(item.questionData || item.data);
               return;

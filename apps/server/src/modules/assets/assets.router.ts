@@ -80,8 +80,7 @@ assetsRouter.post('/upload', upload.single('image'), (req: Request, res: Respons
   }
 });
 
-// GET /api/assets/raw/:filename - Serve uploaded file directly
-assetsRouter.get('/raw/:filename', (req: Request, res: Response) => {
+const serveAssetFile = (req: Request, res: Response) => {
   const filename = path.basename(req.params.filename); // prevent path traversal
   const filePath = path.join(uploadsDir, filename);
 
@@ -90,4 +89,8 @@ assetsRouter.get('/raw/:filename', (req: Request, res: Response) => {
   }
 
   res.sendFile(filePath);
-});
+};
+
+// GET /api/assets/raw/:filename & GET /api/assets/:filename
+assetsRouter.get('/raw/:filename', serveAssetFile);
+assetsRouter.get('/:filename', serveAssetFile);
