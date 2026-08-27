@@ -44,24 +44,82 @@ const STORAGE_KEYS = {
   SETTINGS: 'eduforge_local_settings'
 };
 
+const defaultAdminDocs: DocumentModel[] = Array.from({ length: 10 }, (_, i) => ({
+  id: `test-${100 + i + 1}`,
+  title: `NEET & JEE Mock Test Paper ${i + 1}`,
+  templateId: 'standard-paper',
+  createdAt: new Date(Date.now() - (10 - i) * 86400000).toISOString(),
+  updatedAt: new Date(Date.now() - (10 - i) * 86400000).toISOString(),
+  metadata: {
+    subject: ['Biology', 'Physics', 'Chemistry', 'Mathematics'][i % 4],
+    totalMarks: 720,
+    durationMinutes: 180,
+    totalQuestions: 180
+  },
+  settings: {
+    pageSize: 'A4',
+    orientation: 'portrait',
+    margins: { top: 15, bottom: 15, left: 15, right: 15 },
+    columns: 2,
+    columnGap: 8,
+    columnDivider: true,
+    defaultFont: 'Calibri, sans-serif',
+    defaultFontSize: 10.5,
+    questionSpacing: 6,
+    optionSpacing: 4,
+    lineSpacing: 1.15,
+    paragraphSpacing: 4
+  },
+  sections: []
+}));
+
+function isFacultyUser(): boolean {
+  try {
+    const raw = localStorage.getItem('eduforge_auth');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return parsed.role === 'FACULTY' || parsed.user === 'faculty';
+    }
+  } catch {}
+  return false;
+}
+
 function getLocalDocs(): DocumentModel[] {
+  if (isFacultyUser()) {
+    try {
+      const raw = localStorage.getItem('eduforge_local_documents_faculty');
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  }
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.DOCS);
-    return raw ? JSON.parse(raw) : [];
+    if (raw && JSON.parse(raw).length > 0) return JSON.parse(raw);
+    return defaultAdminDocs;
   } catch {
-    return [];
+    return defaultAdminDocs;
   }
 }
 
 function saveLocalDocs(docs: DocumentModel[]): void {
   try {
-    localStorage.setItem(STORAGE_KEYS.DOCS, JSON.stringify(docs));
+    const key = isFacultyUser() ? 'eduforge_local_documents_faculty' : STORAGE_KEYS.DOCS;
+    localStorage.setItem(key, JSON.stringify(docs));
   } catch (e) {
     console.warn('LocalStorage save failed:', e);
   }
 }
 
 function getLocalQuestions(): Question[] {
+  if (isFacultyUser()) {
+    try {
+      const raw = localStorage.getItem('eduforge_local_questions_faculty');
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  }
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.QUESTIONS);
     if (raw) return JSON.parse(raw);
@@ -73,7 +131,8 @@ function getLocalQuestions(): Question[] {
 
 function saveLocalQuestions(qs: Question[]): void {
   try {
-    localStorage.setItem(STORAGE_KEYS.QUESTIONS, JSON.stringify(qs));
+    const key = isFacultyUser() ? 'eduforge_local_questions_faculty' : STORAGE_KEYS.QUESTIONS;
+    localStorage.setItem(key, JSON.stringify(qs));
   } catch (e) {
     console.warn('LocalStorage save failed:', e);
   }
@@ -116,6 +175,13 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
 export const api = {
   // Documents & Exam Papers
   async getDocuments(search?: string): Promise<DocumentModel[]> {
+    if (isFacultyUser()) {
+      const local = getLocalDocs();
+      if (search) {
+        return local.filter(d => d.title.toLowerCase().includes(search.toLowerCase()));
+      }
+      return local;
+    }
     try {
       const query = search ? `?search=${encodeURIComponent(search)}` : '';
       let docs: DocumentModel[] = [];
@@ -124,11 +190,13 @@ export const api = {
       } catch {
         docs = await fetchJson<DocumentModel[]>(`${API_BASE}/exam-papers/${query}`);
       }
-      cache.documents = docs;
-      saveLocalDocs(docs);
-      return docs;
+      if (Array.isArray(docs) && docs.length > 0) {
+        cache.documents = docs;
+        saveLocalDocs(docs);
+        return docs;
+      }
+      return getLocalDocs();
     } catch {
-      // Fallback to local storage on Vercel / offline mode
       const local = getLocalDocs();
       if (search) {
         return local.filter(d => d.title.toLowerCase().includes(search.toLowerCase()));
@@ -250,18 +318,45 @@ export const api = {
 
   // Subjects & Chapters
   async getSubjects(): Promise<any[]> {
+    if (isFacultyUser()) {
+      try {
+        const raw = localStorage.getItem('eduforge_local_subjects_faculty');
+        return raw ? JSON.parse(raw) : [];
+      } catch {
+        return [];
+      }
+    }
     try {
-      return await fetchJson<any[]>(`${API_BASE}/subjects/`);
+      const subs = await fetchJson<any[]>(`${API_BASE}/subjects/`);
+      return subs && subs.length > 0 ? subs : [
+        { id: 1, name: 'Biology', code: 'BIO', chapters: 2, questions: 1, status: 'Active' },
+        { id: 2, name: 'Physics', code: 'PHY', chapters: 2, questions: 1, status: 'Active' },
+        { id: 3, name: 'Chemistry', code: 'CHE', chapters: 1, questions: 1, status: 'Active' },
+        { id: 4, name: 'Mathematics', code: 'MATH', chapters: 1, questions: 0, status: 'Active' }
+      ];
     } catch {
       return [
-        { id: 1, name: 'Biology', code: 'BIO', chapters: 24, questions: 1820, status: 'Active' },
-        { id: 2, name: 'Physics', code: 'PHY', chapters: 18, questions: 1420, status: 'Active' },
-        { id: 3, name: 'Chemistry', code: 'CHE', chapters: 21, questions: 1180, status: 'Active' }
+        { id: 1, name: 'Biology', code: 'BIO', chapters: 2, questions: 1, status: 'Active' },
+        { id: 2, name: 'Physics', code: 'PHY', chapters: 2, questions: 1, status: 'Active' },
+        { id: 3, name: 'Chemistry', code: 'CHE', chapters: 1, questions: 1, status: 'Active' },
+        { id: 4, name: 'Mathematics', code: 'MATH', chapters: 1, questions: 0, status: 'Active' }
       ];
     }
   },
 
   async createSubject(subject: { name: string; code: string }): Promise<any> {
+    if (isFacultyUser()) {
+      try {
+        const raw = localStorage.getItem('eduforge_local_subjects_faculty');
+        const list = raw ? JSON.parse(raw) : [];
+        const newSub = { id: Date.now(), ...subject, chapters: 0, questions: 0, status: 'Active' };
+        list.push(newSub);
+        localStorage.setItem('eduforge_local_subjects_faculty', JSON.stringify(list));
+        return newSub;
+      } catch {
+        return { id: Date.now(), ...subject, chapters: 0, questions: 0, status: 'Active' };
+      }
+    }
     try {
       return await fetchJson<any>(`${API_BASE}/subjects/`, {
         method: 'POST',
@@ -284,14 +379,37 @@ export const api = {
   },
 
   async getChapters(subjectId?: number | string): Promise<any[]> {
+    if (isFacultyUser()) {
+      try {
+        const raw = localStorage.getItem('eduforge_local_chapters_faculty');
+        const list = raw ? JSON.parse(raw) : [];
+        if (subjectId) {
+          return list.filter((ch: any) => String(ch.subjectId) === String(subjectId));
+        }
+        return list;
+      } catch {
+        return [];
+      }
+    }
     try {
       const url = subjectId ? `${API_BASE}/subjects/${subjectId}/chapters/` : `${API_BASE}/chapters/`;
-      return await fetchJson<any[]>(url);
+      const chs = await fetchJson<any[]>(url);
+      return chs && chs.length > 0 ? chs : [
+        { num: '01', id: 'BIO-01', title: 'The Living World', subject: 'Biology', count: 1 },
+        { num: '02', id: 'BIO-02', title: 'Biological Classification', subject: 'Biology', count: 0 },
+        { num: '01', id: 'PHY-01', title: 'Units and Measurements', subject: 'Physics', count: 1 },
+        { num: '02', id: 'PHY-02', title: 'Motion in a Straight Line', subject: 'Physics', count: 0 },
+        { num: '01', id: 'CHE-01', title: 'Some Basic Concepts of Chemistry', subject: 'Chemistry', count: 1 },
+        { num: '01', id: 'MATH-01', title: 'Sets and Functions', subject: 'Mathematics', count: 0 }
+      ];
     } catch {
       return [
-        { num: '01', id: 'BIO-01', title: 'The Living World', subject: 'Biology', count: 42 },
-        { num: '02', id: 'BIO-02', title: 'Biological Classification', subject: 'Biology', count: 56 },
-        { num: '04', id: 'BIO-04', title: 'Cell Structure and Function', subject: 'Biology', count: 120 }
+        { num: '01', id: 'BIO-01', title: 'The Living World', subject: 'Biology', count: 1 },
+        { num: '02', id: 'BIO-02', title: 'Biological Classification', subject: 'Biology', count: 0 },
+        { num: '01', id: 'PHY-01', title: 'Units and Measurements', subject: 'Physics', count: 1 },
+        { num: '02', id: 'PHY-02', title: 'Motion in a Straight Line', subject: 'Physics', count: 0 },
+        { num: '01', id: 'CHE-01', title: 'Some Basic Concepts of Chemistry', subject: 'Chemistry', count: 1 },
+        { num: '01', id: 'MATH-01', title: 'Sets and Functions', subject: 'Mathematics', count: 0 }
       ];
     }
   },
@@ -320,6 +438,25 @@ export const api = {
 
   // Question Bank
   async getQuestions(filters?: Record<string, any>): Promise<Question[]> {
+    if (isFacultyUser()) {
+      let questions = getLocalQuestions();
+      if (filters) {
+        if (filters.subject && filters.subject !== 'all') {
+          questions = questions.filter(q => q.subject === filters.subject);
+        }
+        if (filters.difficulty && filters.difficulty !== 'all') {
+          questions = questions.filter(q => q.difficulty === filters.difficulty);
+        }
+        if (filters.search) {
+          const q = filters.search.toLowerCase();
+          questions = questions.filter(item =>
+            (item.rawText && item.rawText.toLowerCase().includes(q)) ||
+            (item.chapter && item.chapter.toLowerCase().includes(q))
+          );
+        }
+      }
+      return questions;
+    }
     try {
       const params = new URLSearchParams();
       if (filters) {
@@ -331,8 +468,11 @@ export const api = {
       }
       const qs = params.toString() ? `?${params.toString()}` : '';
       const questions = await fetchJson<Question[]>(`${API_BASE}/question-bank${qs}`);
-      cache.questions = questions;
-      return questions;
+      if (Array.isArray(questions) && questions.length > 0) {
+        cache.questions = questions;
+        return questions;
+      }
+      return getLocalQuestions();
     } catch {
       let questions = getLocalQuestions();
       if (filters) {
