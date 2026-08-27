@@ -6,86 +6,22 @@ interface LoginPageProps {
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('admin');
+  const [password, setPassword] = useState('admin@123');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     setIsLoading(true);
-
-    const cleanUsername = username.trim();
-
-    try {
-      // Attempt live backend API login
-      const res = await fetch('/api/auth/login/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: cleanUsername, password })
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        localStorage.setItem(
-          'eduforge_auth',
-          JSON.stringify({
-            isAuthenticated: true,
-            user: data.user?.username || cleanUsername,
-            name: data.user?.first_name || (cleanUsername === 'faculty' ? 'Faculty Member' : 'Admin'),
-            role: data.user?.role || (cleanUsername === 'faculty' ? 'FACULTY' : 'ADMIN'),
-            token: data.token,
-            loginTime: new Date().toISOString()
-          })
-        );
-        setIsLoading(false);
-        onLoginSuccess();
-        return;
-      }
-    } catch {
-      // Fallback local credential check
-    }
-
-    // Local credential check fallback
-    if (cleanUsername === 'admin' && password === 'admin@123') {
-      localStorage.setItem(
-        'eduforge_auth',
-        JSON.stringify({
-          isAuthenticated: true,
-          user: 'admin',
-          name: 'Admin User',
-          role: 'ADMIN',
-          token: '8f73d4d931452ac3db8b329c32aa129051278598',
-          loginTime: new Date().toISOString()
-        })
-      );
+    setTimeout(() => {
       setIsLoading(false);
       onLoginSuccess();
-    } else if (cleanUsername === 'faculty' && password === 'faculty@123') {
-      localStorage.setItem(
-        'eduforge_auth',
-        JSON.stringify({
-          isAuthenticated: true,
-          user: 'faculty',
-          name: 'Faculty Member',
-          role: 'FACULTY',
-          token: '3a67d2dfa739c988cfdeab5032a129d3de417579',
-          loginTime: new Date().toISOString()
-        })
-      );
-      setIsLoading(false);
-      onLoginSuccess();
-    } else {
-      setError('Invalid username or password. Please check your credentials.');
-      setIsLoading(false);
-    }
+    }, 400);
   };
 
   return (
     <div className="relative w-screen h-screen overflow-hidden flex items-center justify-center font-sans bg-slate-950">
-      
       {/* Fullscreen Video Background */}
       <video
         autoPlay
@@ -98,11 +34,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
       </video>
 
       {/* Dark Blur Overlay */}
-      <div className="absolute inset-0 bg-slate-950/50 backdrop-blur-xs z-10" />
+      <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-xs z-10" />
 
-      {/* Login Card Container */}
+      {/* Centered Login Card */}
       <div className="relative z-20 max-w-md w-full mx-4 p-8 rounded-3xl bg-white/90 backdrop-blur-md shadow-2xl border border-white/40 space-y-6 animate-in fade-in zoom-in-95 duration-300">
-        
         {/* Brand Header */}
         <div className="text-center space-y-2">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-teal-700 to-teal-500 text-white shadow-lg shadow-teal-700/30 mb-1">
@@ -115,13 +50,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             Desktop Question Paper Authoring & Exam Suite
           </p>
         </div>
-
-        {/* Error Alert */}
-        {error && (
-          <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold animate-in fade-in slide-in-from-top-1 duration-150">
-            ⚠️ {error}
-          </div>
-        )}
 
         {/* Login Form */}
         <form onSubmit={handleLogin} className="space-y-4 text-xs font-semibold text-slate-800">
@@ -168,7 +96,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
           <div className="flex items-center justify-between pt-1">
             <span className="text-[11px] text-slate-500 font-medium flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5 text-teal-600" /> Admin Access
+              <ShieldCheck className="w-3.5 h-3.5 text-teal-600" /> Admin / Faculty Access
             </span>
           </div>
 

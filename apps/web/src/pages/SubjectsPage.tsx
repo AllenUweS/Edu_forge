@@ -19,17 +19,6 @@ interface SubjectsPageProps {
   onDeleteSubject?: (code: string) => void;
 }
 
-function isFacultySession(): boolean {
-  try {
-    const raw = localStorage.getItem('eduforge_auth');
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      return parsed.role === 'FACULTY' || parsed.user === 'faculty';
-    }
-  } catch {}
-  return false;
-}
-
 export const SubjectsPage: React.FC<SubjectsPageProps> = ({
   subjectsList,
   onAddSubject,
@@ -60,8 +49,8 @@ export const SubjectsPage: React.FC<SubjectsPageProps> = ({
   const [editingCode, setEditingCode] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
-  const [chaptersCount, setChaptersCount] = useState<number>(0);
-  const [questionsCount, setQuestionsCount] = useState<number>(0);
+  const [chaptersCount, setChaptersCount] = useState<number | string>(0);
+  const [questionsCount, setQuestionsCount] = useState<number | string>(0);
 
   const handleOpenAdd = () => {
     setEditingCode(null);
@@ -83,7 +72,7 @@ export const SubjectsPage: React.FC<SubjectsPageProps> = ({
 
   const handleDelete = async (s: SubjectItem) => {
     const subIdentifier = s.name || s.code;
-    if (confirm(`Are you sure you want to delete subject "${subIdentifier}"? This will delete it from your MySQL database.`)) {
+    if (confirm(`Are you sure you want to delete subject "${subIdentifier}"?`)) {
       const targetId = s.id || s.code;
       // Optimistic delete
       setLocalSubjects(prev => prev.filter(item => item.code !== s.code && item.id !== s.id));

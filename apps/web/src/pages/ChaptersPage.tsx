@@ -20,17 +20,6 @@ interface ChaptersPageProps {
   onNavigateToQuestionBank?: (chapter?: { id: string; title: string }) => void;
 }
 
-function isFacultySession(): boolean {
-  try {
-    const raw = localStorage.getItem('eduforge_auth');
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      return parsed.role === 'FACULTY' || parsed.user === 'faculty';
-    }
-  } catch {}
-  return false;
-}
-
 export const ChaptersPage: React.FC<ChaptersPageProps> = ({
   subjectsList,
   chaptersList,
@@ -46,7 +35,7 @@ export const ChaptersPage: React.FC<ChaptersPageProps> = ({
     { name: 'Mathematics', code: 'MAT' }
   ];
 
-  const availableSubjects = subjectsList !== undefined ? subjectsList : (isFacultySession() ? [] : defaultSubjects);
+  const availableSubjects = subjectsList !== undefined ? subjectsList : defaultSubjects;
 
   const [localChapters, setLocalChapters] = useState<ChapterItem[]>([]);
 
@@ -95,7 +84,7 @@ export const ChaptersPage: React.FC<ChaptersPageProps> = ({
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm(`Are you sure you want to delete chapter ${id}? This will delete it from your MySQL database.`)) {
+    if (confirm(`Are you sure you want to delete chapter ${id}?`)) {
       // Optimistic delete
       setLocalChapters(prev => prev.filter(c => String(c.id) !== String(id)));
       try {

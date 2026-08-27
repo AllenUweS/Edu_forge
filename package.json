@@ -8,11 +8,16 @@
     "apps/*"
   ],
   "scripts": {
-    "dev": "concurrently -k -n \"django,web\" -c \"magenta,green\" \"npm run dev:django\" \"npm run dev:web\"",
-    "dev:django": "./backend/venv/bin/python backend/manage.py runserver 8000",
+    "dev": "concurrently -k -n \"server,web\" -c \"magenta,green\" \"npm run dev:server\" \"npm run dev:web\"",
+    "dev:server": "npm run dev --workspace=apps/server",
     "dev:web": "npm run dev --workspace=apps/web",
     "build": "npm run build --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present"
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run build",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop",
+    "supabase:reset": "supabase db reset",
+    "supabase:migration:new": "supabase migration new"
   },
   "keywords": [
     "question-paper-builder",

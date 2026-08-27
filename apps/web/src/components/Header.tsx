@@ -28,25 +28,10 @@ export const Header: React.FC<HeaderProps> = ({ currentPage, onLogout }) => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
-  // Active User Profile State (persisted in localStorage)
-  const [userName, setUserName] = useState('Admin');
+  // Active User Profile State
+  const [userName, setUserName] = useState('Admin User');
   const [userEmail, setUserEmail] = useState('admin@eduforge.in');
   const [userRole, setUserRole] = useState('Administrator');
-
-  useEffect(() => {
-    try {
-      const authData = localStorage.getItem('eduforge_auth');
-      if (authData) {
-        const parsed = JSON.parse(authData);
-        if (parsed.user) {
-          const capitalizedUser = parsed.user.charAt(0).toUpperCase() + parsed.user.slice(1);
-          setUserName(parsed.name || (parsed.user === 'faculty' ? 'Faculty Member' : capitalizedUser));
-          setUserEmail(parsed.email || `${parsed.user.toLowerCase()}@eduforge.in`);
-          setUserRole(parsed.role === 'FACULTY' ? 'Faculty Member' : 'Administrator');
-        }
-      }
-    } catch {}
-  }, []);
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
