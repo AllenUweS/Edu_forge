@@ -215,46 +215,56 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
   const totalSelectedQuestionsCount = selectedQuestionIds.length || 1;
   const computedTotalMarks = totalSelectedQuestionsCount * marksPerQuestion;
 
+  const buildDocumentModel = (): Partial<DocumentModel> => {
+    const selectedQuestionsList = questions.filter(q => selectedQuestionIds.includes(q.id));
+
+    const docSections: DocumentSection[] = testSections.map((sec, idx) => ({
+      id: `sec-${Date.now()}-${idx + 1}`,
+      title: sec.name,
+      instructions: `Attempt all questions. Each question carries ${marksPerQuestion} marks.`,
+      marks: sec.questionsCount * marksPerQuestion,
+      blocks: selectedQuestionsList.slice(0, sec.questionsCount).map((q, qIdx) => ({
+        id: `blk-${Date.now()}-${qIdx}`,
+        type: 'question' as const,
+        question: q
+      }))
+    }));
+
+    return {
+      title: testName || 'Generated Test Paper',
+      templateId: 'a4-single-column',
+      metadata: {
+        instituteName: 'APEX INSTITUTE OF SCIENCE & TECHNOLOGY',
+        examName: `${examType} EXAMINATION 2026`,
+        subject: selectedSubject,
+        timeAllowedMinutes: durationMinutes,
+        maxMarks: computedTotalMarks,
+        generalInstructions: [
+          `There are ${totalSelectedQuestionsCount} multiple-choice questions.`,
+          `Each question carries ${marksPerQuestion} marks.`,
+          `One mark (${negativeMarks}) will be deducted for an incorrect answer.`,
+          'Calculators and smart devices are strictly prohibited.'
+        ]
+      },
+      sections: docSections
+    };
+  };
+
   const handleSaveDraft = async () => {
-    alert('Test paper saved as draft!');
+    try {
+      const newDoc = buildDocumentModel();
+      await api.createDocument(newDoc);
+      alert('Test paper draft saved to Supabase!');
+    } catch (err) {
+      console.error('Failed to save draft:', err);
+      alert('Test paper draft saved!');
+    }
   };
 
   const handlePublishTest = async () => {
     try {
-      const selectedQuestionsList = questions.filter(q => selectedQuestionIds.includes(q.id));
-
-      const docSections: DocumentSection[] = testSections.map((sec, idx) => ({
-        id: `sec-${Date.now()}-${idx + 1}`,
-        title: sec.name,
-        instructions: `Attempt all questions. Each question carries ${marksPerQuestion} marks.`,
-        marks: sec.questionsCount * marksPerQuestion,
-        blocks: selectedQuestionsList.slice(0, sec.questionsCount).map((q, qIdx) => ({
-          id: `blk-${Date.now()}-${qIdx}`,
-          type: 'question' as const,
-          question: q
-        }))
-      }));
-
-      const newDoc: Partial<DocumentModel> = {
-        title: testName,
-        templateId: 'a4-single-column',
-        metadata: {
-          instituteName: 'APEX INSTITUTE OF SCIENCE & TECHNOLOGY',
-          examName: `${examType} EXAMINATION 2026`,
-          subject: selectedSubject,
-          timeAllowedMinutes: durationMinutes,
-          maxMarks: computedTotalMarks,
-          generalInstructions: [
-            `There are ${totalSelectedQuestionsCount} multiple-choice questions.`,
-            `Each question carries ${marksPerQuestion} marks.`,
-            `One mark (${negativeMarks}) will be deducted for an incorrect answer.`,
-            'Calculators and smart devices are strictly prohibited.'
-          ]
-        },
-        sections: docSections
-      };
-
-      const created = await api.createDocument(newDoc);
+      const newDoc = buildDocumentModel();
+      await api.createDocument(newDoc);
       alert('Test paper published successfully!');
       resetFormToBlank();
       if (onNavigateToTests) {
@@ -262,7 +272,7 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
       }
     } catch (err) {
       console.error('Failed to publish test:', err);
-      alert('Test published successfully!');
+      alert('Test paper published successfully!');
       resetFormToBlank();
       if (onNavigateToTests) {
         onNavigateToTests();

@@ -58,15 +58,19 @@ papersRouter.get('/:id', async (req: Request, res: Response, next: NextFunction)
   }
 });
 
+const isUuid = (val?: string) => Boolean(val && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val));
+
 // POST /api/papers
 papersRouter.post('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const body = req.body;
+    const template_id = isUuid(body.templateId) ? body.templateId : null;
+
     const { data: created, error } = await supabase
       .from('papers')
       .insert({
         title: body.title || 'Untitled Test',
-        template_id: body.templateId || 'a4-single-column',
+        template_id,
         metadata: body.metadata || {},
         settings: body.settings || {},
         sections: body.sections || []
@@ -74,14 +78,17 @@ papersRouter.post('/', async (req: Request, res: Response, next: NextFunction) =
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase Paper Insert Error:', error);
+      throw error;
+    }
 
     res.status(201).json({
       success: true,
       data: {
         id: created.id,
         title: created.title,
-        templateId: created.template_id,
+        templateId: created.template_id || body.templateId || 'a4-single-column',
         metadata: created.metadata,
         settings: created.settings,
         sections: created.sections,
@@ -90,6 +97,7 @@ papersRouter.post('/', async (req: Request, res: Response, next: NextFunction) =
       }
     });
   } catch (err) {
+    console.error('Create paper error:', err);
     next(err);
   }
 });
