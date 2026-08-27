@@ -40,8 +40,9 @@ export const Header: React.FC<HeaderProps> = ({ currentPage, onLogout }) => {
         const parsed = JSON.parse(authData);
         if (parsed.user) {
           const capitalizedUser = parsed.user.charAt(0).toUpperCase() + parsed.user.slice(1);
-          setUserName(parsed.name || capitalizedUser);
+          setUserName(parsed.name || (parsed.user === 'faculty' ? 'Faculty Member' : capitalizedUser));
           setUserEmail(parsed.email || `${parsed.user.toLowerCase()}@eduforge.in`);
+          setUserRole(parsed.role === 'FACULTY' ? 'Faculty Member' : 'Administrator');
         }
       }
     } catch {}
