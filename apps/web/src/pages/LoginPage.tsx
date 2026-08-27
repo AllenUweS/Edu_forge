@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, Lock, User, ArrowRight, ShieldCheck, Sparkles } from 'lucide-react';
+import { Eye, EyeOff, Lock, User, ArrowRight, ShieldCheck } from 'lucide-react';
 
 interface LoginPageProps {
   onLoginSuccess: () => void;
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('admin@123');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -30,16 +30,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         );
         onLoginSuccess();
       } else {
-        setError('Invalid username or password. (Use: admin / admin@123)');
+        setError('Invalid username or password. Please check your credentials.');
         setIsLoading(false);
       }
     }, 400);
-  };
-
-  const handleFillDemoCredentials = () => {
-    setUsername('admin');
-    setPassword('admin@123');
-    setError('');
   };
 
   return (
@@ -125,18 +119,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             </div>
           </div>
 
-          {/* Quick Demo Fill Helper */}
           <div className="flex items-center justify-between pt-1">
             <span className="text-[11px] text-slate-500 font-medium flex items-center gap-1">
               <ShieldCheck className="w-3.5 h-3.5 text-teal-600" /> Admin Access
             </span>
-            <button
-              type="button"
-              onClick={handleFillDemoCredentials}
-              className="text-[11px] font-bold text-teal-700 hover:underline cursor-pointer flex items-center gap-1"
-            >
-              <Sparkles className="w-3 h-3" /> Auto-fill (admin / admin@123)
-            </button>
           </div>
 
           {/* Submit Button */}
