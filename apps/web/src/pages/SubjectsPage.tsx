@@ -17,17 +17,31 @@ interface SubjectsPageProps {
   onDeleteSubject?: (code: string) => void;
 }
 
+function isFacultySession(): boolean {
+  try {
+    const raw = localStorage.getItem('eduforge_auth');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return parsed.role === 'FACULTY' || parsed.user === 'faculty';
+    }
+  } catch {}
+  return false;
+}
+
 export const SubjectsPage: React.FC<SubjectsPageProps> = ({
   subjectsList,
   onAddSubject,
   onEditSubject,
   onDeleteSubject
 }) => {
-  const [localSubjects, setLocalSubjects] = useState<SubjectItem[]>([
-    { name: 'Biology', code: 'BIO', chapters: 24, questions: 1820, status: 'Active' },
-    { name: 'Physics', code: 'PHY', chapters: 18, questions: 1420, status: 'Active' },
-    { name: 'Chemistry', code: 'CHE', chapters: 21, questions: 1180, status: 'Active' }
-  ]);
+  const [localSubjects, setLocalSubjects] = useState<SubjectItem[]>(() => {
+    if (isFacultySession()) return [];
+    return [
+      { name: 'Biology', code: 'BIO', chapters: 24, questions: 1820, status: 'Active' },
+      { name: 'Physics', code: 'PHY', chapters: 18, questions: 1420, status: 'Active' },
+      { name: 'Chemistry', code: 'CHE', chapters: 21, questions: 1180, status: 'Active' }
+    ];
+  });
 
   const subjects = subjectsList || localSubjects;
 

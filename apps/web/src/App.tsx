@@ -23,6 +23,17 @@ import { api } from './services/api.js';
 import { DocumentModel, Template, Question } from '@eduforge/shared';
 import { ThemeProvider } from './state/ThemeContext.js';
 
+function isFacultySession(): boolean {
+  try {
+    const raw = localStorage.getItem('eduforge_auth');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return parsed.role === 'FACULTY' || parsed.user === 'faculty';
+    }
+  } catch {}
+  return false;
+}
+
 const AppContent: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     try {
@@ -38,22 +49,72 @@ const AppContent: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<PageView>('dashboard');
   const [activeDocumentId, setActiveDocumentId] = useState<string | null>(null);
   const [documents, setDocuments] = useState<DocumentModel[]>([]);
-  // Shared frontend state for subjects and chapters
-  const [subjectsList, setSubjectsList] = useState<SubjectItem[]>([
-    { name: 'Biology', code: 'BIO', chapters: 28, questions: 0, color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-    { name: 'Physics', code: 'PHY', chapters: 32, questions: 0, color: 'bg-sky-50 text-sky-700 border-sky-200' },
-    { name: 'Chemistry', code: 'CHE', chapters: 26, questions: 0, color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
-    { name: 'Mathematics', code: 'MAT', chapters: 24, questions: 0, color: 'bg-amber-50 text-amber-700 border-amber-200' }
-  ]);
 
-  const [chaptersList, setChaptersList] = useState<ChapterItem[]>([
-    { id: 'BIO-CELL-0012', title: 'Cell Structure & Function', subject: 'Biology', count: 0 },
-    { id: 'PHY-MOT-0041', title: 'Kinematics & Motion', subject: 'Physics', count: 0 },
-    { id: 'CHE-ATOM-0027', title: 'Atomic Structure & Bonding', subject: 'Chemistry', count: 0 },
-    { id: 'PHY-ELE-0089', title: 'Electrostatics & Current', subject: 'Physics', count: 0 },
-    { id: 'CHE-ORG-0105', title: 'Organic Reaction Mechanisms', subject: 'Chemistry', count: 0 },
-    { id: 'BIO-GEN-0054', title: 'Genetics & Inheritance', subject: 'Biology', count: 0 }
-  ]);
+  // Shared frontend state for subjects and chapters
+  const [subjectsList, setSubjectsList] = useState<SubjectItem[]>(() => {
+    if (isFacultySession()) {
+      try {
+        const raw = localStorage.getItem('eduforge_local_subjects_faculty');
+        return raw ? JSON.parse(raw) : [];
+      } catch {
+        return [];
+      }
+    }
+    return [
+      { name: 'Biology', code: 'BIO', chapters: 28, questions: 0, color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+      { name: 'Physics', code: 'PHY', chapters: 32, questions: 0, color: 'bg-sky-50 text-sky-700 border-sky-200' },
+      { name: 'Chemistry', code: 'CHE', chapters: 26, questions: 0, color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+      { name: 'Mathematics', code: 'MAT', chapters: 24, questions: 0, color: 'bg-amber-50 text-amber-700 border-amber-200' }
+    ];
+  });
+
+  const [chaptersList, setChaptersList] = useState<ChapterItem[]>(() => {
+    if (isFacultySession()) {
+      try {
+        const raw = localStorage.getItem('eduforge_local_chapters_faculty');
+        return raw ? JSON.parse(raw) : [];
+      } catch {
+        return [];
+      }
+    }
+    return [
+      { id: 'BIO-CELL-0012', title: 'Cell Structure & Function', subject: 'Biology', count: 0 },
+      { id: 'PHY-MOT-0041', title: 'Kinematics & Motion', subject: 'Physics', count: 0 },
+      { id: 'CHE-ATOM-0027', title: 'Atomic Structure & Bonding', subject: 'Chemistry', count: 0 },
+      { id: 'PHY-ELE-0089', title: 'Electrostatics & Current', subject: 'Physics', count: 0 },
+      { id: 'CHE-ORG-0105', title: 'Organic Reaction Mechanisms', subject: 'Chemistry', count: 0 },
+      { id: 'BIO-GEN-0054', title: 'Genetics & Inheritance', subject: 'Biology', count: 0 }
+    ];
+  });
+
+  useEffect(() => {
+    if (isFacultySession()) {
+      try {
+        const rawSubs = localStorage.getItem('eduforge_local_subjects_faculty');
+        setSubjectsList(rawSubs ? JSON.parse(rawSubs) : []);
+        const rawChs = localStorage.getItem('eduforge_local_chapters_faculty');
+        setChaptersList(rawChs ? JSON.parse(rawChs) : []);
+      } catch {
+        setSubjectsList([]);
+        setChaptersList([]);
+      }
+    } else {
+      setSubjectsList([
+        { name: 'Biology', code: 'BIO', chapters: 28, questions: 0, color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+        { name: 'Physics', code: 'PHY', chapters: 32, questions: 0, color: 'bg-sky-50 text-sky-700 border-sky-200' },
+        { name: 'Chemistry', code: 'CHE', chapters: 26, questions: 0, color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+        { name: 'Mathematics', code: 'MAT', chapters: 24, questions: 0, color: 'bg-amber-50 text-amber-700 border-amber-200' }
+      ]);
+      setChaptersList([
+        { id: 'BIO-CELL-0012', title: 'Cell Structure & Function', subject: 'Biology', count: 0 },
+        { id: 'PHY-MOT-0041', title: 'Kinematics & Motion', subject: 'Physics', count: 0 },
+        { id: 'CHE-ATOM-0027', title: 'Atomic Structure & Bonding', subject: 'Chemistry', count: 0 },
+        { id: 'PHY-ELE-0089', title: 'Electrostatics & Current', subject: 'Physics', count: 0 },
+        { id: 'CHE-ORG-0105', title: 'Organic Reaction Mechanisms', subject: 'Chemistry', count: 0 },
+        { id: 'BIO-GEN-0054', title: 'Genetics & Inheritance', subject: 'Biology', count: 0 }
+      ]);
+    }
+  }, [isAuthenticated]);
 
   const handleAddSubject = (newSub: SubjectItem) => {
     setSubjectsList(prev => [...prev, newSub]);

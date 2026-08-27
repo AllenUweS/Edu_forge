@@ -19,6 +19,17 @@ interface ChaptersPageProps {
   onNavigateToQuestionBank?: () => void;
 }
 
+function isFacultySession(): boolean {
+  try {
+    const raw = localStorage.getItem('eduforge_auth');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return parsed.role === 'FACULTY' || parsed.user === 'faculty';
+    }
+  } catch {}
+  return false;
+}
+
 export const ChaptersPage: React.FC<ChaptersPageProps> = ({
   subjectsList,
   chaptersList,
@@ -34,13 +45,16 @@ export const ChaptersPage: React.FC<ChaptersPageProps> = ({
     { name: 'Mathematics', code: 'MAT' }
   ];
 
-  const availableSubjects = subjectsList && subjectsList.length > 0 ? subjectsList : defaultSubjects;
+  const availableSubjects = subjectsList !== undefined ? subjectsList : (isFacultySession() ? [] : defaultSubjects);
 
-  const [localChapters, setLocalChapters] = useState<ChapterItem[]>([
-    { num: '01', id: 'BIO-01', title: 'The Living World', subject: 'Biology', count: 42 },
-    { num: '02', id: 'BIO-02', title: 'Biological Classification', subject: 'Biology', count: 56 },
-    { num: '04', id: 'BIO-04', title: 'Cell Structure and Function', subject: 'Biology', count: 120 }
-  ]);
+  const [localChapters, setLocalChapters] = useState<ChapterItem[]>(() => {
+    if (isFacultySession()) return [];
+    return [
+      { num: '01', id: 'BIO-01', title: 'The Living World', subject: 'Biology', count: 42 },
+      { num: '02', id: 'BIO-02', title: 'Biological Classification', subject: 'Biology', count: 56 },
+      { num: '04', id: 'BIO-04', title: 'Cell Structure and Function', subject: 'Biology', count: 120 }
+    ];
+  });
 
   const chapters = chaptersList || localChapters;
 
