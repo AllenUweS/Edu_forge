@@ -27,12 +27,13 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 
-    "corsheaders",
     "rest_framework",
+    "rest_framework.authtoken",
     "drf_spectacular",
 
     "editor",
     "questionbank",
+    "accounts",
 ]
 
 
@@ -41,7 +42,6 @@ INSTALLED_APPS = [
 # --------------------------------------------------
 
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -50,8 +50,6 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
-
-CORS_ALLOW_ALL_ORIGINS = True
 
 
 # --------------------------------------------------
@@ -89,12 +87,19 @@ WSGI_APPLICATION = "exam_project.wsgi.application"
 
 
 # --------------------------------------------------
-# DATABASE (MYSQL default with SQLite fallback option)
+# DATABASE - MYSQL ONLY
 # --------------------------------------------------
 
-DB_ENGINE = os.getenv("DB_ENGINE", "sqlite3")
+use_sqlite = os.getenv("USE_SQLITE", "1") == "1" or os.getenv("DB_ENGINE") == "sqlite3"
 
-if DB_ENGINE == "mysql":
+if use_sqlite:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
+else:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.mysql",
@@ -106,13 +111,6 @@ if DB_ENGINE == "mysql":
             "OPTIONS": {
                 "charset": "utf8mb4",
             },
-        }
-    }
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
         }
     }
 
@@ -173,6 +171,15 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    # Every API requires authentication now; object-level rules live in
+    # accounts/permissions.py and per-app permission modules.
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.TokenAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
 }
 
 

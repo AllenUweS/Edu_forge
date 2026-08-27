@@ -1,8 +1,12 @@
 from rest_framework import serializers
 from django.db import models
 
+from questionbank.serializers import (
+    QuestionSerializer as BankQuestionSerializer,
+)
+
 from .models import (
-    ExamPage, ExamPaper, UploadedImage,
+    ExamPaper, ExamPaperQuestion, ExamPage, UploadedImage,
     Question, Option, QuestionEquation, OptionEquation, Symbol
 )
 from .utils import link_images_to_paper
@@ -103,29 +107,41 @@ class ExamPageSerializer(serializers.ModelSerializer):
 
 
 class ExamPaperSerializer(serializers.ModelSerializer):
-    pages = ExamPageSerializer(many=True)
+    # ``pages`` stays optional so a paper can be created title-first
+    # (questions are attached afterwards); the free-form editor still sends it.
+    pages = ExamPageSerializer(many=True, required=False)
 
     class Meta:
         model = ExamPaper
-        fields = ["id", "title", "created_at", "updated_at", "pages"]
+        fields = ["id", "title", "created_by", "created_at", "updated_at", "pages"]
+        extra_kwargs = {"created_by": {"required": False}}
+
+    def _create_pages(self, paper, pages_data):
+        for i, page_data in enumerate(pages_data, start=1):
+            ExamPage.objects.create(
+                exam_paper=paper,
+                page_number=i,
+                content=page_data.get("content", ""),
+            )
 
     def create(self, validated_data):
-        pages_data = validated_data.pop("pages")
+        pages_data = validated_data.pop("pages", [])
         paper = ExamPaper.objects.create(**validated_data)
-        for i, page_data in enumerate(pages_data, start=1):
-            ExamPage.objects.create(exam_paper=paper, page_number=i, content=page_data.get("content", ""))
+        self._create_pages(paper, pages_data)
         link_images_to_paper(paper)
         return paper
 
     def update(self, instance, validated_data):
-        pages_data = validated_data.pop("pages")
+        pages_data = validated_data.pop("pages", None)
         instance.title = validated_data.get("title", instance.title)
+        if not instance.created_by_id and validated_data.get("created_by"):
+            instance.created_by = validated_data["created_by"]
         instance.save()
 
-        # Simplest correct approach: replace all pages on every save.
-        instance.pages.all().delete()
-        for i, page_data in enumerate(pages_data, start=1):
-            ExamPage.objects.create(exam_paper=instance, page_number=i, content=page_data.get("content", ""))
+        # Replace all pages on every save (when provided).
+        if pages_data is not None:
+            instance.pages.all().delete()
+            self._create_pages(instance, pages_data)
 
         link_images_to_paper(instance)
         return instance
@@ -284,3 +300,115 @@ class SymbolSerializer(serializers.ModelSerializer):
     class Meta:
         model = Symbol
         fields = ["id", "category", "exam_type", "latex", "display_name", "search_tags", "is_favorite"]
+
+
+# ==================== PAPER <-> QUESTION-BANK PLACEMENTS ====================
+
+class PaperQuestionItemSerializer(serializers.ModelSerializer):
+    """
+    One placed question inside a paper: reference + order + overrides,
+    including the FULL resolved rich question for complete-paper rendering.
+    """
+
+    marks_effective = serializers.SerializerMethodField()
+    negative_marks_effective = serializers.SerializerMethodField()
+    question = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ExamPaperQuestion
+        fields = [
+            "id",
+            "sequence",
+            "marks_override",
+            "negative_marks_override",
+            "marks_effective",
+            "negative_marks_effective",
+            "question",
+            "added_at",
+        ]
+
+    def get_marks_effective(self, obj):
+        return obj.effective_marks
+
+    def get_negative_marks_effective(self, obj):
+        return obj.effective_negative_marks
+
+    def get_question(self, obj):
+        return BankQuestionSerializer(
+            obj.question,
+            context=self.context,
+        ).data
+
+
+class InputPlacementSerializer(serializers.Serializer):
+    """Validates one add-to-paper entry."""
+
+    question = serializers.IntegerField(min_value=1)
+    marks_override = serializers.DecimalField(
+        max_digits=6, decimal_places=2, required=False, allow_null=True
+    )
+    negative_marks_override = serializers.DecimalField(
+        max_digits=6, decimal_places=2, required=False, allow_null=True
+    )
+
+    @staticmethod
+    def normalized(validated):
+        return {
+            "question": validated["question"],
+            "marks_override": validated.get("marks_override"),
+            "negative_marks_override": validated.get("negative_marks_override"),
+        }
+
+
+class BulkPlacementsSerializer(serializers.Serializer):
+    """
+    Body accepted by POST /api/exam-papers/<pk>/questions/add/.
+
+    Accepts either {"question": 5} / {"question": 5, "marks_override": 2}
+    or a bulk form {"questions": [5, {"question": 6, "marks_override": 1}, ...]}.
+
+    After validation ``validated_data["placements"]`` holds a de-duplicated
+    list of normalized placement dicts preserving client order.
+    """
+
+    question = serializers.IntegerField(min_value=1, required=False)
+    questions = serializers.ListField(
+        child=serializers.JSONField(), required=False
+    )
+    marks_override = serializers.DecimalField(
+        max_digits=6, decimal_places=2, required=False, allow_null=True
+    )
+    negative_marks_override = serializers.DecimalField(
+        max_digits=6, decimal_places=2, required=False, allow_null=True
+    )
+
+    def validate(self, attrs):
+        placements = []
+
+        if attrs.get("question") is not None:
+            placements.append(InputPlacementSerializer.normalized(attrs))
+
+        for item in attrs.get("questions") or []:
+            if isinstance(item, int):
+                placements.append({
+                    "question": item,
+                    "marks_override": None,
+                    "negative_marks_override": None,
+                })
+            elif isinstance(item, dict):
+                entry = InputPlacementSerializer(data=item)
+                entry.is_valid(raise_exception=True)
+                placements.append(InputPlacementSerializer.normalized(entry.validated_data))
+            else:
+                raise serializers.ValidationError({
+                    "questions": "Items must be question ids or objects like "
+                                 "{\"question\": <id>, \"marks_override\": ...}."
+                })
+
+        if not placements:
+            raise serializers.ValidationError(
+                "Provide \"question\" (single add) or \"questions\" (bulk add)."
+            )
+
+        attrs["placements"] = placements
+        return attrs

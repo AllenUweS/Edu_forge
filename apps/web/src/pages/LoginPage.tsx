@@ -25,6 +25,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           JSON.stringify({
             isAuthenticated: true,
             user: 'admin',
+            token: 'cecbb723e23749f160c8b4b528225209deee9436',
             loginTime: new Date().toISOString()
           })
         );

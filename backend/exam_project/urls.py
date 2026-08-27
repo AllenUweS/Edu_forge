@@ -16,6 +16,9 @@ urlpatterns = [
     # Question Bank APIs
     path("api/", include("questionbank.urls")),
 
+    # Authentication / user & role management
+    path("api/", include("accounts.urls")),
+
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path(
         "api/docs/",

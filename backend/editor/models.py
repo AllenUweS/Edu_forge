@@ -1,8 +1,18 @@
+from django.conf import settings
 from django.db import models
 
 
 class ExamPaper(models.Model):
     title = models.CharField(max_length=255, default="Untitled Exam")
+    # Owner of the paper. NULL marks legacy papers saved before the roles
+    # existed; a faculty member claims such a paper the first time they save it.
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="exam_papers",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -36,6 +46,72 @@ class UploadedImage(models.Model):
 
 
 # ==================== STRUCTURED QUESTIONS (NEW) ====================
+
+
+class ExamPaperQuestion(models.Model):
+    """
+    Placement of an existing question-bank Question inside a faculty's exam
+    paper.
+
+    Stores a REFERENCE plus paper-specific overrides (order, adjusted marks)
+    -- never a copy of the question data.
+
+    ``on_delete=PROTECT`` on ``question`` keeps generated papers permanent:
+    a question that already appears in a saved paper cannot be deleted from
+    the bank while that placement exists (the API reports HTTP 409).
+    """
+
+    exam_paper = models.ForeignKey(
+        ExamPaper,
+        related_name="paper_questions",
+        on_delete=models.CASCADE,
+    )
+    question = models.ForeignKey(
+        "questionbank.Question",
+        related_name="paper_placements",
+        on_delete=models.PROTECT,
+    )
+    # Auto-assigned dense order (1..n) maintained by the add/reorder APIs.
+    sequence = models.PositiveIntegerField()
+    # When NULL the question's own marks/negative_marks apply.
+    marks_override = models.DecimalField(
+        max_digits=6, decimal_places=2, null=True, blank=True
+    )
+    negative_marks_override = models.DecimalField(
+        max_digits=6, decimal_places=2, null=True, blank=True
+    )
+    added_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["sequence"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["exam_paper", "question"],
+                name="unique_question_per_paper",
+            ),
+            models.UniqueConstraint(
+                fields=["exam_paper", "sequence"],
+                name="unique_sequence_per_paper",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["exam_paper", "sequence"]),
+        ]
+
+    @property
+    def effective_marks(self):
+        if self.marks_override is not None:
+            return self.marks_override
+        return self.question.marks
+
+    @property
+    def effective_negative_marks(self):
+        if self.negative_marks_override is not None:
+            return self.negative_marks_override
+        return self.question.negative_marks
+
+    def __str__(self):
+        return f"{self.exam_paper} <- {self.question}"
 
 
 class Question(models.Model):

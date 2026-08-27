@@ -79,11 +79,27 @@ function saveLocalQuestions(qs: Question[]): void {
   }
 }
 
+function getAuthHeader(): Record<string, string> {
+  try {
+    const authData = localStorage.getItem('eduforge_auth');
+    if (authData) {
+      const parsed = JSON.parse(authData);
+      if (parsed.token) {
+        return { Authorization: `Token ${parsed.token}` };
+      }
+    }
+  } catch {}
+  // Default fallback token for admin session
+  return { Authorization: 'Token cecbb723e23749f160c8b4b528225209deee9436' };
+}
+
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
+  const authHeaders = getAuthHeader();
   const res = await fetch(url, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      ...authHeaders,
       ...(options?.headers || {})
     }
   });

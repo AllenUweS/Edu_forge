@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import ExamPage, ExamPaper, UploadedImage
+from .models import ExamPage, ExamPaper, ExamPaperQuestion, UploadedImage
 
 
 class ExamPageInline(admin.TabularInline):
@@ -8,10 +8,16 @@ class ExamPageInline(admin.TabularInline):
     extra = 0
 
 
+class PaperQuestionsInline(admin.TabularInline):
+    model = ExamPaperQuestion
+    extra = 0
+    readonly_fields = ["added_at"]
+
+
 @admin.register(ExamPaper)
 class ExamPaperAdmin(admin.ModelAdmin):
-    list_display = ["id", "title", "updated_at"]
-    inlines = [ExamPageInline]
+    list_display = ["id", "title", "created_by", "updated_at"]
+    inlines = [ExamPageInline, PaperQuestionsInline]
 
 
 @admin.register(UploadedImage)

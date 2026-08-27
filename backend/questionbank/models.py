@@ -2,6 +2,44 @@ from django.db import models
 from django.contrib.auth.models import User
 
 
+class QuestionBank(models.Model):
+    """
+    A named collection of questions owned by one user.
+
+    Visibility rule (enforced in querysets/permissions, see
+    questionbank/permissions.py):
+      * owner has the ADMIN role  -> bank is public: everyone can read it,
+        only the owner/superuser can modify it
+      * owner has the FACULTY role -> bank is private to its owner
+      * superusers bypass every restriction
+    """
+
+    name = models.CharField(max_length=200)
+    description = models.TextField(blank=True, default="")
+    owner = models.ForeignKey(
+        User,
+        related_name="question_banks",
+        on_delete=models.PROTECT,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["owner", "name"],
+                name="unique_bank_name_per_owner",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["owner"]),
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.owner.username})"
+
+
 class Subject(models.Model):
     name = models.CharField(max_length=150, unique=True)
     code = models.CharField(max_length=20, unique=True)
@@ -88,6 +126,12 @@ class Question(models.Model):
         on_delete=models.CASCADE
     )
 
+    question_bank = models.ForeignKey(
+        QuestionBank,
+        related_name="questions",
+        on_delete=models.CASCADE
+    )
+
     difficulty = models.CharField(
         max_length=10,
         choices=DIFFICULTY_CHOICES
@@ -125,6 +169,7 @@ class Question(models.Model):
         ordering = ["-created_at"]
         indexes = [
             models.Index(fields=["chapter"]),
+            models.Index(fields=["question_bank"]),
             models.Index(fields=["difficulty"]),
             models.Index(fields=["status"]),
         ]
@@ -137,6 +182,7 @@ class QuestionContent(models.Model):
     CONTENT_TYPE_CHOICES = [
         ("TEXT", "Text"),
         ("IMAGE", "Image"),
+        ("EQUATION", "Equation"),
     ]
 
     question = models.ForeignKey(
@@ -154,6 +200,9 @@ class QuestionContent(models.Model):
         blank=True,
         null=True
     )
+
+    # Raw LaTeX source for EQUATION rows (e.g. r"A = A_0(1 + \\sin t)").
+    latex = models.TextField(blank=True, null=True)
 
     media = models.ForeignKey(
         Media,
@@ -222,6 +271,7 @@ class OptionContent(models.Model):
     CONTENT_TYPE_CHOICES = [
         ("TEXT", "Text"),
         ("IMAGE", "Image"),
+        ("EQUATION", "Equation"),
     ]
 
     option = models.ForeignKey(
@@ -239,6 +289,9 @@ class OptionContent(models.Model):
         blank=True,
         null=True
     )
+
+    # Raw LaTeX source for EQUATION rows.
+    latex = models.TextField(blank=True, null=True)
 
     media = models.ForeignKey(
         Media,
@@ -278,6 +331,7 @@ class SolutionContent(models.Model):
     CONTENT_TYPE_CHOICES = [
         ("TEXT", "Text"),
         ("IMAGE", "Image"),
+        ("EQUATION", "Equation"),
     ]
 
     solution = models.ForeignKey(
@@ -295,6 +349,9 @@ class SolutionContent(models.Model):
         blank=True,
         null=True
     )
+
+    # Raw LaTeX source for EQUATION rows.
+    latex = models.TextField(blank=True, null=True)
 
     media = models.ForeignKey(
         Media,

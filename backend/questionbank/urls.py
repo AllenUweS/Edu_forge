@@ -1,6 +1,20 @@
 from django.urls import path
+from rest_framework.routers import DefaultRouter
+
 from . import views
 
+
+router = DefaultRouter(trailing_slash=True)
+router.register(
+    r"question-banks",
+    views.QuestionBankViewSet,
+    basename="question-bank",
+)
+router.register(
+    r"bank-questions",
+    views.RichQuestionViewSet,
+    basename="bank-questions",
+)
 
 urlpatterns = [
 
@@ -50,7 +64,7 @@ urlpatterns = [
 
 
     # =========================
-    # QUESTIONS
+    # QUESTIONS (legacy paths, kept compatible)
     # =========================
 
     path(
@@ -65,3 +79,13 @@ urlpatterns = [
         name="question-detail"
     ),
 ]
+
+# question-banks/, question-banks/<pk>/,
+# question-banks/<pk>/questions/, bank-questions/, bank-questions/<pk>/
+urlpatterns += [
+    path(
+        "question-banks/<int:bank_id>/questions/",
+        views.BankQuestionsView.as_view(),
+        name="bank-questions-nested",
+    ),
+] + router.urls
