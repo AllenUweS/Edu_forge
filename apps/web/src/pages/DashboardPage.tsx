@@ -59,15 +59,67 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   // Real Counts from active frontend state + API
   const totalSubjectsCount = subjectsList.length > 0 ? subjectsList.length : apiSubjects.length;
   const totalChaptersCount = chaptersList.length > 0 ? chaptersList.length : apiChapters.length;
+  const totalQuestionsCount = questions.length;
 
-  // Dynamic Question Distribution by Subject
+  // Dynamic Question Distribution by Subject (calculated 100% strictly from real question bank records)
   const subjectCountMap: Record<string, number> = {};
   questions.forEach(q => {
-    const rawSub = (q.subject || 'General').trim();
-    const matchingSub = subjectsList.find(s => s.name.toLowerCase() === rawSub.toLowerCase());
-    const key = matchingSub ? matchingSub.name : rawSub;
-    subjectCountMap[key] = (subjectCountMap[key] || 0) + 1;
+    const rawSub = (q.subject || 'Biology').trim();
+    const formattedSub = rawSub.charAt(0).toUpperCase() + rawSub.slice(1);
+    subjectCountMap[formattedSub] = (subjectCountMap[formattedSub] || 0) + 1;
   });
+
+  const allSubjects = ['Biology', 'Physics', 'Chemistry', 'Mathematics'];
+  const subjectColors: Record<string, string> = {
+    Biology: 'bg-emerald-500',
+    Physics: 'bg-[#007a8c]',
+    Chemistry: 'bg-amber-500',
+    Mathematics: 'bg-sky-500'
+  };
+
+  const subjectPerformance = allSubjects.map(subName => {
+    const count = subjectCountMap[subName] || 0;
+    const percent = totalQuestionsCount > 0 ? Math.round((count / totalQuestionsCount) * 100) : 0;
+    return {
+      name: subName,
+      count,
+      percent,
+      color: subjectColors[subName] || 'bg-teal-600'
+    };
+  });
+
+  // Real Difficulty Breakdown calculated strictly from real question bank records
+  let easyCount = 0;
+  let mediumCount = 0;
+  let hardCount = 0;
+
+  questions.forEach(q => {
+    const diff = (q.difficulty || 'Medium').toLowerCase();
+    if (diff === 'easy') easyCount++;
+    else if (diff === 'hard') hardCount++;
+    else mediumCount++;
+  });
+
+  const difficultyBreakdown = [
+    {
+      level: 'Easy',
+      count: easyCount,
+      percent: totalQuestionsCount > 0 ? Math.round((easyCount / totalQuestionsCount) * 100) : 0,
+      color: 'bg-emerald-500'
+    },
+    {
+      level: 'Medium',
+      count: mediumCount,
+      percent: totalQuestionsCount > 0 ? Math.round((mediumCount / totalQuestionsCount) * 100) : 0,
+      color: 'bg-amber-500'
+    },
+    {
+      level: 'Hard',
+      count: hardCount,
+      percent: totalQuestionsCount > 0 ? Math.round((hardCount / totalQuestionsCount) * 100) : 0,
+      color: 'bg-rose-500'
+    }
+  ];
 
   const distributionList = subjectsList.length > 0
     ? subjectsList.map(s => ({
@@ -78,23 +130,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         ? Object.entries(subjectCountMap).map(([name, count]) => ({ name, count }))
         : apiSubjects.map(s => ({ name: s.name, count: subjectCountMap[s.name] || 0 })));
 
-  // Report Graph Mock Data for Dashboard Preview
-  const subjectPerformance = [
-    { name: 'Biology', score: 85, color: 'bg-emerald-500', attempts: 12 },
-    { name: 'Physics', score: 72, color: 'bg-[#007a8c]', attempts: 9 },
-    { name: 'Chemistry', score: 68, color: 'bg-amber-500', attempts: 8 },
-    { name: 'Mathematics', score: 91, color: 'bg-sky-500', attempts: 15 }
-  ];
-
-  const monthlyTrend = [
-    { month: 'Jan', accuracy: 65 },
-    { month: 'Feb', accuracy: 70 },
-    { month: 'Mar', accuracy: 74 },
-    { month: 'Apr', accuracy: 79 },
-    { month: 'May', accuracy: 82 },
-    { month: 'Jun', accuracy: 88 }
-  ];
-
   return (
     <div className="max-w-7xl mx-auto px-8 py-8 space-y-8 font-sans animate-in fade-in slide-in-from-bottom-2 duration-300">
       {/* Page Header */}
@@ -104,7 +139,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             Dashboard
           </h1>
           <p className="text-xs text-slate-500 font-medium mt-0.5">
-            Overview of question repository, generated tests, and performance analytics.
+            Overview of question repository, generated tests, and synced performance analytics.
           </p>
         </div>
         <button
@@ -258,7 +293,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         </div>
       </div>
 
-      {/* REPORTS GRAPHICAL ANALYTICS SECTION WITH REDIRECT BUTTON */}
+      {/* REPORTS GRAPHICAL ANALYTICS SECTION (SYNCED REAL METRICS WITH REPORTS PAGE) */}
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-7 space-y-6">
         
         {/* Section Header with Redirect Button */}
@@ -271,7 +306,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               </h2>
             </div>
             <p className="text-xs text-slate-500 font-medium mt-0.5">
-              Real-time student accuracy scores, subject performance, and monthly trends.
+              Synced real database question share and difficulty balance metrics.
             </p>
           </div>
 
@@ -290,58 +325,69 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         {/* 2 Graphical Analytics Charts Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           
-          {/* Graph 1: Subject Performance Breakdown */}
+          {/* Graph 1: Subject Question Share (Bar Chart) */}
           <div className="p-5 border border-slate-200/80 rounded-xl bg-slate-50/50 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-200/60 pb-2.5">
               <h3 className="text-xs font-bold text-slate-900 flex items-center gap-2 uppercase tracking-wide">
-                <BarChart3 className="w-4 h-4 text-teal-700" /> Subject Accuracy Breakdown
+                <BarChart3 className="w-4 h-4 text-teal-700" /> Subject Question Share
               </h3>
               <span className="text-[10px] font-extrabold text-teal-700 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded">
-                Live Data
+                Synced Real Data
               </span>
             </div>
 
             <div className="space-y-3.5 pt-1">
-              {subjectPerformance.map(s => (
-                <div key={s.name} className="space-y-1.5">
-                  <div className="flex justify-between text-xs font-bold text-slate-800">
-                    <span>{s.name}</span>
-                    <span className="font-mono text-teal-800">{s.score}%</span>
+              {loading ? (
+                <div className="text-xs text-slate-400 py-4 text-center">Loading subject metrics...</div>
+              ) : (
+                subjectPerformance.map(s => (
+                  <div key={s.name} className="space-y-1.5">
+                    <div className="flex justify-between text-xs font-bold text-slate-800">
+                      <span>{s.name}</span>
+                      <span className="font-mono text-teal-800">{s.count} Questions ({s.percent}%)</span>
+                    </div>
+                    <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full ${s.color} rounded-full transition-all duration-500`}
+                        style={{ width: `${s.percent}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full ${s.color} rounded-full transition-all duration-500`}
-                      style={{ width: `${s.score}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 
-          {/* Graph 2: Monthly Accuracy & Trajectory Line Graph */}
+          {/* Graph 2: Difficulty Level Distribution */}
           <div className="p-5 border border-slate-200/80 rounded-xl bg-slate-50/50 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-200/60 pb-2.5">
               <h3 className="text-xs font-bold text-slate-900 flex items-center gap-2 uppercase tracking-wide">
-                <TrendingUp className="w-4 h-4 text-emerald-600" /> Monthly Growth Trajectory
+                <Award className="w-4 h-4 text-amber-500" /> Question Bank Difficulty Balance
               </h3>
-              <span className="text-[10px] font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
-                Trending Up
+              <span className="text-[10px] font-extrabold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
+                Live Balance
               </span>
             </div>
 
-            <div className="pt-2">
-              <div className="h-36 w-full relative flex items-end justify-between px-3 border-b border-slate-300 pb-1">
-                {monthlyTrend.map((t) => (
-                  <div key={t.month} className="flex flex-col items-center gap-1.5">
-                    <span className="text-[10px] font-extrabold text-teal-800 bg-white border border-teal-200 px-1.5 py-0.5 rounded shadow-2xs">
-                      {t.accuracy}%
-                    </span>
-                    <div className="w-3 h-3 bg-teal-600 border-2 border-white rounded-full shadow-xs" />
-                    <span className="text-[10px] font-bold text-slate-500 mt-1">{t.month}</span>
+            <div className="space-y-3.5 pt-1">
+              {loading ? (
+                <div className="text-xs text-slate-400 py-4 text-center">Loading difficulty balance...</div>
+              ) : (
+                difficultyBreakdown.map(d => (
+                  <div key={d.level} className="space-y-1.5">
+                    <div className="flex justify-between text-xs font-bold text-slate-800">
+                      <span>{d.level} Difficulty</span>
+                      <span className="font-mono text-slate-900">{d.count} Questions ({d.percent}%)</span>
+                    </div>
+                    <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full ${d.color} rounded-full transition-all duration-500`}
+                        style={{ width: `${d.percent}%` }}
+                      />
+                    </div>
                   </div>
-                ))}
-              </div>
+                ))
+              )}
             </div>
           </div>
 
