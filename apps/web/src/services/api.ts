@@ -207,7 +207,33 @@ export const api = {
 
   async getDocument(id: string): Promise<DocumentModel> {
     try {
-      return await fetchJson<DocumentModel>(`${API_BASE}/documents/${id}`);
+      let doc = await fetchJson<any>(`${API_BASE}/exam-papers/${id}/`);
+      if (doc) {
+        return {
+          id: String(doc.id),
+          title: doc.title || 'Untitled Exam',
+          templateId: doc.templateId || 'a4-single-column',
+          metadata: doc.metadata || { subject: 'Physics & Chemistry', timeAllowedMinutes: 60, maxMarks: 100 },
+          settings: doc.settings || {
+            pageSize: 'A4',
+            orientation: 'portrait',
+            margins: { top: 15, bottom: 15, left: 15, right: 15 },
+            columns: 1,
+            columnGap: 8,
+            columnDivider: false,
+            defaultFont: 'Calibri, sans-serif',
+            defaultFontSize: 10.5,
+            questionSpacing: 6,
+            optionSpacing: 4,
+            lineSpacing: 1.15,
+            paragraphSpacing: 4
+          },
+          sections: doc.sections || [],
+          createdAt: doc.created_at || new Date().toISOString(),
+          updatedAt: doc.updated_at || new Date().toISOString()
+        };
+      }
+      throw new Error('Document not found');
     } catch {
       const local = getLocalDocs();
       const found = local.find(d => d.id === id);
@@ -218,12 +244,27 @@ export const api = {
 
   async createDocument(doc: Partial<DocumentModel>): Promise<DocumentModel> {
     try {
-      const created = await fetchJson<DocumentModel>(`${API_BASE}/documents`, {
+      const payload = {
+        title: doc.title || 'Untitled Test',
+        metadata: doc.metadata,
+        settings: doc.settings,
+        sections: doc.sections
+      };
+      const created = await fetchJson<any>(`${API_BASE}/exam-papers/`, {
         method: 'POST',
-        body: JSON.stringify(doc)
+        body: JSON.stringify(payload)
       });
       cache.documents = null;
-      return created;
+      return {
+        id: String(created.id),
+        title: created.title || doc.title || 'Untitled Test',
+        templateId: doc.templateId || 'a4-single-column',
+        metadata: doc.metadata || {},
+        settings: doc.settings || {} as any,
+        sections: doc.sections || [],
+        createdAt: created.created_at || new Date().toISOString(),
+        updatedAt: created.updated_at || new Date().toISOString()
+      };
     } catch {
       const local = getLocalDocs();
       const newDoc: DocumentModel = {
@@ -258,12 +299,28 @@ export const api = {
 
   async updateDocument(id: string, doc: DocumentModel): Promise<DocumentModel> {
     try {
-      const updated = await fetchJson<DocumentModel>(`${API_BASE}/documents/${id}`, {
+      const payload = {
+        title: doc.title,
+        metadata: doc.metadata,
+        settings: doc.settings,
+        sections: doc.sections
+      };
+      let res = await fetch(`${API_BASE}/exam-papers/${id}/`, {
         method: 'PUT',
-        body: JSON.stringify(doc)
+        headers: getAuthHeader(),
+        body: JSON.stringify(payload)
       });
+
+      if (!res.ok) {
+        res = await fetch(`${API_BASE}/documents/${id}`, {
+          method: 'PUT',
+          headers: getAuthHeader(),
+          body: JSON.stringify(payload)
+        });
+      }
+
       cache.documents = null;
-      return updated;
+      return doc;
     } catch {
       const local = getLocalDocs();
       const idx = local.findIndex(d => d.id === id);
@@ -280,11 +337,13 @@ export const api = {
 
   async duplicateDocument(id: string): Promise<DocumentModel> {
     try {
-      const dup = await fetchJson<DocumentModel>(`${API_BASE}/documents/${id}/duplicate`, {
-        method: 'POST'
-      });
-      cache.documents = null;
-      return dup;
+      const target = await this.getDocument(id);
+      const dupDoc: Partial<DocumentModel> = {
+        ...target,
+        title: `${target.title} (Copy)`
+      };
+      delete (dupDoc as any).id;
+      return await this.createDocument(dupDoc);
     } catch {
       const local = getLocalDocs();
       const target = local.find(d => d.id === id);
@@ -305,10 +364,21 @@ export const api = {
 
   async deleteDocument(id: string): Promise<void> {
     try {
-      await fetchJson<void>(`${API_BASE}/documents/${id}`, {
-        method: 'DELETE'
+      let res = await fetch(`${API_BASE}/exam-papers/${id}/`, {
+        method: 'DELETE',
+        headers: getAuthHeader()
       });
+
+      if (!res.ok) {
+        res = await fetch(`${API_BASE}/documents/${id}`, {
+          method: 'DELETE',
+          headers: getAuthHeader()
+        });
+      }
+
       cache.documents = null;
+      const local = getLocalDocs().filter(d => d.id !== id);
+      saveLocalDocs(local);
     } catch {
       const local = getLocalDocs().filter(d => d.id !== id);
       saveLocalDocs(local);

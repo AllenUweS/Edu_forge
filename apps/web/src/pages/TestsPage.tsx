@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Eye, Copy } from 'lucide-react';
+import { Plus, Trash2, Eye, Copy, Edit3, X, Save } from 'lucide-react';
 import { DocumentModel } from '@eduforge/shared';
 import { api } from '../services/api.js';
 
@@ -29,6 +29,13 @@ export const TestsPage: React.FC<TestsPageProps> = ({
 }) => {
   const [docs, setDocs] = useState<DocumentModel[]>(propDocs || []);
 
+  // Edit Modal State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingDoc, setEditingDoc] = useState<DocumentModel | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editSubject, setEditSubject] = useState('');
+  const [editDuration, setEditDuration] = useState('60');
+
   const fetchLatestDocs = async () => {
     try {
       const latest = await api.getDocuments();
@@ -44,22 +51,68 @@ export const TestsPage: React.FC<TestsPageProps> = ({
 
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this test paper?')) {
-      if (onDeleteDocument) {
-        onDeleteDocument(id);
-      } else {
+      // Optimistic delete
+      setDocs(prev => prev.filter(d => String(d.id) !== String(id)));
+      try {
+        if (onDeleteDocument) {
+          await onDeleteDocument(id);
+        }
         await api.deleteDocument(id);
+      } catch (err) {
+        console.error('Delete error:', err);
+      } finally {
+        fetchLatestDocs();
       }
-      fetchLatestDocs();
     }
   };
 
   const handleDuplicate = async (id: string) => {
-    if (onDuplicateDocument) {
-      onDuplicateDocument(id);
-    } else {
-      await api.duplicateDocument(id);
+    try {
+      if (onDuplicateDocument) {
+        onDuplicateDocument(id);
+      } else {
+        await api.duplicateDocument(id);
+      }
+    } catch (err) {
+      console.error('Duplicate error:', err);
+    } finally {
+      fetchLatestDocs();
     }
-    fetchLatestDocs();
+  };
+
+  const handleOpenEditModal = (d: DocumentModel) => {
+    setEditingDoc(d);
+    setEditTitle(d.title || '');
+    setEditSubject(d.metadata?.subject || 'Physics & Chemistry');
+    setEditDuration(String(d.metadata?.timeAllowedMinutes || (d.metadata as any)?.durationMinutes || 60));
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveEditModal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingDoc || !editTitle.trim()) return;
+
+    const updated: DocumentModel = {
+      ...editingDoc,
+      title: editTitle.trim(),
+      metadata: {
+        ...editingDoc.metadata,
+        subject: editSubject.trim(),
+        timeAllowedMinutes: Number(editDuration) || 60
+      }
+    };
+
+    // Optimistic UI update
+    setDocs(prev => prev.map(item => String(item.id) === String(editingDoc.id) ? updated : item));
+    setIsEditModalOpen(false);
+
+    try {
+      await api.updateDocument(editingDoc.id, updated);
+    } catch (err) {
+      console.error('Failed to update test paper:', err);
+    } finally {
+      fetchLatestDocs();
+    }
   };
 
   return (
@@ -68,7 +121,7 @@ export const TestsPage: React.FC<TestsPageProps> = ({
       <div className="flex items-center justify-between border-b border-slate-200 pb-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Tests</h1>
-          <p className="text-xs text-slate-500 font-medium mt-0.5">Generate, publish, and manage all your test papers.</p>
+          <p className="text-xs text-slate-500 font-medium mt-0.5">Generate, publish, edit, and manage all your test papers.</p>
         </div>
         <button
           type="button"
@@ -130,25 +183,33 @@ export const TestsPage: React.FC<TestsPageProps> = ({
                       <div className="flex items-center justify-end gap-2">
                         <button
                           type="button"
+                          onClick={() => handleOpenEditModal(d)}
+                          className="p-1.5 text-slate-600 hover:text-teal-700 hover:bg-slate-100 rounded-md transition-colors cursor-pointer"
+                          title="Edit Test Paper Details"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => onOpenDocument && onOpenDocument(d.id)}
-                          className="p-1.5 text-slate-500 hover:text-teal-700 transition-colors cursor-pointer rounded hover:bg-slate-100"
-                          title="Open in Editor"
+                          className="p-1.5 text-slate-600 hover:text-teal-700 hover:bg-slate-100 rounded-md transition-colors cursor-pointer"
+                          title="Open in Document Editor"
                         >
                           <Eye className="w-3.5 h-3.5" />
                         </button>
                         <button
                           type="button"
                           onClick={() => handleDuplicate(d.id)}
-                          className="p-1.5 text-slate-500 hover:text-indigo-600 transition-colors cursor-pointer rounded hover:bg-slate-100"
-                          title="Duplicate Test"
+                          className="p-1.5 text-slate-600 hover:text-indigo-600 hover:bg-slate-100 rounded-md transition-colors cursor-pointer"
+                          title="Duplicate Test Paper"
                         >
                           <Copy className="w-3.5 h-3.5" />
                         </button>
                         <button
                           type="button"
                           onClick={() => handleDelete(d.id)}
-                          className="p-1.5 text-slate-400 hover:text-red-600 transition-colors cursor-pointer rounded hover:bg-slate-100"
-                          title="Delete Test"
+                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors cursor-pointer"
+                          title="Delete Test Paper"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -161,6 +222,88 @@ export const TestsPage: React.FC<TestsPageProps> = ({
           </tbody>
         </table>
       </div>
+
+      {/* Edit Test Paper Modal */}
+      {isEditModalOpen && editingDoc && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full p-6 space-y-5 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 font-bold text-sm text-slate-900">
+              <span>Edit Test Paper</span>
+              <button
+                type="button"
+                onClick={() => setIsEditModalOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditModal} className="space-y-4 text-xs font-medium">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Test Paper Title</label>
+                <input
+                  type="text"
+                  required
+                  value={editTitle}
+                  onChange={e => setEditTitle(e.target.value)}
+                  className="w-full p-2.5 border border-slate-300 rounded-lg text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-teal-500 bg-white font-semibold"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Subject</label>
+                <input
+                  type="text"
+                  required
+                  value={editSubject}
+                  onChange={e => setEditSubject(e.target.value)}
+                  className="w-full p-2.5 border border-slate-300 rounded-lg text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-teal-500 bg-white font-semibold"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Duration (Minutes)</label>
+                <input
+                  type="number"
+                  required
+                  value={editDuration}
+                  onChange={e => setEditDuration(e.target.value)}
+                  className="w-full p-2.5 border border-slate-300 rounded-lg text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-teal-500 bg-white font-semibold"
+                />
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditModalOpen(false);
+                    if (onOpenDocument) onOpenDocument(editingDoc.id);
+                  }}
+                  className="px-3.5 py-2 text-teal-700 hover:bg-teal-50 font-bold rounded-lg transition-colors cursor-pointer"
+                >
+                  Open in Document Editor
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditModalOpen(false)}
+                    className="px-3.5 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-lg cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white font-bold rounded-lg shadow-sm hover:shadow-md transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Save className="w-3.5 h-3.5" /> Save Changes
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
