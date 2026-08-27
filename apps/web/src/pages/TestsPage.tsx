@@ -500,18 +500,7 @@ export const TestsPage: React.FC<TestsPageProps> = ({
             </div>
 
             {/* Modal Footer Actions */}
-            <div className="p-4 bg-white border-t border-slate-200 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsPreviewModalOpen(false);
-                  if (onOpenDocument) onOpenDocument(previewDoc.id);
-                }}
-                className="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white font-bold rounded-lg transition-colors cursor-pointer text-xs flex items-center gap-1.5"
-              >
-                <FileText className="w-4 h-4" /> Open Full A4 Canvas Editor
-              </button>
-
+            <div className="p-4 bg-white border-t border-slate-200 flex items-center justify-end">
               <div className="flex items-center gap-2">
                 <button
                   type="button"
