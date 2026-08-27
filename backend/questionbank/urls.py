@@ -27,6 +27,11 @@ urlpatterns = [
         views.MediaUploadView.as_view(),
         name="media-upload"
     ),
+    path(
+        "media/<int:pk>/",
+        views.MediaDetailView.as_view(),
+        name="media-detail"
+    ),
 
 
     # =========================

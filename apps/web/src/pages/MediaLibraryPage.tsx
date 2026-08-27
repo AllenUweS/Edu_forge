@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Plus, X, Upload, Edit3, Trash2, Image as ImageIcon, Check } from 'lucide-react';
 import { api } from '../services/api.js';
 
@@ -24,6 +24,19 @@ export const MediaLibraryPage: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const loadMediaFromDb = async () => {
+    try {
+      const mediaItems = await api.getMedia();
+      setAssets(mediaItems || []);
+    } catch (err) {
+      console.error('Failed to load media from MySQL:', err);
+    }
+  };
+
+  useEffect(() => {
+    loadMediaFromDb();
+  }, []);
+
   const handleOpenEdit = (asset: MediaAsset) => {
     setEditingAsset(asset);
     setEditName(asset.name);
@@ -31,9 +44,11 @@ export const MediaLibraryPage: React.FC = () => {
     setIsEditOpen(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this media asset?')) {
       setAssets(prev => prev.filter(a => a.id !== id));
+      await api.deleteMedia(id);
+      loadMediaFromDb();
     }
   };
 
@@ -80,7 +95,7 @@ export const MediaLibraryPage: React.FC = () => {
     e.stopPropagation();
   };
 
-  // Perform upload to backend / storage
+  // Perform upload to backend / MySQL database
   const handleUploadSubmit = async () => {
     if (selectedFiles.length === 0) {
       alert('Please select at least one image file to upload.');
@@ -89,31 +104,14 @@ export const MediaLibraryPage: React.FC = () => {
 
     setIsUploading(true);
     try {
-      const newAssets: MediaAsset[] = [];
-
       for (const item of selectedFiles) {
-        let finalUrl = item.url;
-        try {
-          const res = await api.uploadAsset(item.file);
-          if (res.url) finalUrl = res.url;
-        } catch {
-          // fallback to object URL / data URL
-        }
-
-        newAssets.push({
-          id: `asset-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-          name: item.file.name,
-          label: item.file.name.split('.')[0].toUpperCase(),
-          url: finalUrl,
-          usesCount: 0
-        });
+        await api.uploadAsset(item.file);
       }
-
-      setAssets(prev => [...newAssets, ...prev]);
       setSelectedFiles([]);
       setIsUploadOpen(false);
+      await loadMediaFromDb();
     } catch (err) {
-      console.error('Failed to upload image:', err);
+      console.error('Failed to upload image to MySQL:', err);
     } finally {
       setIsUploading(false);
     }

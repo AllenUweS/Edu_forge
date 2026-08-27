@@ -55,10 +55,21 @@ def get_or_create_default_bank(user):
 # POST /api/media/
 # =========================================================
 
-class MediaUploadView(generics.CreateAPIView):
-    queryset = Media.objects.all()
+class MediaUploadView(generics.ListCreateAPIView):
+    queryset = Media.objects.all().order_by("-created_at")
     serializer_class = MediaSerializer
     parser_classes = [MultiPartParser, FormParser]
+
+    def perform_create(self, serializer):
+        file_obj = self.request.FILES.get("file") or self.request.FILES.get("image")
+        original_name = file_obj.name if file_obj else ""
+        file_size = file_obj.size if file_obj else None
+        serializer.save(original_name=original_name, file_size=file_size)
+
+
+class MediaDetailView(generics.RetrieveDestroyAPIView):
+    queryset = Media.objects.all()
+    serializer_class = MediaSerializer
 
 
 # =========================================================

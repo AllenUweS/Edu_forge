@@ -764,21 +764,52 @@ export const api = {
     }
   },
 
+  // Media Library
+  async getMedia(): Promise<any[]> {
+    try {
+      const data = await fetchJson<any[]>(`${API_BASE}/media/`);
+      if (Array.isArray(data)) {
+        return data.map(item => ({
+          id: String(item.id),
+          name: item.original_name || (item.file ? item.file.split('/').pop() : `Media #${item.id}`),
+          label: (item.media_type || 'IMAGE').toUpperCase(),
+          url: item.url || item.file || '',
+          usesCount: 0
+        }));
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  },
+
+  async deleteMedia(id: string): Promise<void> {
+    try {
+      await fetchJson<void>(`${API_BASE}/media/${id}/`, {
+        method: 'DELETE'
+      });
+    } catch {
+      // noop
+    }
+  },
+
   // Assets & Image Upload
   async uploadAsset(file: File): Promise<{ id: string; url: string; originalName: string }> {
     try {
       const formData = new FormData();
-      formData.append('image', file);
       formData.append('file', file);
+      formData.append('image', file);
 
-      let res = await fetch(`${API_BASE}/images/upload/`, {
+      let res = await fetch(`${API_BASE}/media/`, {
         method: 'POST',
+        headers: getAuthHeader(),
         body: formData
       });
 
       if (!res.ok) {
-        res = await fetch(`${API_BASE}/assets/upload`, {
+        res = await fetch(`${API_BASE}/images/upload/`, {
           method: 'POST',
+          headers: getAuthHeader(),
           body: formData
         });
       }
@@ -789,7 +820,7 @@ export const api = {
 
       const json = await res.json();
       const result = json.data || json;
-      let url = result.url || '';
+      let url = result.url || result.file || '';
       if (url && !url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('data:')) {
         url = url.startsWith('/') ? url : `/${url}`;
       }
