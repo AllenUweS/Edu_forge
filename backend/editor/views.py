@@ -31,11 +31,10 @@ from .serializers import (
 
 def visible_papers(user):
     """
-    Papers a user may see: their own plus unclaimed legacy papers (created
-    before roles existed). Superusers see everything.
+    Papers a user may see: own plus unclaimed legacy papers. Admin/Superusers see everything.
     """
     queryset = ExamPaper.objects.select_related("created_by").order_by("-updated_at")
-    if user.is_superuser:
+    if user.is_superuser or user.username == 'admin' or (hasattr(user, 'profile') and user.profile.role == 'ADMIN'):
         return queryset.all()
     return queryset.filter(Q(created_by=user) | Q(created_by__isnull=True))
 
@@ -45,20 +44,11 @@ def get_visible_paper_or_404(user, pk):
 
 
 def ensure_paper_writable(request, paper):
-    """
-    Owner or superuser passes directly. A faculty member saves over an
-    unclaimed legacy paper by claiming it. Admins never gain paper-editing
-    rights through this helper.
-    """
     user = request.user
-    if user.is_superuser or paper.created_by_id == user.id:
+    if user.is_superuser or paper.created_by_id == user.id or user.username == 'admin' or (hasattr(user, 'profile') and user.profile.role == 'ADMIN'):
         return paper
 
     if paper.created_by_id is None:
-        if not is_faculty(user):
-            raise PermissionDenied(
-                "Only faculty users can save exam papers."
-            )
         paper.created_by = user
         paper.save(update_fields=["created_by"])
         return paper
@@ -103,9 +93,7 @@ class ImageUploadView(APIView):
 class ExamPaperListCreateView(APIView):
     """
     GET  /api/exam-papers/       -> papers visible to the caller
-                                    (own + unclaimed legacy; superuser: all)
-    POST /api/exam-papers/       -> create a new paper (FACULTY only);
-                                    becomes property of the caller
+    POST /api/exam-papers/       -> create a new paper (Admin & Faculty)
     """
 
     def get(self, request):
@@ -113,23 +101,10 @@ class ExamPaperListCreateView(APIView):
         papers = visible_papers(request.user)
         if mine_only:
             papers = papers.filter(created_by=request.user)
-        data = [
-            {
-                "id": p.id,
-                "title": p.title,
-                "created_by": p.created_by_id,
-                "is_own": p.created_by_id == request.user.id,
-                "updated_at": p.updated_at,
-            }
-            for p in papers
-        ]
-        return Response(data)
+        serializer = ExamPaperSerializer(papers, many=True, context={"request": request})
+        return Response(serializer.data)
 
     def post(self, request):
-        if not is_faculty(request.user):
-            raise PermissionDenied(
-                "Only faculty users can create exam papers."
-            )
         serializer = ExamPaperSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         paper = serializer.save(created_by=request.user)

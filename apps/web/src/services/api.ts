@@ -150,11 +150,26 @@ export const api = {
   async getDocuments(search?: string): Promise<DocumentModel[]> {
     try {
       const query = search ? `?search=${encodeURIComponent(search)}` : '';
-      const docs = await fetchJson<DocumentModel[]>(`${API_BASE}/exam-papers/${query}`);
+      const docs = await fetchJson<any[]>(`${API_BASE}/exam-papers/${query}`);
       if (Array.isArray(docs)) {
-        cache.documents = docs;
-        saveLocalDocs(docs);
-        return docs;
+        const formatted: DocumentModel[] = docs.map(doc => ({
+          id: String(doc.id),
+          title: doc.title || 'Untitled Test',
+          templateId: doc.templateId || 'a4-single-column',
+          metadata: doc.metadata || {
+            subject: doc.subject || 'Physics & Chemistry',
+            timeAllowedMinutes: doc.durationMinutes || doc.timeAllowedMinutes || 60,
+            totalQuestions: doc.totalQuestions || 25,
+            maxMarks: doc.maxMarks || 100
+          },
+          settings: doc.settings || {} as any,
+          sections: doc.sections || [],
+          createdAt: doc.created_at || doc.createdAt || new Date().toISOString(),
+          updatedAt: doc.updated_at || doc.updatedAt || new Date().toISOString()
+        }));
+        cache.documents = formatted;
+        saveLocalDocs(formatted);
+        return formatted;
       }
       return getLocalDocs();
     } catch {
