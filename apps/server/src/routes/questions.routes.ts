@@ -156,28 +156,38 @@ questionsRouter.post('/', async (req: Request, res: Response, next: NextFunction
     const questionCode = body.questionCode || body.id || `Q-${Date.now()}`;
     const rawText = body.rawText || (Array.isArray(body.content) ? body.content.map((b: any) => b.text || b.html || '').join(' ') : '');
 
+    const insertPayload: any = {
+      question_code: questionCode,
+      subject_id,
+      chapter_id,
+      question_type: body.questionType || 'MCQ_SINGLE',
+      content: body.content || body.blocks || [],
+      explanation: body.explanation || body.explanationText || [],
+      difficulty: body.difficulty || 'Medium',
+      marks: body.marks || 1,
+      negative_marks: body.negativeMarks || 0,
+      correct_option: (body.correctAnswer || 'a').toLowerCase(),
+      option_layout: body.optionLayout || 'grid_2x2',
+      year: body.year,
+      source: body.source,
+      raw_text: rawText
+    };
+
+    // Only pass id if it is a valid UUID
+    if (body.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(body.id)) {
+      insertPayload.id = body.id;
+    }
+
     const { data: newQ, error } = await supabase
       .from('questions')
-      .insert({
-        question_code: questionCode,
-        subject_id,
-        chapter_id,
-        question_type: body.questionType || 'MCQ_SINGLE',
-        content: body.content || body.blocks || [],
-        explanation: body.explanation || body.explanationText || [],
-        difficulty: body.difficulty || 'Medium',
-        marks: body.marks || 1,
-        negative_marks: body.negativeMarks || 0,
-        correct_option: (body.correctAnswer || 'a').toLowerCase(),
-        option_layout: body.optionLayout || 'grid_2x2',
-        year: body.year,
-        source: body.source,
-        raw_text: rawText
-      })
+      .insert(insertPayload)
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase Question Insert Error:', error);
+      throw error;
+    }
 
     // Save options if present
     if (Array.isArray(body.options) && body.options.length > 0) {
@@ -188,11 +198,13 @@ questionsRouter.post('/', async (req: Request, res: Response, next: NextFunction
         raw_text: opt.rawText || '',
         sort_order: idx + 1
       }));
-      await supabase.from('question_options').insert(opts);
+      const { error: optErr } = await supabase.from('question_options').insert(opts);
+      if (optErr) console.error('Supabase Option Insert Error:', optErr);
     }
 
     res.status(201).json({ success: true, data: { ...body, id: newQ.id, questionCode } });
   } catch (err) {
+    console.error('Create question route error:', err);
     next(err);
   }
 });

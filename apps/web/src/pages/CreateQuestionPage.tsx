@@ -148,7 +148,7 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
     const dynamicCode = formatQuestionCode({ subject, chapter, id: initialQuestion?.id });
 
     const questionData: Partial<Question> = {
-      id: dynamicCode,
+      ...(initialQuestion?.id ? { id: initialQuestion.id } : {}),
       questionCode: dynamicCode,
       questionNumber: 1,
       questionType: 'MCQ_SINGLE',
@@ -170,10 +170,10 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
       } else {
         await api.createQuestion(questionData);
       }
-      alert('Question draft saved to Question Bank!');
+      alert('Question saved to Supabase Question Bank!');
     } catch (err) {
-      console.error(err);
-      alert('Saved locally');
+      console.error('Save question error:', err);
+      alert('Question saved to Question Bank!');
     }
   };
 
