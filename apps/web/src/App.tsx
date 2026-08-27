@@ -140,6 +140,26 @@ const AppContent: React.FC = () => {
     setChaptersList(prev => prev.map(c => c.id === originalId ? updatedCh : c));
   };
 
+  const handleDeleteSubject = async (codeOrId: string) => {
+    const subObj = subjectsList.find(s => (s as any).code === codeOrId || String((s as any).id) === String(codeOrId));
+    const targetId = (subObj as any)?.id || codeOrId;
+    setSubjectsList(prev => prev.filter(s => (s as any).code !== codeOrId && String((s as any).id) !== String(codeOrId)));
+    try {
+      await api.deleteSubject(targetId);
+    } catch (err) {
+      console.error('Failed to delete subject:', err);
+    }
+  };
+
+  const handleDeleteChapter = async (id: string) => {
+    setChaptersList(prev => prev.filter(c => String(c.id) !== String(id)));
+    try {
+      await api.deleteChapter(id);
+    } catch (err) {
+      console.error('Failed to delete chapter:', err);
+    }
+  };
+
   // Pre-warm in-memory caches on startup for instantaneous 0ms loading
   useEffect(() => {
     loadDocs();
@@ -304,6 +324,7 @@ const AppContent: React.FC = () => {
               subjectsList={subjectsList}
               onAddSubject={handleAddSubject}
               onEditSubject={handleEditSubject}
+              onDeleteSubject={handleDeleteSubject}
             />
           )}
 
@@ -313,6 +334,7 @@ const AppContent: React.FC = () => {
               chaptersList={chaptersList}
               onAddChapter={handleAddChapter}
               onEditChapter={handleEditChapter}
+              onDeleteChapter={handleDeleteChapter}
               onNavigateToQuestionBank={() => setCurrentPage('question_bank')}
             />
           )}

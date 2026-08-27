@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, X, Edit3, Trash2 } from 'lucide-react';
+import { api } from '../services/api.js';
 
 export interface SubjectItem {
+  id?: number | string;
   name: string;
   code: string;
   chapters: number;
@@ -34,14 +36,22 @@ export const SubjectsPage: React.FC<SubjectsPageProps> = ({
   onEditSubject,
   onDeleteSubject
 }) => {
-  const [localSubjects, setLocalSubjects] = useState<SubjectItem[]>(() => {
-    if (isFacultySession()) return [];
-    return [
-      { name: 'Biology', code: 'BIO', chapters: 24, questions: 1820, status: 'Active' },
-      { name: 'Physics', code: 'PHY', chapters: 18, questions: 1420, status: 'Active' },
-      { name: 'Chemistry', code: 'CHE', chapters: 21, questions: 1180, status: 'Active' }
-    ];
-  });
+  const [localSubjects, setLocalSubjects] = useState<SubjectItem[]>([]);
+
+  const loadBackendSubjects = async () => {
+    try {
+      const data = await api.getSubjects();
+      setLocalSubjects(data || []);
+    } catch (e) {
+      console.error('Failed to load subjects:', e);
+    }
+  };
+
+  useEffect(() => {
+    if (!subjectsList) {
+      loadBackendSubjects();
+    }
+  }, [subjectsList]);
 
   const subjects = subjectsList || localSubjects;
 
@@ -66,22 +76,31 @@ export const SubjectsPage: React.FC<SubjectsPageProps> = ({
     setEditingCode(s.code);
     setName(s.name);
     setCode(s.code);
-    setChaptersCount(s.chapters);
-    setQuestionsCount(s.questions);
+    setChaptersCount(s.chapters || 0);
+    setQuestionsCount(s.questions || 0);
     setIsModalOpen(true);
   };
 
-  const handleDelete = (subjectCode: string) => {
-    if (confirm(`Are you sure you want to delete subject ${subjectCode}?`)) {
-      if (onDeleteSubject) {
-        onDeleteSubject(subjectCode);
-      } else {
-        setLocalSubjects(localSubjects.filter(s => s.code !== subjectCode));
+  const handleDelete = async (s: SubjectItem) => {
+    const subIdentifier = s.name || s.code;
+    if (confirm(`Are you sure you want to delete subject "${subIdentifier}"? This will delete it from your MySQL database.`)) {
+      const targetId = s.id || s.code;
+      // Optimistic delete
+      setLocalSubjects(prev => prev.filter(item => item.code !== s.code && item.id !== s.id));
+      try {
+        if (onDeleteSubject) {
+          onDeleteSubject(s.code);
+        }
+        await api.deleteSubject(targetId);
+      } catch (err) {
+        console.error('Failed deleting subject:', err);
+      } finally {
+        loadBackendSubjects();
       }
     }
   };
 
-  const handleSubmitSubject = (e: React.FormEvent) => {
+  const handleSubmitSubject = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !code.trim()) return;
 
@@ -99,6 +118,10 @@ export const SubjectsPage: React.FC<SubjectsPageProps> = ({
       if (onEditSubject) {
         onEditSubject(editingCode, updatedSub);
       } else {
+        const subToEdit = subjects.find(s => s.code === editingCode);
+        if (subToEdit?.id) {
+          await api.updateSubject(subToEdit.id, updatedSub);
+        }
         setLocalSubjects(localSubjects.map(s => (s.code === editingCode ? updatedSub : s)));
       }
     } else {
@@ -113,7 +136,8 @@ export const SubjectsPage: React.FC<SubjectsPageProps> = ({
       if (onAddSubject) {
         onAddSubject(newSub);
       } else {
-        setLocalSubjects([...localSubjects, newSub]);
+        const created = await api.createSubject(newSub);
+        setLocalSubjects(prev => [...prev, created || newSub]);
       }
     }
 
@@ -131,7 +155,7 @@ export const SubjectsPage: React.FC<SubjectsPageProps> = ({
       <div className="flex items-center justify-between border-b border-slate-200 pb-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Subjects</h1>
-          <p className="text-xs text-slate-500 font-medium mt-0.5">Manage subjects.</p>
+          <p className="text-xs text-slate-500 font-medium mt-0.5">Manage subjects ({subjects.length} active).</p>
         </div>
         <button
           type="button"
@@ -156,39 +180,47 @@ export const SubjectsPage: React.FC<SubjectsPageProps> = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
-            {subjects.map(s => (
-              <tr key={s.code} className="hover:bg-slate-50/80 transition-colors">
-                <td className="px-5 py-3.5 font-bold text-slate-900">{s.name}</td>
-                <td className="px-5 py-3.5 font-mono text-slate-600">{s.code}</td>
-                <td className="px-5 py-3.5">{s.chapters}</td>
-                <td className="px-5 py-3.5 font-bold text-slate-900">{s.questions.toLocaleString()}</td>
-                <td className="px-5 py-3.5">
-                  <span className="px-2 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-full text-[10px] font-semibold">
-                    {s.status || 'Active'}
-                  </span>
-                </td>
-                <td className="px-5 py-3.5 text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleOpenEdit(s)}
-                      className="p-1 text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
-                      title="Edit Subject"
-                    >
-                      <Edit3 className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(s.code)}
-                      className="p-1 text-slate-400 hover:text-red-600 transition-colors cursor-pointer"
-                      title="Delete Subject"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+            {subjects.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="px-5 py-10 text-center text-slate-400 font-medium">
+                  No subjects created yet. Click "+ Add Subject" to add your first subject.
                 </td>
               </tr>
-            ))}
+            ) : (
+              subjects.map(s => (
+                <tr key={s.id || s.code} className="hover:bg-slate-50/80 transition-colors">
+                  <td className="px-5 py-3.5 font-bold text-slate-900">{s.name}</td>
+                  <td className="px-5 py-3.5 font-mono text-slate-600">{s.code}</td>
+                  <td className="px-5 py-3.5">{s.chapters || 0}</td>
+                  <td className="px-5 py-3.5 font-bold text-slate-900">{(s.questions || 0).toLocaleString()}</td>
+                  <td className="px-5 py-3.5">
+                    <span className="px-2 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-full text-[10px] font-semibold">
+                      {s.status || 'Active'}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3.5 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEdit(s)}
+                        className="p-1 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+                        title="Edit Subject"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(s)}
+                        className="p-1 text-slate-400 hover:text-red-600 transition-colors cursor-pointer"
+                        title="Delete Subject"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

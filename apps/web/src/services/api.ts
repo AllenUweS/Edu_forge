@@ -374,19 +374,9 @@ export const api = {
     }
     try {
       const subs = await fetchJson<any[]>(`${API_BASE}/subjects/`);
-      return subs && subs.length > 0 ? subs : [
-        { id: 1, name: 'Biology', code: 'BIO', chapters: 2, questions: 1, status: 'Active' },
-        { id: 2, name: 'Physics', code: 'PHY', chapters: 2, questions: 1, status: 'Active' },
-        { id: 3, name: 'Chemistry', code: 'CHE', chapters: 1, questions: 1, status: 'Active' },
-        { id: 4, name: 'Mathematics', code: 'MATH', chapters: 1, questions: 0, status: 'Active' }
-      ];
+      return Array.isArray(subs) ? subs : [];
     } catch {
-      return [
-        { id: 1, name: 'Biology', code: 'BIO', chapters: 2, questions: 1, status: 'Active' },
-        { id: 2, name: 'Physics', code: 'PHY', chapters: 2, questions: 1, status: 'Active' },
-        { id: 3, name: 'Chemistry', code: 'CHE', chapters: 1, questions: 1, status: 'Active' },
-        { id: 4, name: 'Mathematics', code: 'MATH', chapters: 1, questions: 0, status: 'Active' }
-      ];
+      return [];
     }
   },
 
@@ -426,6 +416,25 @@ export const api = {
     }
   },
 
+  async deleteSubject(id: number | string): Promise<void> {
+    if (isFacultyUser()) {
+      try {
+        const raw = localStorage.getItem('eduforge_local_subjects_faculty');
+        const list = raw ? JSON.parse(raw) : [];
+        const updated = list.filter((s: any) => String(s.id) !== String(id) && s.code !== id);
+        localStorage.setItem('eduforge_local_subjects_faculty', JSON.stringify(updated));
+      } catch {}
+    }
+    try {
+      await fetch(`${API_BASE}/subjects/${id}/`, {
+        method: 'DELETE',
+        headers: getAuthHeader()
+      });
+    } catch (e) {
+      console.error('Delete subject error:', e);
+    }
+  },
+
   async getChapters(subjectId?: number | string): Promise<any[]> {
     if (isFacultyUser()) {
       try {
@@ -442,23 +451,9 @@ export const api = {
     try {
       const url = subjectId ? `${API_BASE}/subjects/${subjectId}/chapters/` : `${API_BASE}/chapters/`;
       const chs = await fetchJson<any[]>(url);
-      return chs && chs.length > 0 ? chs : [
-        { num: '01', id: 'BIO-01', title: 'The Living World', subject: 'Biology', count: 1 },
-        { num: '02', id: 'BIO-02', title: 'Biological Classification', subject: 'Biology', count: 0 },
-        { num: '01', id: 'PHY-01', title: 'Units and Measurements', subject: 'Physics', count: 1 },
-        { num: '02', id: 'PHY-02', title: 'Motion in a Straight Line', subject: 'Physics', count: 0 },
-        { num: '01', id: 'CHE-01', title: 'Some Basic Concepts of Chemistry', subject: 'Chemistry', count: 1 },
-        { num: '01', id: 'MATH-01', title: 'Sets and Functions', subject: 'Mathematics', count: 0 }
-      ];
+      return Array.isArray(chs) ? chs : [];
     } catch {
-      return [
-        { num: '01', id: 'BIO-01', title: 'The Living World', subject: 'Biology', count: 1 },
-        { num: '02', id: 'BIO-02', title: 'Biological Classification', subject: 'Biology', count: 0 },
-        { num: '01', id: 'PHY-01', title: 'Units and Measurements', subject: 'Physics', count: 1 },
-        { num: '02', id: 'PHY-02', title: 'Motion in a Straight Line', subject: 'Physics', count: 0 },
-        { num: '01', id: 'CHE-01', title: 'Some Basic Concepts of Chemistry', subject: 'Chemistry', count: 1 },
-        { num: '01', id: 'MATH-01', title: 'Sets and Functions', subject: 'Mathematics', count: 0 }
-      ];
+      return [];
     }
   },
 
@@ -495,6 +490,25 @@ export const api = {
       });
     } catch {
       return { id, title: chapter.title || chapter.name };
+    }
+  },
+
+  async deleteChapter(id: number | string): Promise<void> {
+    if (isFacultyUser()) {
+      try {
+        const raw = localStorage.getItem('eduforge_local_chapters_faculty');
+        const list = raw ? JSON.parse(raw) : [];
+        const updated = list.filter((c: any) => String(c.id) !== String(id));
+        localStorage.setItem('eduforge_local_chapters_faculty', JSON.stringify(updated));
+      } catch {}
+    }
+    try {
+      await fetch(`${API_BASE}/chapters/${id}/`, {
+        method: 'DELETE',
+        headers: getAuthHeader()
+      });
+    } catch (e) {
+      console.error('Delete chapter error:', e);
     }
   },
 
