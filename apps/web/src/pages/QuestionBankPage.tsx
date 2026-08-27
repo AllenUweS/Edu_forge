@@ -68,11 +68,22 @@ export const QuestionBankPage: React.FC<QuestionBankPageProps> = ({
     setIsPreviewOpen(true);
   };
 
+  // Helper to strip HTML tags and image URLs to display clean question text
+  const getCleanQuestionText = (htmlText?: string) => {
+    if (!htmlText) return 'Question statement text';
+    const clean = htmlText
+      .replace(/<[^>]*>?/gm, ' ')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    return clean || 'Question statement text';
+  };
+
   const filteredList = questions.filter(q => {
     if (search.trim()) {
       const s = search.toLowerCase();
       const code = formatQuestionCode(q).toLowerCase();
-      const statement = (q.rawText || '').toLowerCase();
+      const statement = getCleanQuestionText(q.rawText).toLowerCase();
       if (!code.includes(s) && !statement.includes(s)) return false;
     }
     if (statusFilter === 'Draft' && q.isSystem) return false;
@@ -179,7 +190,7 @@ export const QuestionBankPage: React.FC<QuestionBankPageProps> = ({
                         <span className="text-slate-400 text-[11px]">· {q.subject || 'Biology'}</span>
                       </div>
                       <span className="text-slate-900 font-semibold line-clamp-1 mt-1 block">
-                        {q.rawText || 'Question statement text'}
+                        {getCleanQuestionText(q.rawText)}
                       </span>
                     </td>
 
