@@ -24,7 +24,9 @@ import { DocumentModel, Template, Question } from '@eduforge/shared';
 import { ThemeProvider } from './state/ThemeContext.js';
 
 const AppContent: React.FC = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    return localStorage.getItem('eduforge_auth') === 'true';
+  });
   const [currentPage, setCurrentPage] = useState<PageView>('dashboard');
   const [activeDocumentId, setActiveDocumentId] = useState<string | null>(null);
   const [documents, setDocuments] = useState<DocumentModel[]>([]);
@@ -181,8 +183,18 @@ const AppContent: React.FC = () => {
     await handleCreatePaper(newDoc);
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('eduforge_auth');
+    setIsAuthenticated(false);
+  };
+
+  const handleLoginSuccess = () => {
+    localStorage.setItem('eduforge_auth', 'true');
+    setIsAuthenticated(true);
+  };
+
   if (!isAuthenticated) {
-    return <LoginPage onLoginSuccess={() => setIsAuthenticated(true)} />;
+    return <LoginPage onLoginSuccess={handleLoginSuccess} />;
   }
 
   if (currentPage === 'editor' && activeDocumentId) {
@@ -203,13 +215,13 @@ const AppContent: React.FC = () => {
       <Sidebar
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
-        onLogout={() => setIsAuthenticated(false)}
+        onLogout={handleLogout}
       />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
         {/* Top Header Bar */}
-        <Header currentPage={currentPage} onLogout={() => setIsAuthenticated(false)} />
+        <Header currentPage={currentPage} onLogout={handleLogout} />
 
         {/* Dynamic Page Views */}
         <main className="flex-1 bg-slate-50 pb-12">

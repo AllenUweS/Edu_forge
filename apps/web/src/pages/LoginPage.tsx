@@ -16,6 +16,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     setIsLoading(true);
     setTimeout(() => {
       setIsLoading(false);
+      localStorage.setItem('eduforge_auth', 'true');
       onLoginSuccess();
     }, 400);
   };
