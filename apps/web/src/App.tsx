@@ -28,6 +28,7 @@ const AppContent: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<PageView>('dashboard');
   const [activeDocumentId, setActiveDocumentId] = useState<string | null>(null);
   const [documents, setDocuments] = useState<DocumentModel[]>([]);
+  const [activeChapterFilter, setActiveChapterFilter] = useState<{ id?: string; title?: string } | null>(null);
 
   // Shared frontend state for subjects and chapters
   const [subjectsList, setSubjectsList] = useState<SubjectItem[]>([
@@ -195,8 +196,6 @@ const AppContent: React.FC = () => {
       />
     );
   }
-
-  const [activeChapterFilter, setActiveChapterFilter] = useState<{ id?: string; title?: string } | null>(null);
 
   return (
     <div className="flex h-screen bg-slate-50 text-slate-900 font-sans overflow-hidden">
