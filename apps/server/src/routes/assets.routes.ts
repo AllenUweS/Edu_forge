@@ -9,6 +9,20 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
 });
 
+const BUCKET_NAME = process.env.VITE_SUPABASE_STORAGE_BUCKET || 'question-assets';
+
+async function ensureBucketExists() {
+  try {
+    const { data: buckets } = await supabase.storage.listBuckets();
+    const exists = (buckets || []).some(b => b.name === BUCKET_NAME);
+    if (!exists) {
+      await supabase.storage.createBucket(BUCKET_NAME, { public: true });
+    }
+  } catch (err) {
+    // Ignore error if bucket creation fails or exists
+  }
+}
+
 // GET /api/assets
 assetsRouter.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -33,13 +47,15 @@ assetsRouter.post('/', upload.single('file'), async (req: Request, res: Response
       });
     }
 
+    await ensureBucketExists();
+
     const fileExt = file.originalname.split('.').pop();
     const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
     const storagePath = `uploads/${fileName}`;
 
-    // Upload to Supabase Storage bucket 'question-assets'
+    // Upload to Supabase Storage bucket
     const { data: storageData, error: storageError } = await supabase.storage
-      .from('question-assets')
+      .from(BUCKET_NAME)
       .upload(storagePath, file.buffer, {
         contentType: file.mimetype,
         upsert: true
@@ -47,7 +63,7 @@ assetsRouter.post('/', upload.single('file'), async (req: Request, res: Response
 
     let publicUrl = '';
     if (!storageError && storageData) {
-      const { data: urlData } = supabase.storage.from('question-assets').getPublicUrl(storagePath);
+      const { data: urlData } = supabase.storage.from(BUCKET_NAME).getPublicUrl(storagePath);
       publicUrl = urlData.publicUrl;
     } else {
       // Fallback data URL if storage is unconfigured

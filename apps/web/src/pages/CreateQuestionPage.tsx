@@ -149,9 +149,11 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
 
     const questionData: Partial<Question> = {
       id: dynamicCode,
+      questionCode: dynamicCode,
       questionNumber: 1,
       questionType: 'MCQ_SINGLE',
       rawText: rawStatement,
+      content: blocks as any,
       subject,
       chapter,
       difficulty,
@@ -160,7 +162,7 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
       options,
       correctAnswer: correctOpt?.key || 'A',
       explanationText: solutionText
-    };
+    } as any;
 
     try {
       if (initialQuestion?.id) {
