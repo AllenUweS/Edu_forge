@@ -60,7 +60,7 @@ export const EditorPage: React.FC<EditorPageProps> = ({
   // Autosave state
   const [autosaveStatus, setAutosaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('saved');
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(new Date());
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // History stack for Undo / Redo
   const [past, setPast] = useState<DocumentModel[]>([]);
@@ -1370,17 +1370,43 @@ export const EditorPage: React.FC<EditorPageProps> = ({
       <QuestionBuilderModal
         isOpen={isQuestionBuilderOpen}
         initialQuestion={editingQuestion}
-        onClose={() => setIsQuestionBuilderOpen(false)}
-        onSave={q => {
-          const qBlock: QuestionBlock = {
-            id: `qblk-${q.id}`,
-            type: 'question',
-            question: q
-          };
-          if (editingQuestion?.id) {
-            handleUpdateBlock(getTargetSectionId(), qBlock);
-          } else {
-            handleAddBlockToSection(qBlock);
+        onClose={() => {
+          setEditingQuestion(undefined);
+          setIsQuestionBuilderOpen(false);
+        }}
+        onSave={async q => {
+          try {
+            let savedQ: Question;
+            if (editingQuestion?.id) {
+              savedQ = await api.updateQuestion(q.id, q);
+            } else {
+              savedQ = await api.createQuestion(q);
+            }
+            const qBlock: QuestionBlock = {
+              id: `qblk-${savedQ.id}`,
+              type: 'question',
+              question: savedQ
+            };
+            if (editingQuestion?.id) {
+              handleUpdateBlock(getTargetSectionId(), qBlock);
+            } else {
+              handleAddBlockToSection(qBlock);
+            }
+          } catch (err) {
+            console.error('Failed to add to question bank:', err);
+            const qBlock: QuestionBlock = {
+              id: `qblk-${q.id || Date.now()}`,
+              type: 'question',
+              question: q
+            };
+            if (editingQuestion?.id) {
+              handleUpdateBlock(getTargetSectionId(), qBlock);
+            } else {
+              handleAddBlockToSection(qBlock);
+            }
+          } finally {
+            setEditingQuestion(undefined);
+            setIsQuestionBuilderOpen(false);
           }
         }}
       />

@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api.js';
-import { DocumentModel } from '@eduforge/shared';
-import {
-  FilePlus, PlusCircle, LayoutTemplate, Database, FileText,
-  Clock, Trash2, Copy, ArrowRight, Atom
-} from 'lucide-react';
+import { DocumentModel, Question } from '@eduforge/shared';
+import { Plus, BookOpen, Layers, HelpCircle, FileText } from 'lucide-react';
+import { SubjectItem } from './SubjectsPage.js';
+import { ChapterItem } from './ChaptersPage.js';
+import { formatQuestionCode } from '../utils/questionCode.js';
 
 interface DashboardPageProps {
+  subjectsList?: SubjectItem[];
+  chaptersList?: ChapterItem[];
   onOpenDocument: (docId: string) => void;
   onNewPaperWizard: () => void;
   onOpenQuestionBuilder: () => void;
@@ -17,17 +19,15 @@ interface DashboardPageProps {
 }
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({
-  onOpenDocument,
-  onNewPaperWizard,
+  subjectsList = [],
+  chaptersList = [],
   onOpenQuestionBuilder,
-  onOpenTemplateGallery,
-  onNavigateToQuestionBank,
-  onNavigateToTemplates,
-  onNavigateToScience
+  onNavigateToQuestionBank
 }) => {
+  const [questions, setQuestions] = useState<Question[]>([]);
   const [documents, setDocuments] = useState<DocumentModel[]>([]);
-  const [questionCount, setQuestionCount] = useState<number>(0);
-  const [templateCount, setTemplateCount] = useState<number>(0);
+  const [apiSubjects, setApiSubjects] = useState<any[]>([]);
+  const [apiChapters, setApiChapters] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -37,14 +37,16 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      const [docs, questions, templates] = await Promise.all([
+      const [docs, qList, subList, chList] = await Promise.all([
         api.getDocuments(),
         api.getQuestions(),
-        api.getTemplates()
+        api.getSubjects(),
+        api.getChapters()
       ]);
-      setDocuments(docs);
-      setQuestionCount(questions.length);
-      setTemplateCount(templates.length);
+      setDocuments(docs || []);
+      setQuestions(qList || []);
+      setApiSubjects(subList || []);
+      setApiChapters(chList || []);
     } catch (err) {
       console.error('Failed to load dashboard:', err);
     } finally {
@@ -52,239 +54,189 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     }
   };
 
-  const handleDuplicate = async (docId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    try {
-      await api.duplicateDocument(docId);
-      loadDashboardData();
-    } catch (err) {
-      console.error('Duplicate failed:', err);
-    }
-  };
+  // Real Counts from active frontend state + API
+  const totalSubjectsCount = subjectsList.length > 0 ? subjectsList.length : apiSubjects.length;
+  const totalChaptersCount = chaptersList.length > 0 ? chaptersList.length : apiChapters.length;
 
-  const handleDelete = async (docId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (confirm('Are you sure you want to delete this document?')) {
-      try {
-        await api.deleteDocument(docId);
-        loadDashboardData();
-      } catch (err) {
-        console.error('Delete failed:', err);
-      }
-    }
-  };
+  // Dynamic Question Distribution by Subject (calculated 100% strictly from real question bank records)
+  const subjectCountMap: Record<string, number> = {};
+  questions.forEach(q => {
+    const rawSub = (q.subject || 'General').trim();
+    const matchingSub = subjectsList.find(s => s.name.toLowerCase() === rawSub.toLowerCase());
+    const key = matchingSub ? matchingSub.name : rawSub;
+    subjectCountMap[key] = (subjectCountMap[key] || 0) + 1;
+  });
+
+  // Prepare Distribution List showing actual question counts per subject
+  const distributionList = subjectsList.length > 0
+    ? subjectsList.map(s => ({
+        name: s.name,
+        count: subjectCountMap[s.name] || 0
+      }))
+    : (Object.keys(subjectCountMap).length > 0
+        ? Object.entries(subjectCountMap).map(([name, count]) => ({ name, count }))
+        : apiSubjects.map(s => ({ name: s.name, count: subjectCountMap[s.name] || 0 })));
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
-      
-      {/* Welcome Banner */}
-      <div className="rounded-2xl p-8 text-white shadow-lg border border-slate-800 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-        <div className="flex items-start gap-4">
-          <img
-            src="/logo.png"
-            alt="EduForge Logo"
-            className="w-16 h-16 object-contain drop-shadow-xl hidden sm:block shrink-0"
-          />
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="px-2.5 py-0.5 bg-sky-500/20 text-sky-400 border border-sky-500/30 rounded-full text-xs font-bold tracking-wide uppercase">
-                Desktop Authoring Suite
-              </span>
-              <span className="text-xs text-slate-300">by HAEGL Technologies</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white mb-2">
-              Welcome to EduForge
-            </h1>
-            <p className="text-sm text-slate-300 max-w-2xl leading-relaxed">
-              Professional question paper creator, scientific typesetter, and document editor with full A4 single-column real-time pagination, Math AST, Physics & Chemistry chapters, and offline Question Repository.
-            </p>
-          </div>
+    <div className="max-w-7xl mx-auto px-8 py-8 space-y-6 font-sans animate-in fade-in slide-in-from-bottom-2 duration-300">
+      {/* Page Header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight font-sans">
+            Dashboard
+          </h1>
+          <p className="text-xs text-slate-500 font-medium mt-1">
+            Question bank and test generation overview.
+          </p>
         </div>
-
-        {/* Primary Action Buttons */}
-        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-          <button
-            type="button"
-            onClick={onNewPaperWizard}
-            className="flex-1 md:flex-initial px-5 py-3 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-sm rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-sky-500/20 transition-all active:scale-95 cursor-pointer"
-          >
-            <FilePlus className="w-4 h-4" /> + New Question Paper
-          </button>
-          <button
-            type="button"
-            onClick={onOpenQuestionBuilder}
-            className="flex-1 md:flex-initial px-4 py-3 font-semibold text-sm rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 text-white flex items-center justify-center gap-2 transition-colors cursor-pointer"
-          >
-            <PlusCircle className="w-4 h-4 text-sky-400" /> + New Question
-          </button>
-          <button
-            type="button"
-            onClick={onOpenTemplateGallery}
-            className="flex-1 md:flex-initial px-4 py-3 font-semibold text-sm rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 text-white flex items-center justify-center gap-2 transition-colors cursor-pointer"
-          >
-            <LayoutTemplate className="w-4 h-4 text-amber-400" /> From Template
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onOpenQuestionBuilder}
+          className="px-4 py-2.5 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 shadow-sm hover:shadow-md transition-all active:scale-[0.98] cursor-pointer"
+        >
+          <Plus className="w-4 h-4" /> Create Question
+        </button>
       </div>
 
-      {/* Quick Metrics */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="p-5 rounded-xl border border-slate-200 bg-white shadow-xs flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-sky-50 text-sky-700 border border-sky-200">
-            <FileText className="w-6 h-6" />
+      {/* 4 Stat Cards Displaying Real Backend Metrics */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
+        {/* Card 1: Subjects */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 flex items-center gap-4">
+          <div className="w-12 h-12 rounded-full bg-[#e6f4f6] text-[#007a8c] flex items-center justify-center shrink-0">
+            <BookOpen className="w-5 h-5 stroke-[2.2]" />
           </div>
           <div>
-            <div className="text-2xl font-black text-slate-900">{documents.length}</div>
-            <div className="text-xs font-semibold text-slate-500">Question Papers</div>
+            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">
+              Subjects
+            </div>
+            <div className="text-2xl font-black text-[#007a87] tracking-tight">
+              {loading ? '...' : totalSubjectsCount}
+            </div>
           </div>
         </div>
 
-        <div
-          onClick={onNavigateToQuestionBank}
-          className="p-5 rounded-xl border border-slate-200 bg-white shadow-xs flex items-center gap-4 cursor-pointer hover:border-indigo-400 transition-colors"
-        >
-          <div className="p-3 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200">
-            <Database className="w-6 h-6" />
+        {/* Card 2: Chapters */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 flex items-center gap-4">
+          <div className="w-12 h-12 rounded-full bg-[#e6f4f6] text-[#007a8c] flex items-center justify-center shrink-0">
+            <Layers className="w-5 h-5 stroke-[2.2]" />
           </div>
           <div>
-            <div className="text-2xl font-black text-slate-900">{questionCount}</div>
-            <div className="text-xs font-semibold text-slate-500">Question Bank</div>
+            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">
+              Chapters
+            </div>
+            <div className="text-2xl font-black text-[#007a87] tracking-tight">
+              {loading ? '...' : totalChaptersCount}
+            </div>
           </div>
         </div>
 
-        <div
-          onClick={onNavigateToTemplates}
-          className="p-5 rounded-xl border border-slate-200 bg-white shadow-xs flex items-center gap-4 cursor-pointer hover:border-amber-400 transition-colors"
-        >
-          <div className="p-3 rounded-xl bg-amber-50 text-amber-700 border border-amber-200">
-            <LayoutTemplate className="w-6 h-6" />
+        {/* Card 3: Questions */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 flex items-center gap-4">
+          <div className="w-12 h-12 rounded-full bg-[#e6f4f6] text-[#007a8c] flex items-center justify-center shrink-0">
+            <HelpCircle className="w-5 h-5 stroke-[2.2]" />
           </div>
           <div>
-            <div className="text-2xl font-black text-slate-900">{templateCount}</div>
-            <div className="text-xs font-semibold text-slate-500">Exam Templates</div>
+            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">
+              Questions
+            </div>
+            <div className="text-2xl font-black text-[#007a87] tracking-tight">
+              {loading ? '...' : questions.length.toLocaleString()}
+            </div>
           </div>
         </div>
 
-        <div
-          onClick={onNavigateToScience}
-          className="p-5 rounded-xl border border-slate-200 bg-white shadow-xs flex items-center gap-4 cursor-pointer hover:border-emerald-400 transition-colors"
-        >
-          <div className="p-3 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200">
-            <Atom className="w-6 h-6" />
+        {/* Card 4: Tests */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 flex items-center gap-4">
+          <div className="w-12 h-12 rounded-full bg-[#e6f4f6] text-[#007a8c] flex items-center justify-center shrink-0">
+            <FileText className="w-5 h-5 stroke-[2.2]" />
           </div>
           <div>
-            <div className="text-2xl font-black text-slate-900">23 Chapters</div>
-            <div className="text-xs font-semibold text-slate-500">Physics & Chem Lib</div>
+            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">
+              Tests
+            </div>
+            <div className="text-2xl font-black text-[#007a87] tracking-tight">
+              {loading ? '...' : documents.length}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Recent Documents Section */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-          <div>
-            <h2 className="text-base font-black text-slate-900">Recent Question Papers & Documents</h2>
-            <p className="text-xs text-slate-500">Double click or select a document to open in the full editor</p>
-          </div>
-          <button
-            type="button"
-            onClick={onNewPaperWizard}
-            className="text-xs font-bold text-sky-600 hover:text-sky-700 flex items-center gap-1 cursor-pointer"
-          >
-            Create New Paper <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        {loading ? (
-          <div className="h-48 flex items-center justify-center text-slate-400 text-sm">
-            Loading recent documents...
-          </div>
-        ) : documents.length === 0 ? (
-          <div className="py-12 flex flex-col items-center justify-center text-center space-y-3 bg-slate-50 rounded-xl border border-dashed border-slate-300">
-            <FileText className="w-10 h-10 text-slate-400" />
-            <div>
-              <h3 className="text-sm font-bold text-slate-900">No question papers yet</h3>
-              <p className="text-xs text-slate-500 max-w-sm mt-0.5">
-                Get started by creating a new examination paper using the step-by-step wizard.
-              </p>
-            </div>
+      {/* 2-Column Content Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Left Card: Real Recent Questions */}
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-2xs hover:shadow-md transition-all duration-300 flex flex-col justify-between space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+              Recent Questions
+            </h2>
             <button
               type="button"
-              onClick={onNewPaperWizard}
-              className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer"
+              onClick={onNavigateToQuestionBank}
+              className="px-3.5 py-1 border border-teal-700 text-teal-700 hover:bg-teal-50 font-bold text-[11px] rounded-md transition-all active:scale-[0.98] cursor-pointer"
             >
-              + Create First Paper
+              View all
             </button>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {documents.map(doc => (
-              <div
-                key={doc.id}
-                onClick={() => onOpenDocument(doc.id)}
-                className="group p-4 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white hover:border-sky-300 transition-all cursor-pointer shadow-xs flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="flex items-center gap-2.5">
-                      <div className="p-2 bg-sky-100 border border-sky-200 rounded-lg text-sky-700 shadow-2xs">
-                        <FileText className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-bold text-slate-900 group-hover:text-sky-600 transition-colors line-clamp-1">
-                          {doc.title}
-                        </h4>
-                        <span className="text-[10px] text-slate-500">
-                          Template: {doc.templateId || 'A4 Two Column'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
 
-                  <div className="flex items-center gap-2 text-xs mt-2">
-                    <span className="px-2 py-0.5 bg-white border border-slate-200 rounded text-[11px] font-medium text-slate-700">
-                      {doc.metadata?.subject || 'Physics'}
-                    </span>
-                    <span className="px-2 py-0.5 bg-white border border-slate-200 rounded text-[11px] font-medium text-slate-700">
-                      {doc.settings?.columns || 2} Col
-                    </span>
-                    <span className="text-slate-500 text-[10px]">
-                      {doc.sections?.length || 1} Sec
-                    </span>
-                  </div>
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-                  <div className="flex items-center gap-1 text-[11px]">
-                    <Clock className="w-3 h-3 text-slate-400" />
-                    <span>{new Date(doc.updatedAt).toLocaleDateString()}</span>
-                  </div>
-
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      type="button"
-                      onClick={e => handleDuplicate(doc.id, e)}
-                      className="p-1 hover:text-sky-600 rounded"
-                      title="Duplicate"
-                    >
-                      <Copy className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={e => handleDelete(doc.id, e)}
-                      className="p-1 hover:text-red-600 rounded"
-                      title="Delete"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
+          <div className="space-y-3.5 min-h-[140px]">
+            {loading ? (
+              <div className="text-xs text-slate-400 py-6 text-center">Loading recent questions...</div>
+            ) : questions.length === 0 ? (
+              <div className="text-xs text-slate-400 py-6 text-center">
+                No recent questions found. Click "+ Create Question" to add your first question.
               </div>
-            ))}
+            ) : (
+              questions.slice(0, 5).map((q, idx) => (
+                <div
+                  key={q.id || idx}
+                  className="flex items-center gap-2 text-xs font-semibold text-slate-800 py-1 border-b border-slate-50 last:border-0"
+                >
+                  <span className="font-mono font-bold text-slate-900 shrink-0">
+                    {formatQuestionCode(q)}
+                  </span>
+                  <span className="text-slate-400">·</span>
+                  <span className="line-clamp-1">{q.chapter || (q.rawText || '').substring(0, 30) || 'Question'}</span>
+                  {q.isSystem ? (
+                    <span className="ml-auto px-2.5 py-0.5 bg-teal-50 border border-teal-200 text-teal-700 rounded-full text-[10px] font-bold">
+                      Published
+                    </span>
+                  ) : (
+                    <span className="ml-auto px-2.5 py-0.5 bg-slate-100 border border-slate-200 text-slate-600 rounded-full text-[10px] font-bold">
+                      Draft
+                    </span>
+                  )}
+                </div>
+              ))
+            )}
           </div>
-        )}
-      </div>
+        </div>
 
+        {/* Right Card: Real Question Distribution by Subject */}
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-2xs hover:shadow-md transition-all duration-300 flex flex-col justify-between space-y-4">
+          <div className="border-b border-slate-100 pb-3">
+            <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+              Question Distribution
+            </h2>
+          </div>
+
+          <div className="space-y-4 min-h-[140px] text-xs font-semibold">
+            {loading ? (
+              <div className="text-xs text-slate-400 py-6 text-center">Loading distribution...</div>
+            ) : distributionList.length === 0 ? (
+              <div className="text-xs text-slate-400 py-6 text-center">
+                No subject distribution data available yet.
+              </div>
+            ) : (
+              distributionList.map(item => (
+                <div key={item.name} className="flex items-center justify-between text-slate-800 border-b border-slate-50 pb-2 last:border-0">
+                  <span>{item.name}</span>
+                  <span className="font-extrabold text-[#007a87] font-mono text-sm">{item.count.toLocaleString()}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

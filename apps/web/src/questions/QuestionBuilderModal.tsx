@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Question, QuestionOption, OptionLayoutType, QuestionDifficulty } from '@eduforge/shared';
 import { MathTextRenderer } from '../equation/MathTextRenderer.js';
 import { MathTypeEditor } from '../equation/MathTypeEditor.js';
@@ -21,6 +21,58 @@ type MathTypeTarget =
   | { field: 'statement' }
   | { field: 'option'; index: number; key: string }
   | { field: 'explanation' };
+
+const chapterSuggestionsBySubject: Record<string, string[]> = {
+  Physics: [
+    'Kinematics & Motion',
+    'Thermodynamics & Heat',
+    'Electrostatics & Current',
+    'Optics & Wave Physics',
+    'Modern Physics & Nuclear',
+    'Work, Energy & Power',
+    'Gravitation & Circular Motion'
+  ],
+  Chemistry: [
+    'Atomic Structure & Periodicity',
+    'Chemical Bonding & Molecular Structure',
+    'Organic Chemistry & Mechanisms',
+    'Physical Chemistry & Equilibrium',
+    'Electrochemistry & Kinetics',
+    'Coordination Compounds'
+  ],
+  Biology: [
+    'Cell Structure & Function',
+    'Genetics & Evolution',
+    'Human Physiology',
+    'Plant Physiology',
+    'Ecology & Environment',
+    'Biotechnology & Applications'
+  ],
+  Mathematics: [
+    'Algebra & Quadratic Equations',
+    'Calculus & Integration',
+    'Vectors & 3D Geometry',
+    'Trigonometry & Functions',
+    'Matrices & Determinants',
+    'Probability & Statistics'
+  ],
+  'General Science': [
+    'General Scientific Principles',
+    'Measurement & Units',
+    'Applied Science'
+  ]
+};
+
+const topicSuggestionsByChapter: Record<string, string[]> = {
+  'Kinematics & Motion': ['Projectile Motion', 'Uniform Circular Motion', 'Relative Velocity', 'Newton Laws of Motion'],
+  'Thermodynamics & Heat': ['Carnot Engine', 'First Law of Thermodynamics', 'Heat Transfer & Radiation', 'Ideal Gas Law'],
+  'Electrostatics & Current': ['Coulomb Law', 'Electric Field & Potential', 'Gauss Theorem', 'Ohm Law & Kirchhoff Rules'],
+  'Atomic Structure & Periodicity': ['Bohr Atomic Model', 'Quantum Numbers', 'Periodic Trends & Ionization', 'Photoelectric Effect'],
+  'Organic Chemistry & Mechanisms': ['Electrophilic Substitution', 'Nucleophilic Addition', 'Resonance Effects', 'Stereoisomerism'],
+  'Cell Structure & Function': ['Organelles & Membranes', 'Mitosis & Meiosis Cell Division', 'Plasma Membrane Transport'],
+  'Genetics & Evolution': ['Mendelian Inheritance', 'DNA Replication', 'Transcription & Translation', 'Natural Selection'],
+  'Calculus & Integration': ['Limits & Continuity', 'Derivatives & Chain Rule', 'Definite Integrals', 'Differential Equations']
+};
 
 export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
   isOpen,
@@ -64,16 +116,78 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
   const [isDiagramStudioOpen, setIsDiagramStudioOpen] = useState<boolean>(false);
   const [diagramStudioTarget, setDiagramStudioTarget] = useState<{ field: 'statement' } | { field: 'option'; index: number }>({ field: 'statement' });
 
+  const defaultOptions: QuestionOption[] = [
+    { id: 'opt-1', key: 'a', rawText: '', isCorrect: true, content: [] },
+    { id: 'opt-2', key: 'b', rawText: '', isCorrect: false, content: [] },
+    { id: 'opt-3', key: 'c', rawText: '', isCorrect: false, content: [] },
+    { id: 'opt-4', key: 'd', rawText: '', isCorrect: false, content: [] }
+  ];
+
   const [options, setOptions] = useState<QuestionOption[]>(
     initialQuestion?.options && initialQuestion.options.length > 0
       ? initialQuestion.options
-      : [
+      : defaultOptions
+  );
+
+  // Synchronize / Reset Form State when Modal Opens or Initial Question Changes
+  useEffect(() => {
+    if (isOpen) {
+      if (initialQuestion && (initialQuestion.id || initialQuestion.rawText)) {
+        setQuestionNumber(initialQuestion.questionNumber || 1);
+        setRawText(initialQuestion.rawText || '');
+        setSubject(initialQuestion.subject || 'Physics');
+        setChapter(initialQuestion.chapter || '');
+        setTopic(initialQuestion.topic || '');
+        setDifficulty(initialQuestion.difficulty || 'Medium');
+        setMarks(initialQuestion.marks || 4);
+        setNegativeMarks(initialQuestion.negativeMarks !== undefined ? initialQuestion.negativeMarks : 1);
+        setOptionLayout(initialQuestion.optionLayout || 'grid_2x2');
+        setTagsInput((initialQuestion.tags || []).join(', '));
+        setExplanationText(initialQuestion.explanationText || '');
+        setDiagramSvg(initialQuestion.diagramSvg || '');
+
+        if (initialQuestion.imageUrls && initialQuestion.imageUrls.length > 0) {
+          setImageUrls(initialQuestion.imageUrls);
+        } else if (initialQuestion.imageUrl) {
+          setImageUrls([initialQuestion.imageUrl]);
+        } else {
+          setImageUrls([]);
+        }
+
+        if (initialQuestion.options && initialQuestion.options.length > 0) {
+          setOptions(initialQuestion.options);
+        } else {
+          setOptions([
+            { id: 'opt-1', key: 'a', rawText: '', isCorrect: true, content: [] },
+            { id: 'opt-2', key: 'b', rawText: '', isCorrect: false, content: [] },
+            { id: 'opt-3', key: 'c', rawText: '', isCorrect: false, content: [] },
+            { id: 'opt-4', key: 'd', rawText: '', isCorrect: false, content: [] }
+          ]);
+        }
+      } else {
+        // Entirely FRESH RESET for new question creation
+        setQuestionNumber(1);
+        setRawText('');
+        setSubject('Physics');
+        setChapter('');
+        setTopic('');
+        setDifficulty('Medium');
+        setMarks(4);
+        setNegativeMarks(1);
+        setOptionLayout('grid_2x2');
+        setTagsInput('');
+        setExplanationText('');
+        setDiagramSvg('');
+        setImageUrls([]);
+        setOptions([
           { id: 'opt-1', key: 'a', rawText: '', isCorrect: true, content: [] },
           { id: 'opt-2', key: 'b', rawText: '', isCorrect: false, content: [] },
           { id: 'opt-3', key: 'c', rawText: '', isCorrect: false, content: [] },
           { id: 'opt-4', key: 'd', rawText: '', isCorrect: false, content: [] }
-        ]
-  );
+        ]);
+      }
+    }
+  }, [isOpen, initialQuestion]);
 
   if (!isOpen) return null;
 
@@ -92,7 +206,6 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
       ...opt,
       key: String.fromCharCode(97 + idx)
     }));
-    // If the removed one was correct, set first one as correct
     if (!updated.some(o => o.isCorrect) && updated.length > 0) {
       updated[0].isCorrect = true;
     }
@@ -113,7 +226,6 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
     setOptions(updated);
   };
 
-  // Upload Question Images from local files (multiple supported)
   const handleQuestionImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -139,11 +251,6 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
     }
   };
 
-  const handleRemoveQuestionImage = (idxToRemove: number) => {
-    setImageUrls(prev => prev.filter((_, idx) => idx !== idxToRemove));
-  };
-
-  // Upload Option Image from local file (supports multiple & inline text placement)
   const handleOptionImageUpload = async (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -180,22 +287,6 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
     const updated = [...options];
     updated[index] = { ...updated[index], imageUrl: url };
     setOptions(updated);
-  };
-
-  const handleRemoveOptionImage = (index: number) => {
-    const updated = [...options];
-    updated[index] = { ...updated[index], imageUrl: undefined };
-    setOptions(updated);
-  };
-
-  const openDiagramStudioForStatement = () => {
-    setDiagramStudioTarget({ field: 'statement' });
-    setIsDiagramStudioOpen(true);
-  };
-
-  const openDiagramStudioForOption = (index: number) => {
-    setDiagramStudioTarget({ field: 'option', index });
-    setIsDiagramStudioOpen(true);
   };
 
   const handleSaveDiagram = (svg: string) => {
@@ -395,7 +486,7 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
               </div>
             </div>
 
-            {/* Chapter & Topic */}
+            {/* Chapter & Topic with Dropdown + Typing Support (HTML Datalist) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1">
@@ -403,23 +494,36 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Kinematics, Thermodynamics, Electrostatics..."
+                  list="builder-chapter-list"
+                  placeholder="Select from dropdown or type custom chapter..."
                   value={chapter}
                   onChange={e => setChapter(e.target.value)}
                   className="w-full text-sm font-semibold p-2 border border-slate-300 rounded-lg text-black bg-white focus:outline-hidden focus:ring-2 focus:ring-sky-500 shadow-2xs placeholder:text-slate-400"
                 />
+                <datalist id="builder-chapter-list">
+                  {(chapterSuggestionsBySubject[subject] || chapterSuggestionsBySubject['Physics']).map(chItem => (
+                    <option key={chItem} value={chItem} />
+                  ))}
+                </datalist>
               </div>
+
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1">
                   Topic
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Projectile Motion, Carnot Engine..."
+                  list="builder-topic-list"
+                  placeholder="Select from dropdown or type custom topic..."
                   value={topic}
                   onChange={e => setTopic(e.target.value)}
                   className="w-full text-sm font-semibold p-2 border border-slate-300 rounded-lg text-black bg-white focus:outline-hidden focus:ring-2 focus:ring-sky-500 shadow-2xs placeholder:text-slate-400"
                 />
+                <datalist id="builder-topic-list">
+                  {(topicSuggestionsByChapter[chapter] || ['General Concept', 'Overview', 'Advanced Theory', 'Numerical Problems']).map(topItem => (
+                    <option key={topItem} value={topItem} />
+                  ))}
+                </datalist>
               </div>
             </div>
 
@@ -430,7 +534,6 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
                   Question Statement
                 </label>
                 <div className="flex items-center gap-2">
-                  {/* Upload Images from Local System for Question (multiple allowed) */}
                   <input
                     ref={questionImageInputRef}
                     type="file"
@@ -473,7 +576,6 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
                 </div>
               </div>
 
-              {/* TipTap Open-Source Rich Text Editor for Question Statement */}
               <RichTextEditor
                 value={rawText}
                 onChange={setRawText}
@@ -483,9 +585,6 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
                 showPreview
               />
 
-
-
-              {/* Attached SVG Diagram Preview */}
               {diagramSvg && (
                 <div className="mt-2.5 p-3 bg-slate-50 border-2 border-emerald-300 rounded-xl flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -562,7 +661,6 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
               <div className="space-y-3">
                 {options.map((opt, idx) => (
                   <div key={opt.id || idx} className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
-                    {/* Header bar matching Question Statement style */}
                     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2">
                       <label className="flex items-center gap-2 cursor-pointer" title="Mark as correct answer">
                         <input
@@ -578,7 +676,6 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
                       </label>
 
                       <div className="flex items-center gap-2">
-                        {/* Upload Option Images */}
                         <input
                           ref={el => (optionImageInputRefs.current[idx] = el)}
                           type="file"
@@ -601,7 +698,6 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
                           <span>{opt.imageUrl ? 'Option Image' : 'Add Option Images'}</span>
                         </button>
 
-                        {/* MathType Formula for Option */}
                         <button
                           type="button"
                           onClick={() => openMathTypeForOption(idx, opt.key, opt.rawText || '')}
@@ -611,17 +707,18 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
                           <span>MathType Formula</span>
                         </button>
 
-                        {/* Draw Shapes / Diagram Studio for Option */}
                         <button
                           type="button"
-                          onClick={() => openDiagramStudioForOption(idx)}
+                          onClick={() => {
+                            setDiagramStudioTarget({ field: 'option', index: idx });
+                            setIsDiagramStudioOpen(true);
+                          }}
                           className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all shadow-xs active:scale-95 cursor-pointer"
                         >
                           <Palette className="w-3.5 h-3.5" />
                           <span>{opt.diagramSvg ? 'Edit Diagram' : 'Draw Shapes'}</span>
                         </button>
 
-                        {/* Remove Option */}
                         {options.length > 2 && (
                           <button
                             type="button"
@@ -635,7 +732,6 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
                       </div>
                     </div>
 
-                    {/* TipTap RichTextEditor for Option with live preview */}
                     <RichTextEditor
                       value={opt.rawText || ''}
                       onChange={val => handleOptionTextChange(idx, val)}
@@ -645,7 +741,6 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
                       showPreview
                     />
 
-                    {/* Option Attached Diagram SVG Preview */}
                     {opt.diagramSvg && (
                       <div className="mt-2 p-2.5 bg-slate-50 border-2 border-emerald-300 rounded-xl flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -663,7 +758,10 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
                         <div className="flex items-center gap-1.5">
                           <button
                             type="button"
-                            onClick={() => openDiagramStudioForOption(idx)}
+                            onClick={() => {
+                              setDiagramStudioTarget({ field: 'option', index: idx });
+                              setIsDiagramStudioOpen(true);
+                            }}
                             className="px-2 py-0.5 bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-300 rounded-lg text-xs font-bold cursor-pointer"
                           >
                             Edit

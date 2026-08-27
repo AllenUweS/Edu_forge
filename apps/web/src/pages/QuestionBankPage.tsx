@@ -1,41 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api.js';
 import { Question } from '@eduforge/shared';
-import {
-  Database, Plus, Search, Trash2, Edit3, Copy, ArrowLeft,
-  Download, Upload
-} from 'lucide-react';
-import { QuestionBuilderModal } from '../questions/QuestionBuilderModal.js';
-import { OptionLayoutRenderer } from '../questions/OptionLayoutRenderer.js';
-import { MathTextRenderer } from '../equation/MathTextRenderer.js';
+import { Search, Plus, Trash2, Edit3, Eye, Download, Upload } from 'lucide-react';
+import { StudentPreviewDrawer } from '../components/StudentPreviewDrawer.js';
+
+import { formatQuestionCode } from '../utils/questionCode.js';
 
 interface QuestionBankPageProps {
-  onBackToDashboard: () => void;
+  onBackToDashboard?: () => void;
+  onOpenCreateQuestion?: (q?: Question) => void;
 }
 
 export const QuestionBankPage: React.FC<QuestionBankPageProps> = ({
-  onBackToDashboard
+  onOpenCreateQuestion
 }) => {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [subjectFilter, setSubjectFilter] = useState<string>('all');
   const [difficultyFilter, setDifficultyFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  // Builder Modal
-  const [isBuilderOpen, setIsBuilderOpen] = useState(false);
-  const [editingQuestion, setEditingQuestion] = useState<Question | undefined>(undefined);
+  // Preview Drawer
+  const [previewQuestion, setPreviewQuestion] = useState<Question | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   useEffect(() => {
     loadQuestions();
-  }, [subjectFilter, difficultyFilter]);
+  }, [difficultyFilter]);
 
   const loadQuestions = async () => {
     try {
       setLoading(true);
       const params: any = {};
       if (search) params.search = search;
-      if (subjectFilter !== 'all') params.subject = subjectFilter;
       if (difficultyFilter !== 'all') params.difficulty = difficultyFilter;
 
       const data = await api.getQuestions(params);
@@ -58,288 +55,155 @@ export const QuestionBankPage: React.FC<QuestionBankPageProps> = ({
     }
   };
 
-  const handleDuplicate = async (id: string) => {
-    try {
-      await api.duplicateQuestion(id);
-      loadQuestions();
-    } catch (err) {
-      console.error(err);
-    }
+  const handleOpenPreview = (q: Question) => {
+    setPreviewQuestion(q);
+    setIsPreviewOpen(true);
   };
 
-  const handleExport = () => {
-    const jsonStr = JSON.stringify(questions, null, 2);
-    const blob = new Blob([jsonStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `eduforge_question_bank_${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleImport = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    input.onchange = async (e: any) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      const text = await file.text();
-      try {
-        const parsed = JSON.parse(text);
-        if (Array.isArray(parsed)) {
-          for (const q of parsed) {
-            await api.createQuestion(q);
-          }
-          alert(`Successfully imported ${parsed.length} questions!`);
-          loadQuestions();
-        }
-      } catch (err) {
-        alert('Invalid JSON file format');
-      }
-    };
-    input.click();
-  };
+  const displayList = questions;
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
-      
+    <div className="max-w-7xl mx-auto px-8 py-8 space-y-6 font-sans">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onBackToDashboard}
-            className="p-2 hover:bg-slate-100 text-slate-500 hover:text-slate-900 rounded-lg transition-colors cursor-pointer"
-            title="Back to Dashboard"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div className="p-2.5 bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-xl">
-            <Database className="w-6 h-6" />
-          </div>
-          <div>
-            <h1 className="text-xl font-black text-slate-900">Question Bank Repository</h1>
-            <p className="text-xs text-slate-500">Manage, categorize, import, and export scientific objective questions</p>
-          </div>
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Question Bank</h1>
+          <p className="text-xs text-slate-500 font-medium mt-0.5">
+            Biology / Cell Structure and Function · {displayList.length} questions
+          </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleExport}
-            className="px-3 py-2 border border-slate-300 hover:bg-slate-50 text-slate-800 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
-          >
-            <Download className="w-4 h-4 text-slate-600" /> Export JSON
-          </button>
-          <button
-            type="button"
-            onClick={handleImport}
-            className="px-3 py-2 border border-slate-300 hover:bg-slate-50 text-slate-800 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
-          >
-            <Upload className="w-4 h-4 text-slate-600" /> Import JSON
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setEditingQuestion(undefined);
-              setIsBuilderOpen(true);
-            }}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 shadow-sm transition-all active:scale-95 cursor-pointer"
-          >
-            <Plus className="w-4 h-4" /> + Create Question
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => onOpenCreateQuestion && onOpenCreateQuestion()}
+          className="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 shadow-sm hover:shadow-md transition-all active:scale-[0.98] cursor-pointer"
+        >
+          <Plus className="w-3.5 h-3.5" /> + Create Question
+        </button>
       </div>
 
-      {/* Filters Bar */}
-      <div className="p-4 rounded-xl border border-slate-200 bg-white shadow-xs grid grid-cols-1 sm:grid-cols-4 gap-3">
-        <div className="relative sm:col-span-2">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-          <input
-            type="text"
-            placeholder="Search questions by formula, keywords, chapter (Press Enter)..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && loadQuestions()}
-            className="w-full pl-9 pr-4 py-2 text-xs border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-indigo-500 bg-white text-slate-900"
-          />
-        </div>
+      {/* Search & Filter Row */}
+      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs space-y-4">
+        <div className="flex flex-col sm:flex-row items-center gap-3">
+          <div className="relative flex-1 w-full">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+            <input
+              type="text"
+              placeholder="Search question, code or keyword..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && loadQuestions()}
+              className="w-full pl-9 pr-4 py-2 text-xs border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-slate-900 bg-white text-slate-900"
+            />
+          </div>
 
-        <div>
-          <select
-            value={subjectFilter}
-            onChange={e => setSubjectFilter(e.target.value)}
-            className="w-full py-2 px-3 text-xs border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-indigo-500 bg-white text-slate-900"
-          >
-            <option value="all">All Subjects</option>
-            <option value="Physics">Physics</option>
-            <option value="Chemistry">Chemistry</option>
-            <option value="Mathematics">Mathematics</option>
-          </select>
-        </div>
-
-        <div>
           <select
             value={difficultyFilter}
             onChange={e => setDifficultyFilter(e.target.value)}
-            className="w-full py-2 px-3 text-xs border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-indigo-500 bg-white text-slate-900"
+            className="w-full sm:w-40 py-2 px-3 text-xs border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-slate-900 bg-white text-slate-900 font-medium"
           >
-            <option value="all">All Difficulties</option>
+            <option value="all">All Difficulty</option>
             <option value="Easy">Easy</option>
             <option value="Medium">Medium</option>
             <option value="Hard">Hard</option>
           </select>
+
+          <select
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value)}
+            className="w-full sm:w-36 py-2 px-3 text-xs border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-slate-900 bg-white text-slate-900 font-medium"
+          >
+            <option value="all">All Status</option>
+            <option value="Draft">Draft</option>
+            <option value="Published">Published</option>
+          </select>
+        </div>
+
+        {/* Table */}
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold">
+              <tr>
+                <th className="px-5 py-3">Question</th>
+                <th className="px-5 py-3">Difficulty</th>
+                <th className="px-5 py-3">Marks</th>
+                <th className="px-5 py-3">Status</th>
+                <th className="px-5 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
+              {displayList.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-5 py-8 text-center text-slate-400">
+                    No questions in Question Bank yet. Click "+ Create Question" to add your first question.
+                  </td>
+                </tr>
+              ) : (
+                displayList.map((q, idx) => (
+                <tr key={q.id || idx} className="hover:bg-slate-50/80 transition-colors">
+                  <td className="px-5 py-3.5">
+                    <b className="text-slate-900 block font-mono text-[11px]">
+                      {formatQuestionCode(q)}
+                    </b>
+                    <span className="text-slate-600 line-clamp-1 mt-0.5">
+                      {q.rawText || 'Question statement text'}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3.5 text-slate-700">{q.difficulty || 'Medium'}</td>
+                  <td className="px-5 py-3.5 font-bold text-slate-900">
+                    {q.marks || 4} / -{q.negativeMarks || 1}
+                  </td>
+                  <td className="px-5 py-3.5">
+                    {q.isSystem || idx % 2 === 0 ? (
+                      <span className="px-2 py-0.5 bg-teal-50 border border-teal-200 text-teal-700 rounded-full text-[10px] font-bold">
+                        Published
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-600 rounded-full text-[10px] font-bold">
+                        Draft
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-5 py-3.5 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenPreview(q as Question)}
+                        className="px-3 py-1 border border-slate-300 hover:bg-slate-50 text-slate-800 text-xs font-semibold rounded-md transition-colors cursor-pointer"
+                      >
+                        Preview
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onOpenCreateQuestion && onOpenCreateQuestion(q as Question)}
+                        className="px-3 py-1 border border-slate-300 hover:bg-slate-50 text-slate-800 text-xs font-semibold rounded-md transition-colors cursor-pointer flex items-center gap-1"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" /> Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => q.id && handleDelete(q.id)}
+                        className="p-1.5 text-slate-400 hover:text-red-600 transition-colors cursor-pointer"
+                        title="Delete Question"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+            </tbody>
+          </table>
         </div>
       </div>
 
-      {/* Questions List */}
-      <div className="space-y-3">
-        {loading ? (
-          <div className="h-48 flex items-center justify-center text-slate-400 text-sm">
-            Loading question bank...
-          </div>
-        ) : questions.length === 0 ? (
-          <div className="py-12 rounded-xl border border-slate-200 bg-white text-center text-sm text-slate-500">
-            No questions found. Click <strong>+ Create Question</strong> to add one.
-          </div>
-        ) : (
-          questions.map(q => (
-            <div
-              key={q.id}
-              className="p-5 rounded-xl border border-slate-200 bg-white shadow-xs hover:border-indigo-400/80 transition-all space-y-3"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex flex-wrap items-center gap-2 text-xs">
-                  <span className="font-bold px-2 py-0.5 rounded border bg-indigo-50 text-indigo-900 border-indigo-200">
-                    {q.subject || 'General'}
-                  </span>
-                  {q.chapter && (
-                    <span className="px-2 py-0.5 rounded font-medium border bg-slate-100 text-slate-800 border-slate-200">
-                      {q.chapter}
-                    </span>
-                  )}
-                  <span className={`px-2 py-0.5 rounded font-semibold border ${
-                    q.difficulty === 'Easy'
-                      ? 'bg-emerald-50 text-emerald-900 border-emerald-300'
-                      : q.difficulty === 'Medium'
-                      ? 'bg-amber-50 text-amber-900 border-amber-300'
-                      : 'bg-red-50 text-red-900 border-red-300'
-                  }`}>
-                    {q.difficulty}
-                  </span>
-                  <span className="font-mono font-bold text-xs text-slate-700">
-                    +{q.marks} / -{q.negativeMarks || 0}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingQuestion(q);
-                      setIsBuilderOpen(true);
-                    }}
-                    className="p-1.5 rounded hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
-                    title="Edit"
-                  >
-                    <Edit3 className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDuplicate(q.id)}
-                    className="p-1.5 rounded hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
-                    title="Duplicate"
-                  >
-                    <Copy className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(q.id)}
-                    className="p-1.5 hover:bg-red-50 text-red-600 hover:text-red-700 rounded transition-colors cursor-pointer"
-                    title="Delete"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Question Statement Text */}
-              <div className="text-sm font-semibold leading-relaxed text-slate-900">
-                <MathTextRenderer text={q.rawText} />
-              </div>
-
-              {/* Render Question Images or Diagram */}
-              {(() => {
-                const images: string[] = q.imageUrls && q.imageUrls.length > 0
-                  ? q.imageUrls
-                  : (q.imageUrl ? [q.imageUrl] : []);
-
-                if (images.length === 0) return null;
-
-                return (
-                  <div className={`my-2 grid gap-2 ${
-                    images.length === 1 ? 'grid-cols-1' : images.length === 2 ? 'grid-cols-2' : 'grid-cols-3'
-                  }`}>
-                    {images.map((imgSrc, idx) => (
-                      <div key={idx} className="p-1 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-center max-h-48 overflow-hidden">
-                        <img
-                          src={imgSrc}
-                          alt={`Question illustration ${idx + 1}`}
-                          onError={(e) => {
-                            const target = e.currentTarget;
-                            if (target.src.endsWith('.heic') || target.src.endsWith('.HEIC')) {
-                              target.src = target.src.replace(/\.heic$/i, '.jpg');
-                            }
-                          }}
-                          className="max-h-40 object-contain rounded"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                );
-              })()}
-              {q.diagramSvg && (
-                <div className="my-2 p-2 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-center overflow-hidden">
-                  <div dangerouslySetInnerHTML={{ __html: q.diagramSvg }} />
-                </div>
-              )}
-
-              {/* Multiple Choice Options */}
-              <OptionLayoutRenderer
-                options={q.options}
-                layoutType={q.optionLayout || 'grid_2x2'}
-                showAnswers={true}
-                textColorClass="text-slate-900"
-              />
-
-              {q.explanationText && (
-                <div className="p-2.5 rounded-lg text-xs border bg-slate-50 text-slate-800 border-slate-200">
-                  <strong className="text-slate-900 font-bold">Explanation: </strong>
-                  <MathTextRenderer text={q.explanationText} />
-                </div>
-              )}
-            </div>
-          ))
-        )}
-      </div>
-
-      {/* Modal */}
-      <QuestionBuilderModal
-        isOpen={isBuilderOpen}
-        initialQuestion={editingQuestion}
-        onClose={() => setIsBuilderOpen(false)}
-        onSave={async q => {
-          if (editingQuestion?.id) {
-            await api.updateQuestion(q.id, q);
-          } else {
-            await api.createQuestion(q);
-          }
-          loadQuestions();
-        }}
+      {/* Student Preview Drawer */}
+      <StudentPreviewDrawer
+        isOpen={isPreviewOpen}
+        question={previewQuestion}
+        onClose={() => setIsPreviewOpen(false)}
       />
-
     </div>
   );
 };

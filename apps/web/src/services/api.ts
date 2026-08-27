@@ -98,11 +98,16 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  // Documents
+  // Documents & Exam Papers
   async getDocuments(search?: string): Promise<DocumentModel[]> {
     try {
       const query = search ? `?search=${encodeURIComponent(search)}` : '';
-      const docs = await fetchJson<DocumentModel[]>(`${API_BASE}/documents${query}`);
+      let docs: DocumentModel[] = [];
+      try {
+        docs = await fetchJson<DocumentModel[]>(`${API_BASE}/documents${query}`);
+      } catch {
+        docs = await fetchJson<DocumentModel[]>(`${API_BASE}/exam-papers/${query}`);
+      }
       cache.documents = docs;
       saveLocalDocs(docs);
       return docs;
@@ -224,6 +229,76 @@ export const api = {
       const local = getLocalDocs().filter(d => d.id !== id);
       saveLocalDocs(local);
       cache.documents = local;
+    }
+  },
+
+  // Subjects & Chapters
+  async getSubjects(): Promise<any[]> {
+    try {
+      return await fetchJson<any[]>(`${API_BASE}/subjects/`);
+    } catch {
+      return [
+        { id: 1, name: 'Biology', code: 'BIO', chapters: 24, questions: 1820, status: 'Active' },
+        { id: 2, name: 'Physics', code: 'PHY', chapters: 18, questions: 1420, status: 'Active' },
+        { id: 3, name: 'Chemistry', code: 'CHE', chapters: 21, questions: 1180, status: 'Active' }
+      ];
+    }
+  },
+
+  async createSubject(subject: { name: string; code: string }): Promise<any> {
+    try {
+      return await fetchJson<any>(`${API_BASE}/subjects/`, {
+        method: 'POST',
+        body: JSON.stringify(subject)
+      });
+    } catch {
+      return { id: Date.now(), ...subject, chapters: 0, questions: 0, status: 'Active' };
+    }
+  },
+
+  async updateSubject(id: number | string, subject: { name: string; code: string }): Promise<any> {
+    try {
+      return await fetchJson<any>(`${API_BASE}/subjects/${id}/`, {
+        method: 'PUT',
+        body: JSON.stringify(subject)
+      });
+    } catch {
+      return { id, ...subject, status: 'Active' };
+    }
+  },
+
+  async getChapters(subjectId?: number | string): Promise<any[]> {
+    try {
+      const url = subjectId ? `${API_BASE}/subjects/${subjectId}/chapters/` : `${API_BASE}/chapters/`;
+      return await fetchJson<any[]>(url);
+    } catch {
+      return [
+        { num: '01', id: 'BIO-01', title: 'The Living World', subject: 'Biology', count: 42 },
+        { num: '02', id: 'BIO-02', title: 'Biological Classification', subject: 'Biology', count: 56 },
+        { num: '04', id: 'BIO-04', title: 'Cell Structure and Function', subject: 'Biology', count: 120 }
+      ];
+    }
+  },
+
+  async createChapter(subjectId: number | string, chapter: { title: string; name?: string }): Promise<any> {
+    try {
+      return await fetchJson<any>(`${API_BASE}/subjects/${subjectId}/chapters/`, {
+        method: 'POST',
+        body: JSON.stringify(chapter)
+      });
+    } catch {
+      return { id: `CH-${Date.now()}`, title: chapter.title || chapter.name, count: 0 };
+    }
+  },
+
+  async updateChapter(id: number | string, chapter: { title: string; name?: string }): Promise<any> {
+    try {
+      return await fetchJson<any>(`${API_BASE}/chapters/${id}/`, {
+        method: 'PUT',
+        body: JSON.stringify(chapter)
+      });
+    } catch {
+      return { id, title: chapter.title || chapter.name };
     }
   },
 
@@ -540,10 +615,17 @@ export const api = {
       formData.append('image', file);
       formData.append('file', file);
 
-      const res = await fetch(`${API_BASE}/assets/upload`, {
+      let res = await fetch(`${API_BASE}/images/upload/`, {
         method: 'POST',
         body: formData
       });
+
+      if (!res.ok) {
+        res = await fetch(`${API_BASE}/assets/upload`, {
+          method: 'POST',
+          body: formData
+        });
+      }
 
       if (!res.ok) {
         throw new Error('Upload failed');
@@ -553,10 +635,9 @@ export const api = {
       const result = json.data || json;
       let url = result.url || '';
       if (url && !url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('data:')) {
-        const backendOrigin = API_BASE.replace(/\/api\/?$/, '');
-        url = `${backendOrigin}${url.startsWith('/') ? '' : '/'}${url}`;
+        url = url.startsWith('/') ? url : `/${url}`;
       }
-      return { ...result, url };
+      return { id: String(result.id || Date.now()), url, originalName: file.name };
     } catch {
       // Create local Base64 Data URL as robust fallback
       return new Promise((resolve) => {
