@@ -373,30 +373,6 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
                   </div>
                 </div>
               ))}
-
-              <div className="flex items-center justify-center gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={addTextBlock}
-                  className="px-3.5 py-2 border border-slate-300 hover:bg-slate-50 text-slate-800 text-xs font-bold rounded-lg transition-colors cursor-pointer"
-                >
-                  + Add Text
-                </button>
-                <button
-                  type="button"
-                  onClick={addImageBlock}
-                  className="px-3.5 py-2 border border-slate-300 hover:bg-slate-50 text-slate-800 text-xs font-bold rounded-lg transition-colors cursor-pointer"
-                >
-                  + Add Image
-                </button>
-                <button
-                  type="button"
-                  onClick={() => alert('Formula editor active')}
-                  className="px-3.5 py-2 border border-slate-300 hover:bg-slate-50 text-slate-800 text-xs font-bold rounded-lg transition-colors cursor-pointer"
-                >
-                  + Formula
-                </button>
-              </div>
             </div>
           </div>
 
