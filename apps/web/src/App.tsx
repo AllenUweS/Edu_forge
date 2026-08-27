@@ -271,6 +271,8 @@ const AppContent: React.FC = () => {
     );
   }
 
+  const [activeChapterFilter, setActiveChapterFilter] = useState<{ id?: string; title?: string } | null>(null);
+
   return (
     <div className="flex h-screen bg-slate-50 text-slate-900 font-sans overflow-hidden">
       {/* Left Sidebar Navigation */}
@@ -306,6 +308,8 @@ const AppContent: React.FC = () => {
             <QuestionBankPage
               onBackToDashboard={() => setCurrentPage('dashboard')}
               onOpenCreateQuestion={q => handleOpenCreatePage(q)}
+              selectedChapter={activeChapterFilter}
+              onClearChapterFilter={() => setActiveChapterFilter(null)}
             />
           )}
 
@@ -335,7 +339,10 @@ const AppContent: React.FC = () => {
               onAddChapter={handleAddChapter}
               onEditChapter={handleEditChapter}
               onDeleteChapter={handleDeleteChapter}
-              onNavigateToQuestionBank={() => setCurrentPage('question_bank')}
+              onNavigateToQuestionBank={ch => {
+                setActiveChapterFilter(ch || null);
+                setCurrentPage('question_bank');
+              }}
             />
           )}
 

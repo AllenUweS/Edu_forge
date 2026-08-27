@@ -8,10 +8,14 @@ import { formatQuestionCode } from '../utils/questionCode.js';
 interface QuestionBankPageProps {
   onBackToDashboard?: () => void;
   onOpenCreateQuestion?: (q?: Question) => void;
+  selectedChapter?: { id?: string; title?: string } | null;
+  onClearChapterFilter?: () => void;
 }
 
 export const QuestionBankPage: React.FC<QuestionBankPageProps> = ({
-  onOpenCreateQuestion
+  onOpenCreateQuestion,
+  selectedChapter,
+  onClearChapterFilter
 }) => {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
@@ -111,6 +115,24 @@ export const QuestionBankPage: React.FC<QuestionBankPageProps> = ({
   };
 
   const filteredList = questions.filter(q => {
+    if (selectedChapter && selectedChapter.title) {
+      const chTitle = selectedChapter.title.toLowerCase();
+      const chId = (selectedChapter.id || '').toLowerCase();
+      const qTopic = ((q as any).topic || '').toLowerCase();
+      const qChapter = ((q as any).chapter || '').toLowerCase();
+      const qSubject = (q.subject || '').toLowerCase();
+      const statement = getCleanQuestionText(q.rawText).toLowerCase();
+      const code = formatQuestionCode(q).toLowerCase();
+
+      const matchesChapter =
+        qTopic.includes(chTitle) ||
+        qChapter.includes(chTitle) ||
+        statement.includes(chTitle) ||
+        (chId && (code.includes(chId) || statement.includes(chId)));
+
+      if (!matchesChapter) return false;
+    }
+
     if (search.trim()) {
       const s = search.toLowerCase();
       const code = formatQuestionCode(q).toLowerCase();
@@ -131,7 +153,11 @@ export const QuestionBankPage: React.FC<QuestionBankPageProps> = ({
             Question Bank
           </h1>
           <p className="text-xs text-slate-500 font-medium mt-0.5">
-            Manage, preview, and organize your question repository ({filteredList.length} questions).
+            {selectedChapter && selectedChapter.title ? (
+              <>Showing questions for chapter <b className="text-teal-700">{selectedChapter.title}</b> ({filteredList.length} questions exist).</>
+            ) : (
+              <>Manage, preview, and organize your question repository ({filteredList.length} questions).</>
+            )}
           </p>
         </div>
 
@@ -155,6 +181,30 @@ export const QuestionBankPage: React.FC<QuestionBankPageProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Chapter Filter Active Banner */}
+      {selectedChapter && selectedChapter.title && (
+        <div className="bg-teal-50/90 border border-teal-200 rounded-xl p-3.5 flex items-center justify-between text-xs font-medium text-teal-900 shadow-2xs">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-teal-950">Active Chapter Filter:</span>
+            <span className="px-2.5 py-0.5 bg-teal-700 text-white rounded-md font-mono font-bold text-[11px]">
+              {selectedChapter.title}
+            </span>
+            <span className="text-teal-800 font-bold ml-1">
+              — {filteredList.length > 0 ? `${filteredList.length} question(s) found in database for this topic.` : '0 questions exist for this topic.'}
+            </span>
+          </div>
+          {onClearChapterFilter && (
+            <button
+              type="button"
+              onClick={onClearChapterFilter}
+              className="px-3 py-1 bg-white hover:bg-teal-100 border border-teal-300 text-teal-800 font-bold rounded-md transition-colors cursor-pointer text-xs"
+            >
+              Clear Filter (Show All Questions)
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Search & Filter Row */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-4">
@@ -221,8 +271,17 @@ export const QuestionBankPage: React.FC<QuestionBankPageProps> = ({
                 </tr>
               ) : filteredList.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-8 text-center text-slate-400 font-semibold">
-                    No questions match your filter. Click "+ Create Question" to add a new question.
+                  <td colSpan={6} className="px-5 py-12 text-center text-slate-400 font-semibold">
+                    <div className="flex flex-col items-center justify-center space-y-1.5">
+                      <p className="text-slate-700 font-bold text-sm">
+                        {selectedChapter && selectedChapter.title
+                          ? `No questions exist for chapter "${selectedChapter.title}".`
+                          : 'No questions match your filter.'}
+                      </p>
+                      <p className="text-xs text-slate-400 font-medium">
+                        Click "+ Create Question" to add a new question to your bank.
+                      </p>
+                    </div>
                   </td>
                 </tr>
               ) : (

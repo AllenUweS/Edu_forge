@@ -17,7 +17,7 @@ interface ChaptersPageProps {
   onAddChapter?: (newCh: ChapterItem) => void;
   onEditChapter?: (originalId: string, updatedCh: ChapterItem) => void;
   onDeleteChapter?: (id: string) => void;
-  onNavigateToQuestionBank?: () => void;
+  onNavigateToQuestionBank?: (chapter?: { id: string; title: string }) => void;
 }
 
 function isFacultySession(): boolean {
@@ -199,7 +199,7 @@ export const ChaptersPage: React.FC<ChaptersPageProps> = ({
                     <div className="flex items-center justify-end gap-2">
                       <button
                         type="button"
-                        onClick={() => onNavigateToQuestionBank && onNavigateToQuestionBank()}
+                        onClick={() => onNavigateToQuestionBank && onNavigateToQuestionBank({ id: ch.id, title: ch.title })}
                         className="px-3 py-1 border border-slate-300 hover:bg-slate-50 text-slate-800 text-xs font-semibold rounded-md transition-colors cursor-pointer"
                       >
                         View Questions
