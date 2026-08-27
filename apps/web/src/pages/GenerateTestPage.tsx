@@ -502,14 +502,37 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
 
               <div>
                 <label className="block text-[11px] font-extrabold uppercase text-slate-500 mb-2 font-sans tracking-wide">
-                  DURATION
+                  DURATION (MINUTES)
                 </label>
-                <input
-                  type="text"
-                  value={`${durationMinutes} minutes`}
-                  onChange={e => setDurationMinutes(parseInt(e.target.value) || 60)}
-                  className="w-full text-sm font-bold p-3 border border-slate-200 rounded-xl text-slate-900 bg-white"
-                />
+                <div className="relative flex items-center">
+                  <input
+                    type="number"
+                    min={1}
+                    max={600}
+                    value={durationMinutes}
+                    onChange={e => setDurationMinutes(parseInt(e.target.value) || 0)}
+                    className="w-full text-sm font-bold p-3 pr-16 border border-slate-200 rounded-xl text-slate-900 bg-white font-mono focus:ring-2 focus:ring-teal-600 focus:outline-hidden"
+                  />
+                  <span className="absolute right-3 text-xs text-slate-500 font-bold pointer-events-none">
+                    Min
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 mt-2">
+                  {[30, 60, 90, 120, 180].map(mins => (
+                    <button
+                      key={mins}
+                      type="button"
+                      onClick={() => setDurationMinutes(mins)}
+                      className={`px-2 py-1 text-[10px] font-bold rounded-md transition-colors cursor-pointer ${
+                        durationMinutes === mins
+                          ? 'bg-teal-700 text-white'
+                          : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                      }`}
+                    >
+                      {mins}m
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>

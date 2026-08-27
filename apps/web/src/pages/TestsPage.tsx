@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Eye, Copy, Edit3, X, Save } from 'lucide-react';
+import { Plus, Trash2, Eye, Copy, Edit3, X, Save, Printer, FileText } from 'lucide-react';
 import { DocumentModel } from '@eduforge/shared';
 import { api } from '../services/api.js';
 
@@ -36,6 +36,10 @@ export const TestsPage: React.FC<TestsPageProps> = ({
   const [editTitle, setEditTitle] = useState('');
   const [editSubject, setEditSubject] = useState('');
   const [editDuration, setEditDuration] = useState('60');
+
+  // Preview Modal State
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [previewDoc, setPreviewDoc] = useState<DocumentModel | null>(null);
 
   const fetchLatestDocs = async () => {
     try {
@@ -86,7 +90,7 @@ export const TestsPage: React.FC<TestsPageProps> = ({
 
   const handleDeleteAllDocs = async () => {
     if (docs.length === 0) return;
-    if (confirm(`Are you sure you want to delete ALL ${docs.length} test papers? This will leave your tests section completely empty.`)) {
+    if (confirm(`Are you sure you want to delete ALL ${docs.length} test paper(s)? Once deleted, your tests section will be completely empty.`)) {
       const allIds = docs.map(d => String(d.id));
       setDocs([]);
       setSelectedDocIds([]);
@@ -114,7 +118,7 @@ export const TestsPage: React.FC<TestsPageProps> = ({
         }
         await api.deleteDocument(id);
       } catch (err) {
-        console.error('Delete error:', err);
+        console.error('Failed to delete document:', err);
       } finally {
         fetchLatestDocs();
       }
@@ -124,12 +128,12 @@ export const TestsPage: React.FC<TestsPageProps> = ({
   const handleDuplicate = async (id: string) => {
     try {
       if (onDuplicateDocument) {
-        onDuplicateDocument(id);
+        await onDuplicateDocument(id);
       } else {
         await api.duplicateDocument(id);
       }
     } catch (err) {
-      console.error('Duplicate error:', err);
+      console.error('Failed to duplicate document:', err);
     } finally {
       fetchLatestDocs();
     }
@@ -138,14 +142,19 @@ export const TestsPage: React.FC<TestsPageProps> = ({
   const handleOpenEditModal = (d: DocumentModel) => {
     setEditingDoc(d);
     setEditTitle(d.title || '');
-    setEditSubject(d.metadata?.subject || 'Physics & Chemistry');
-    setEditDuration(String(d.metadata?.timeAllowedMinutes || (d.metadata as any)?.durationMinutes || 60));
+    setEditSubject(d.metadata?.subject || '');
+    setEditDuration(String(d.metadata?.timeAllowedMinutes || 60));
     setIsEditModalOpen(true);
+  };
+
+  const handleOpenPreviewModal = (d: DocumentModel) => {
+    setPreviewDoc(d);
+    setIsPreviewModalOpen(true);
   };
 
   const handleSaveEditModal = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingDoc || !editTitle.trim()) return;
+    if (!editingDoc) return;
 
     const updated: DocumentModel = {
       ...editingDoc,
@@ -176,7 +185,7 @@ export const TestsPage: React.FC<TestsPageProps> = ({
       <div className="flex items-center justify-between border-b border-slate-200 pb-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Tests</h1>
-          <p className="text-xs text-slate-500 font-medium mt-0.5">Generate, publish, edit, and manage all your test papers.</p>
+          <p className="text-xs text-slate-500 font-medium mt-0.5">Generate, publish, preview, edit, and manage all your test papers.</p>
         </div>
         <div className="flex items-center gap-2">
           {selectedDocIds.length > 0 && (
@@ -263,7 +272,7 @@ export const TestsPage: React.FC<TestsPageProps> = ({
                     <td className="px-5 py-3.5 font-bold text-slate-900">
                       <button
                         type="button"
-                        onClick={() => onOpenDocument && onOpenDocument(d.id)}
+                        onClick={() => handleOpenPreviewModal(d)}
                         className="hover:text-teal-700 text-left transition-colors font-bold cursor-pointer"
                       >
                         {d.title}
@@ -281,19 +290,19 @@ export const TestsPage: React.FC<TestsPageProps> = ({
                       <div className="flex items-center justify-end gap-2">
                         <button
                           type="button"
+                          onClick={() => handleOpenPreviewModal(d)}
+                          className="p-1.5 text-teal-700 hover:bg-teal-50 rounded-md transition-colors cursor-pointer flex items-center gap-1 text-xs font-bold"
+                          title="Preview Test Paper"
+                        >
+                          <Eye className="w-3.5 h-3.5" /> Preview
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => handleOpenEditModal(d)}
                           className="p-1.5 text-slate-600 hover:text-teal-700 hover:bg-slate-100 rounded-md transition-colors cursor-pointer"
                           title="Edit Test Paper Details"
                         >
                           <Edit3 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onOpenDocument && onOpenDocument(d.id)}
-                          className="p-1.5 text-slate-600 hover:text-teal-700 hover:bg-slate-100 rounded-md transition-colors cursor-pointer"
-                          title="Open in Document Editor"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
                         </button>
                         <button
                           type="button"
@@ -402,7 +411,127 @@ export const TestsPage: React.FC<TestsPageProps> = ({
           </div>
         </div>
       )}
+
+      {/* Test Preview Modal */}
+      {isPreviewModalOpen && previewDoc && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <FileText className="w-5 h-5 text-teal-400" />
+                <div>
+                  <h3 className="font-extrabold text-sm text-white tracking-wide">{previewDoc.title}</h3>
+                  <p className="text-[11px] text-slate-400 font-medium">
+                    Subject: {previewDoc.metadata?.subject || 'General Science'} • Duration: {previewDoc.metadata?.timeAllowedMinutes || 60} mins • Max Marks: {previewDoc.metadata?.maxMarks || 100}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPreviewModalOpen(false)}
+                className="p-1 text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Test Paper Body Preview */}
+            <div className="p-8 overflow-y-auto flex-1 space-y-6 bg-slate-50 font-sans text-xs text-slate-800">
+              {/* Paper Title Banner */}
+              <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-2xs text-center space-y-2">
+                <h1 className="text-xl font-black text-slate-900 tracking-tight uppercase">{previewDoc.title}</h1>
+                <div className="flex items-center justify-center gap-6 text-xs text-slate-600 font-bold border-t border-b border-slate-100 py-2">
+                  <span>SUBJECT: {previewDoc.metadata?.subject || 'PHYSICS & CHEMISTRY'}</span>
+                  <span>TIME: {previewDoc.metadata?.timeAllowedMinutes || 60} MINUTES</span>
+                  <span>MAX MARKS: {previewDoc.metadata?.maxMarks || 100}</span>
+                </div>
+                <div className="text-[11px] text-slate-500 font-medium italic text-left pt-1">
+                  <b>General Instructions:</b> All questions are compulsory. Read questions carefully before answering. Each question carries marks indicated alongside.
+                </div>
+              </div>
+
+              {/* Sections & Questions */}
+              {previewDoc.sections && previewDoc.sections.length > 0 ? (
+                previewDoc.sections.map((sec, sIdx) => (
+                  <div key={sec.id || sIdx} className="bg-white p-6 rounded-xl border border-slate-200 shadow-2xs space-y-4">
+                    <div className="border-b border-slate-200 pb-2">
+                      <h2 className="font-bold text-sm text-slate-900">{sec.title || `SECTION ${String.fromCharCode(65 + sIdx)}`}</h2>
+                      {sec.instructions && <p className="text-slate-500 text-[11px] font-medium">{sec.instructions}</p>}
+                    </div>
+
+                    <div className="space-y-4">
+                      {sec.blocks && sec.blocks.length > 0 ? (
+                        sec.blocks.map((blk: any, bIdx) => (
+                          <div key={blk.id || bIdx} className="p-3 bg-slate-50/70 border border-slate-200/80 rounded-lg space-y-2">
+                            <div className="flex items-start justify-between gap-3">
+                              <p className="font-semibold text-slate-900 text-xs">
+                                <span className="font-bold font-mono mr-2">Q{bIdx + 1}.</span>
+                                {blk.data?.question?.rawText || blk.data?.text || blk.text || 'Question Statement'}
+                              </p>
+                              <span className="text-[11px] font-bold text-slate-500 font-mono">[{blk.data?.question?.marks || 1} Mark]</span>
+                            </div>
+
+                            {/* Options if present */}
+                            {blk.data?.question?.options && (
+                              <div className="grid grid-cols-2 gap-2 pt-1 font-medium text-[11px] text-slate-700">
+                                {blk.data.question.options.map((opt: any, oIdx: number) => (
+                                  <div key={oIdx} className="p-1.5 bg-white border border-slate-200 rounded">
+                                    <span className="font-bold mr-1.5 text-teal-700">({String.fromCharCode(65 + oIdx)})</span>
+                                    {opt.text || opt}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-slate-400 italic text-center py-2">No question blocks added to this section yet.</p>
+                      )}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="bg-white p-8 rounded-xl border border-slate-200 shadow-2xs text-center space-y-3">
+                  <p className="text-slate-600 font-bold">Standard Question Paper Format</p>
+                  <p className="text-slate-400 text-xs">This test paper contains 25 structured multiple-choice and descriptive questions generated according to your syllabus specifications.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer Actions */}
+            <div className="p-4 bg-white border-t border-slate-200 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsPreviewModalOpen(false);
+                  if (onOpenDocument) onOpenDocument(previewDoc.id);
+                }}
+                className="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white font-bold rounded-lg transition-colors cursor-pointer text-xs flex items-center gap-1.5"
+              >
+                <FileText className="w-4 h-4" /> Open Full A4 Canvas Editor
+              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-800 font-bold rounded-lg transition-colors cursor-pointer text-xs flex items-center gap-1.5"
+                >
+                  <Printer className="w-4 h-4" /> Print / Save PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsPreviewModalOpen(false)}
+                  className="px-4 py-2 border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold rounded-lg cursor-pointer text-xs"
+                >
+                  Close Preview
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
-

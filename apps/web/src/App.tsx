@@ -193,7 +193,7 @@ const AppContent: React.FC = () => {
 
   const handleOpenDocument = (docId: string) => {
     setActiveDocumentId(docId);
-    setCurrentPage('tests');
+    setCurrentPage('editor');
   };
 
   const handleCreatePaper = async (newDoc: Partial<DocumentModel>) => {
