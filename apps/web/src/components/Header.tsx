@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { ChevronDown, User, LogOut, Shield } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ChevronDown, User, LogOut, Shield, X, Check, Mail } from 'lucide-react';
 import { PageView } from './Sidebar.js';
 
 interface HeaderProps {
   currentPage: PageView;
+  onLogout?: () => void;
 }
 
 const pageTitles: Record<PageView, string> = {
@@ -23,8 +24,43 @@ const pageTitles: Record<PageView, string> = {
   science: 'Science Library'
 };
 
-export const Header: React.FC<HeaderProps> = ({ currentPage }) => {
+export const Header: React.FC<HeaderProps> = ({ currentPage, onLogout }) => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+
+  // Active User Profile State (persisted in localStorage)
+  const [userName, setUserName] = useState('Admin');
+  const [userEmail, setUserEmail] = useState('admin@eduforge.in');
+  const [userRole, setUserRole] = useState('Administrator');
+
+  useEffect(() => {
+    try {
+      const authData = localStorage.getItem('eduforge_auth');
+      if (authData) {
+        const parsed = JSON.parse(authData);
+        if (parsed.user) {
+          const capitalizedUser = parsed.user.charAt(0).toUpperCase() + parsed.user.slice(1);
+          setUserName(parsed.name || capitalizedUser);
+          setUserEmail(parsed.email || `${parsed.user.toLowerCase()}@eduforge.in`);
+        }
+      }
+    } catch {}
+  }, []);
+
+  const handleSaveProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const authData = localStorage.getItem('eduforge_auth');
+      const parsed = authData ? JSON.parse(authData) : {};
+      const updated = {
+        ...parsed,
+        name: userName,
+        email: userEmail
+      };
+      localStorage.setItem('eduforge_auth', JSON.stringify(updated));
+    } catch {}
+    setIsProfileModalOpen(false);
+  };
 
   return (
     <header className="h-14 bg-white border-b border-slate-200/80 px-8 flex items-center justify-between sticky top-0 z-30 shadow-2xs">
@@ -42,41 +78,131 @@ export const Header: React.FC<HeaderProps> = ({ currentPage }) => {
           onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
           className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-teal-50/50 text-slate-800 text-xs font-bold transition-all cursor-pointer active:scale-[0.98]"
         >
-          <span className="font-bold text-slate-900">Gautam</span>
+          <div className="w-5 h-5 rounded-full bg-teal-700 text-white flex items-center justify-center text-[10px] font-black uppercase">
+            {userName.charAt(0)}
+          </div>
+          <span className="font-bold text-slate-900">{userName}</span>
           <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
         </button>
 
         {isUserMenuOpen && (
-          <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-lg py-1 z-50 animate-in fade-in zoom-in-95 duration-100">
+          <div className="absolute right-0 mt-2 w-52 bg-white border border-slate-200 rounded-xl shadow-lg py-1 z-50 animate-in fade-in zoom-in-95 duration-100">
             <div className="px-4 py-2 border-b border-slate-100">
-              <p className="text-xs font-bold text-slate-900">Gautam</p>
-              <p className="text-[10px] text-slate-500">gautam@eduforge.in</p>
+              <p className="text-xs font-bold text-slate-900">{userName}</p>
+              <p className="text-[10px] text-slate-500 truncate">{userEmail}</p>
             </div>
+
             <button
               type="button"
-              className="w-full px-4 py-2 text-left text-xs text-slate-700 hover:bg-teal-50 flex items-center gap-2 cursor-pointer font-medium"
-              onClick={() => setIsUserMenuOpen(false)}
+              className="w-full px-4 py-2 text-left text-xs text-slate-700 hover:bg-teal-50 flex items-center gap-2 cursor-pointer font-semibold"
+              onClick={() => {
+                setIsUserMenuOpen(false);
+                setIsProfileModalOpen(true);
+              }}
             >
-              <User className="w-3.5 h-3.5 text-teal-600" /> Profile
+              <User className="w-3.5 h-3.5 text-teal-600" /> My Profile
             </button>
-            <button
-              type="button"
-              className="w-full px-4 py-2 text-left text-xs text-slate-700 hover:bg-teal-50 flex items-center gap-2 cursor-pointer font-medium"
-              onClick={() => setIsUserMenuOpen(false)}
-            >
-              <Shield className="w-3.5 h-3.5 text-teal-600" /> Role: Administrator
-            </button>
+
+            <div className="px-4 py-1.5 text-[11px] text-slate-500 flex items-center gap-2 font-medium">
+              <Shield className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+              <span>Role: <b className="text-slate-800">{userRole}</b></span>
+            </div>
+
             <div className="border-t border-slate-100 my-1" />
+
             <button
               type="button"
-              className="w-full px-4 py-2 text-left text-xs text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer font-medium"
-              onClick={() => setIsUserMenuOpen(false)}
+              className="w-full px-4 py-2 text-left text-xs text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer font-semibold"
+              onClick={() => {
+                setIsUserMenuOpen(false);
+                if (onLogout) onLogout();
+              }}
             >
               <LogOut className="w-3.5 h-3.5 text-red-500" /> Sign Out
             </button>
           </div>
         )}
       </div>
+
+      {/* Edit Profile Modal */}
+      {isProfileModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-sm w-full p-6 space-y-5 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 font-bold text-sm text-slate-900">
+              <span>Admin Profile Details</span>
+              <button
+                type="button"
+                onClick={() => setIsProfileModalOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveProfile} className="space-y-4 text-xs font-semibold text-slate-800">
+              <div>
+                <label className="block text-[11px] font-extrabold uppercase text-slate-500 mb-1">
+                  Full Name
+                </label>
+                <div className="relative">
+                  <User className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                  <input
+                    type="text"
+                    required
+                    value={userName}
+                    onChange={e => setUserName(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-slate-900 bg-white font-medium focus:ring-2 focus:ring-teal-600"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-extrabold uppercase text-slate-500 mb-1">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                  <input
+                    type="email"
+                    required
+                    value={userEmail}
+                    onChange={e => setUserEmail(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-slate-900 bg-white font-medium focus:ring-2 focus:ring-teal-600"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-extrabold uppercase text-slate-500 mb-1">
+                  User Role
+                </label>
+                <input
+                  type="text"
+                  disabled
+                  value={userRole}
+                  className="w-full p-2 border border-slate-200 rounded-lg text-slate-500 bg-slate-50 font-bold"
+                />
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setIsProfileModalOpen(false)}
+                  className="px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold rounded-lg cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-teal-700 hover:bg-teal-800 text-white font-bold rounded-lg shadow-sm hover:shadow-md transition-all active:scale-[0.98] cursor-pointer flex items-center gap-1.5"
+                >
+                  <Check className="w-3.5 h-3.5" /> Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </header>
   );
 };
