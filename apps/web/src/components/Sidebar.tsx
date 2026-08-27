@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   LayoutDashboard, Database, BookOpen, Layers,
-  FileText, ClipboardCheck, BarChart3, Image, Settings
+  FileText, ClipboardCheck, BarChart3, Image, Settings, LogOut
 } from 'lucide-react';
 
 export type PageView =
@@ -23,6 +23,7 @@ export type PageView =
 interface SidebarProps {
   currentPage: PageView;
   setCurrentPage: (page: PageView) => void;
+  onLogout?: () => void;
 }
 
 interface NavItem {
@@ -31,7 +32,7 @@ interface NavItem {
   icon: React.ElementType;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, onLogout }) => {
   const group1: NavItem[] = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'question_bank', label: 'Question Bank', icon: Database },
@@ -113,6 +114,20 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage })
           {renderNavGroup(group3)}
         </div>
       </div>
+
+      {/* Sidebar Footer Logout */}
+      {onLogout && (
+        <div className="p-3 border-t border-slate-100">
+          <button
+            type="button"
+            onClick={onLogout}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-red-600 hover:bg-red-50 transition-all cursor-pointer"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Sign Out</span>
+          </button>
+        </div>
+      )}
     </aside>
   );
 };

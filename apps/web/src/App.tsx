@@ -15,6 +15,7 @@ import { SettingsPage } from './pages/SettingsPage.js';
 import { EditorPage } from './pages/EditorPage.js';
 import { TemplatesPage } from './pages/TemplatesPage.js';
 import { ScienceLibraryPage } from './pages/ScienceLibraryPage.js';
+import { LoginPage } from './pages/LoginPage.js';
 import { PaperWizardModal } from './paper/PaperWizardModal.js';
 import { QuestionBuilderModal } from './questions/QuestionBuilderModal.js';
 import { TemplateGalleryModal } from './templates/TemplateGalleryModal.js';
@@ -23,6 +24,17 @@ import { DocumentModel, Template, Question } from '@eduforge/shared';
 import { ThemeProvider } from './state/ThemeContext.js';
 
 const AppContent: React.FC = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    try {
+      const authData = localStorage.getItem('eduforge_auth');
+      if (authData) {
+        const parsed = JSON.parse(authData);
+        return !!parsed.isAuthenticated;
+      }
+    } catch {}
+    return false;
+  });
+
   const [currentPage, setCurrentPage] = useState<PageView>('dashboard');
   const [activeDocumentId, setActiveDocumentId] = useState<string | null>(null);
   const [documents, setDocuments] = useState<DocumentModel[]>([]);
@@ -157,6 +169,15 @@ const AppContent: React.FC = () => {
     await handleCreatePaper(newDoc);
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('eduforge_auth');
+    setIsAuthenticated(false);
+  };
+
+  if (!isAuthenticated) {
+    return <LoginPage onLoginSuccess={() => setIsAuthenticated(true)} />;
+  }
+
   if (currentPage === 'editor' && activeDocumentId) {
     return (
       <EditorPage
@@ -175,6 +196,7 @@ const AppContent: React.FC = () => {
       <Sidebar
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
+        onLogout={handleLogout}
       />
 
       {/* Main Content Area */}
