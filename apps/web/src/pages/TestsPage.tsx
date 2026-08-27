@@ -28,6 +28,7 @@ export const TestsPage: React.FC<TestsPageProps> = ({
   onDuplicateDocument
 }) => {
   const [docs, setDocs] = useState<DocumentModel[]>(propDocs || []);
+  const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
 
   // Edit Modal State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -49,10 +50,64 @@ export const TestsPage: React.FC<TestsPageProps> = ({
     fetchLatestDocs();
   }, [propDocs]);
 
+  const toggleSelectDoc = (id: string) => {
+    const sId = String(id);
+    setSelectedDocIds(prev =>
+      prev.includes(sId) ? prev.filter(x => x !== sId) : [...prev, sId]
+    );
+  };
+
+  const toggleSelectAllDocs = () => {
+    if (selectedDocIds.length === docs.length) {
+      setSelectedDocIds([]);
+    } else {
+      setSelectedDocIds(docs.map(d => String(d.id)));
+    }
+  };
+
+  const handleBulkDeleteDocs = async () => {
+    if (selectedDocIds.length === 0) return;
+    if (confirm(`Are you sure you want to delete ${selectedDocIds.length} selected test paper(s)? Once deleted, your tests section will be updated.`)) {
+      const idsToDelete = [...selectedDocIds];
+      setDocs(prev => prev.filter(d => !idsToDelete.includes(String(d.id))));
+      setSelectedDocIds([]);
+
+      for (const id of idsToDelete) {
+        try {
+          if (onDeleteDocument) await onDeleteDocument(id);
+          await api.deleteDocument(id);
+        } catch (err) {
+          console.error('Failed deleting doc:', err);
+        }
+      }
+      fetchLatestDocs();
+    }
+  };
+
+  const handleDeleteAllDocs = async () => {
+    if (docs.length === 0) return;
+    if (confirm(`Are you sure you want to delete ALL ${docs.length} test papers? This will leave your tests section completely empty.`)) {
+      const allIds = docs.map(d => String(d.id));
+      setDocs([]);
+      setSelectedDocIds([]);
+
+      for (const id of allIds) {
+        try {
+          if (onDeleteDocument) await onDeleteDocument(id);
+          await api.deleteDocument(id);
+        } catch (err) {
+          console.error('Failed deleting doc:', err);
+        }
+      }
+      fetchLatestDocs();
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this test paper?')) {
       // Optimistic delete
       setDocs(prev => prev.filter(d => String(d.id) !== String(id)));
+      setSelectedDocIds(prev => prev.filter(x => x !== String(id)));
       try {
         if (onDeleteDocument) {
           await onDeleteDocument(id);
@@ -123,15 +178,37 @@ export const TestsPage: React.FC<TestsPageProps> = ({
           <h1 className="text-2xl font-bold text-slate-900">Tests</h1>
           <p className="text-xs text-slate-500 font-medium mt-0.5">Generate, publish, edit, and manage all your test papers.</p>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            if (onNewPaperWizard) onNewPaperWizard();
-          }}
-          className="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 shadow-sm hover:shadow-md transition-all active:scale-[0.98] cursor-pointer"
-        >
-          <Plus className="w-3.5 h-3.5" /> + Create / Generate Test
-        </button>
+        <div className="flex items-center gap-2">
+          {selectedDocIds.length > 0 && (
+            <button
+              type="button"
+              onClick={handleBulkDeleteDocs}
+              className="px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 shadow-sm hover:shadow-md transition-all active:scale-[0.98] cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Delete Selected ({selectedDocIds.length})
+            </button>
+          )}
+
+          {docs.length > 0 && (
+            <button
+              type="button"
+              onClick={handleDeleteAllDocs}
+              className="px-3.5 py-2 border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-bold rounded-lg flex items-center gap-1.5 shadow-2xs transition-all active:scale-[0.98] cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Delete All Tests
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => {
+              if (onNewPaperWizard) onNewPaperWizard();
+            }}
+            className="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 shadow-sm hover:shadow-md transition-all active:scale-[0.98] cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" /> + Create / Generate Test
+          </button>
+        </div>
       </div>
 
       {/* Tests Table */}
@@ -139,6 +216,14 @@ export const TestsPage: React.FC<TestsPageProps> = ({
         <table className="w-full text-left text-xs">
           <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold">
             <tr>
+              <th className="px-3 py-3 w-10 text-center">
+                <input
+                  type="checkbox"
+                  checked={docs.length > 0 && selectedDocIds.length === docs.length}
+                  onChange={toggleSelectAllDocs}
+                  className="w-4 h-4 text-teal-600 rounded border-slate-300 cursor-pointer"
+                />
+              </th>
               <th className="px-5 py-3">Test Paper Title</th>
               <th className="px-5 py-3">Subject</th>
               <th className="px-5 py-3">Questions</th>
@@ -150,8 +235,12 @@ export const TestsPage: React.FC<TestsPageProps> = ({
           <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
             {docs.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-5 py-8 text-center text-slate-400">
-                  No tests created yet. Click "+ Create / Generate Test" to generate your first test paper.
+                <td colSpan={7} className="px-5 py-12 text-center text-slate-400">
+                  <div className="flex flex-col items-center justify-center space-y-2">
+                    <Trash2 className="w-8 h-8 text-slate-300" />
+                    <p className="font-bold text-slate-700 text-sm">Tests section is completely empty.</p>
+                    <p className="text-xs text-slate-400">No tests created yet. Click "+ Create / Generate Test" to generate your first test paper.</p>
+                  </div>
                 </td>
               </tr>
             ) : (
@@ -159,9 +248,18 @@ export const TestsPage: React.FC<TestsPageProps> = ({
                 const totalQ = d.sections?.reduce((acc, s) => acc + (s.blocks?.length || 0), 0) || (d.metadata as any)?.totalQuestions || 25;
                 const durationText = `${d.metadata?.timeAllowedMinutes || (d.metadata as any)?.durationMinutes || 60} min`;
                 const subjectText = d.metadata?.subject || 'Physics & Chemistry';
+                const isSelected = selectedDocIds.includes(String(d.id));
 
                 return (
-                  <tr key={d.id} className="hover:bg-slate-50/80 transition-colors">
+                  <tr key={d.id} className={`hover:bg-slate-50/80 transition-colors ${isSelected ? 'bg-teal-50/40' : ''}`}>
+                    <td className="px-3 py-3.5 text-center">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelectDoc(d.id)}
+                        className="w-4 h-4 text-teal-600 rounded border-slate-300 cursor-pointer"
+                      />
+                    </td>
                     <td className="px-5 py-3.5 font-bold text-slate-900">
                       <button
                         type="button"

@@ -662,15 +662,34 @@ export const api = {
   },
 
   async deleteQuestion(id: string): Promise<void> {
+    if (isFacultyUser()) {
+      const local = getLocalQuestions().filter(q => q.id !== id);
+      saveLocalQuestions(local);
+      cache.questions = local;
+      return;
+    }
     try {
-      await fetchJson<void>(`${API_BASE}/question-bank/${id}`, {
-        method: 'DELETE'
+      let res = await fetch(`${API_BASE}/bank-questions/${id}/`, {
+        method: 'DELETE',
+        headers: getAuthHeader()
       });
+      if (!res.ok) {
+        res = await fetch(`${API_BASE}/question-bank/${id}`, {
+          method: 'DELETE',
+          headers: getAuthHeader()
+        });
+      }
       cache.questions = null;
     } catch {
       const local = getLocalQuestions().filter(q => q.id !== id);
       saveLocalQuestions(local);
       cache.questions = local;
+    }
+  },
+
+  async deleteMultipleQuestions(ids: string[]): Promise<void> {
+    for (const id of ids) {
+      await this.deleteQuestion(id);
     }
   },
 

@@ -18,6 +18,7 @@ export const QuestionBankPage: React.FC<QuestionBankPageProps> = ({
   const [search, setSearch] = useState('');
   const [difficultyFilter, setDifficultyFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Fast Preview Drawer State
   const [previewQuestion, setPreviewQuestion] = useState<Question | null>(null);
@@ -43,19 +44,49 @@ export const QuestionBankPage: React.FC<QuestionBankPageProps> = ({
     }
   };
 
+  const toggleSelectQuestion = (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === filteredList.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredList.map(q => q.id));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (confirm(`Are you sure you want to delete ${selectedIds.length} selected question(s)?`)) {
+      const idsToDelete = [...selectedIds];
+      setQuestions(prev => prev.filter(q => !idsToDelete.includes(q.id)));
+      setSelectedIds([]);
+      try {
+        await api.deleteMultipleQuestions(idsToDelete);
+      } catch (err) {
+        console.error('Failed bulk delete:', err);
+      } finally {
+        loadQuestions();
+      }
+    }
+  };
+
   // Instant Fast Delete (Optimistic UI removal for zero latency)
   const handleFastDelete = async (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
 
     if (confirm('Delete this question from your question bank?')) {
-      // Optimistic UI update: Remove immediately from screen
       setQuestions(prev => prev.filter(q => q.id !== id));
+      setSelectedIds(prev => prev.filter(x => x !== id));
 
       try {
         await api.deleteQuestion(id);
       } catch (err) {
         console.error('Failed to delete question on server:', err);
-        // Reload if delete failed
         loadQuestions();
       }
     }
@@ -104,13 +135,25 @@ export const QuestionBankPage: React.FC<QuestionBankPageProps> = ({
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => onOpenCreateQuestion && onOpenCreateQuestion()}
-          className="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 shadow-sm hover:shadow-md transition-all active:scale-[0.98] cursor-pointer"
-        >
-          <Plus className="w-3.5 h-3.5" /> + Create Question
-        </button>
+        <div className="flex items-center gap-2">
+          {selectedIds.length > 0 && (
+            <button
+              type="button"
+              onClick={handleBulkDelete}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 shadow-sm hover:shadow-md transition-all active:scale-[0.98] cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Delete Selected ({selectedIds.length})
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => onOpenCreateQuestion && onOpenCreateQuestion()}
+            className="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 shadow-sm hover:shadow-md transition-all active:scale-[0.98] cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" /> + Create Question
+          </button>
+        </div>
       </div>
 
       {/* Search & Filter Row */}
@@ -149,11 +192,19 @@ export const QuestionBankPage: React.FC<QuestionBankPageProps> = ({
           </select>
         </div>
 
-        {/* Questions Table with Fast Action Buttons */}
+        {/* Questions Table with Fast Action Buttons & Multi-select */}
         <div className="bg-white rounded-xl border border-slate-200/80 overflow-hidden shadow-2xs">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50/80 border-b border-slate-200/80 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
               <tr>
+                <th className="px-3 py-3.5 w-10 text-center">
+                  <input
+                    type="checkbox"
+                    checked={filteredList.length > 0 && selectedIds.length === filteredList.length}
+                    onChange={toggleSelectAll}
+                    className="w-4 h-4 text-teal-600 rounded border-slate-300 cursor-pointer"
+                  />
+                </th>
                 <th className="px-5 py-3.5">Question & Code</th>
                 <th className="px-5 py-3.5">Difficulty</th>
                 <th className="px-5 py-3.5">Marks</th>
@@ -164,35 +215,47 @@ export const QuestionBankPage: React.FC<QuestionBankPageProps> = ({
             <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="px-5 py-8 text-center text-slate-400 font-semibold">
+                  <td colSpan={6} className="px-5 py-8 text-center text-slate-400 font-semibold">
                     Loading questions from bank...
                   </td>
                 </tr>
               ) : filteredList.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-5 py-8 text-center text-slate-400 font-semibold">
+                  <td colSpan={6} className="px-5 py-8 text-center text-slate-400 font-semibold">
                     No questions match your filter. Click "+ Create Question" to add a new question.
                   </td>
                 </tr>
               ) : (
-                filteredList.map((q, idx) => (
-                  <tr
-                    key={q.id || idx}
-                    onClick={() => handleFastPreview(q as Question)}
-                    className="hover:bg-teal-50/40 transition-colors cursor-pointer group"
-                  >
-                    {/* Question Statement & Dynamic Code */}
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-2">
-                        <b className="text-[#007a87] font-mono text-[11px] bg-teal-50 border border-teal-200 px-2 py-0.5 rounded font-black shrink-0">
-                          {formatQuestionCode(q)}
-                        </b>
-                        <span className="text-slate-400 text-[11px]">· {q.subject || 'Biology'}</span>
-                      </div>
-                      <span className="text-slate-900 font-semibold line-clamp-1 mt-1 block">
-                        {getCleanQuestionText(q.rawText)}
-                      </span>
-                    </td>
+                filteredList.map((q, idx) => {
+                  const isSelected = selectedIds.includes(q.id);
+                  return (
+                    <tr
+                      key={q.id || idx}
+                      onClick={() => handleFastPreview(q as Question)}
+                      className={`hover:bg-teal-50/40 transition-colors cursor-pointer group ${isSelected ? 'bg-teal-50/50' : ''}`}
+                    >
+                      {/* Checkbox */}
+                      <td className="px-3 py-3.5 text-center" onClick={e => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={e => toggleSelectQuestion(q.id, e as any)}
+                          className="w-4 h-4 text-teal-600 rounded border-slate-300 cursor-pointer"
+                        />
+                      </td>
+
+                      {/* Question Statement & Dynamic Code */}
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-2">
+                          <b className="text-[#007a87] font-mono text-[11px] bg-teal-50 border border-teal-200 px-2 py-0.5 rounded font-black shrink-0">
+                            {formatQuestionCode(q)}
+                          </b>
+                          <span className="text-slate-400 text-[11px]">· {q.subject || 'Biology'}</span>
+                        </div>
+                        <span className="text-slate-900 font-semibold line-clamp-1 mt-1 block">
+                          {getCleanQuestionText(q.rawText)}
+                        </span>
+                      </td>
 
                     {/* Difficulty */}
                     <td className="px-5 py-3.5">
@@ -266,9 +329,10 @@ export const QuestionBankPage: React.FC<QuestionBankPageProps> = ({
                       </div>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
+                );
+              })
+            )}
+          </tbody>
           </table>
         </div>
       </div>
