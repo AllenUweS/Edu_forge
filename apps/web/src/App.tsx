@@ -217,6 +217,7 @@ const AppContent: React.FC = () => {
               onNavigateToQuestionBank={() => setCurrentPage('question_bank')}
               onNavigateToTemplates={() => setCurrentPage('templates')}
               onNavigateToScience={() => setCurrentPage('media_library')}
+              onNavigateToReports={() => setCurrentPage('reports')}
             />
           )}
 

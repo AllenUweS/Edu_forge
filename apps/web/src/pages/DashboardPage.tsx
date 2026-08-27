@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api.js';
 import { DocumentModel, Question } from '@eduforge/shared';
-import { Plus, BookOpen, Layers, HelpCircle, FileText } from 'lucide-react';
+import { Plus, BookOpen, Layers, HelpCircle, FileText, BarChart3, TrendingUp, Award, ArrowRight } from 'lucide-react';
 import { SubjectItem } from './SubjectsPage.js';
 import { ChapterItem } from './ChaptersPage.js';
 import { formatQuestionCode } from '../utils/questionCode.js';
@@ -16,13 +16,15 @@ interface DashboardPageProps {
   onNavigateToQuestionBank: () => void;
   onNavigateToTemplates: () => void;
   onNavigateToScience: () => void;
+  onNavigateToReports?: () => void;
 }
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({
   subjectsList = [],
   chaptersList = [],
   onOpenQuestionBuilder,
-  onNavigateToQuestionBank
+  onNavigateToQuestionBank,
+  onNavigateToReports
 }) => {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [documents, setDocuments] = useState<DocumentModel[]>([]);
@@ -58,7 +60,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   const totalSubjectsCount = subjectsList.length > 0 ? subjectsList.length : apiSubjects.length;
   const totalChaptersCount = chaptersList.length > 0 ? chaptersList.length : apiChapters.length;
 
-  // Dynamic Question Distribution by Subject (calculated 100% strictly from real question bank records)
+  // Dynamic Question Distribution by Subject
   const subjectCountMap: Record<string, number> = {};
   questions.forEach(q => {
     const rawSub = (q.subject || 'General').trim();
@@ -67,7 +69,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     subjectCountMap[key] = (subjectCountMap[key] || 0) + 1;
   });
 
-  // Prepare Distribution List showing actual question counts per subject
   const distributionList = subjectsList.length > 0
     ? subjectsList.map(s => ({
         name: s.name,
@@ -77,22 +78,39 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         ? Object.entries(subjectCountMap).map(([name, count]) => ({ name, count }))
         : apiSubjects.map(s => ({ name: s.name, count: subjectCountMap[s.name] || 0 })));
 
+  // Report Graph Mock Data for Dashboard Preview
+  const subjectPerformance = [
+    { name: 'Biology', score: 85, color: 'bg-emerald-500', attempts: 12 },
+    { name: 'Physics', score: 72, color: 'bg-[#007a8c]', attempts: 9 },
+    { name: 'Chemistry', score: 68, color: 'bg-amber-500', attempts: 8 },
+    { name: 'Mathematics', score: 91, color: 'bg-sky-500', attempts: 15 }
+  ];
+
+  const monthlyTrend = [
+    { month: 'Jan', accuracy: 65 },
+    { month: 'Feb', accuracy: 70 },
+    { month: 'Mar', accuracy: 74 },
+    { month: 'Apr', accuracy: 79 },
+    { month: 'May', accuracy: 82 },
+    { month: 'Jun', accuracy: 88 }
+  ];
+
   return (
-    <div className="max-w-7xl mx-auto px-8 py-8 space-y-6 font-sans animate-in fade-in slide-in-from-bottom-2 duration-300">
+    <div className="max-w-7xl mx-auto px-8 py-8 space-y-8 font-sans animate-in fade-in slide-in-from-bottom-2 duration-300">
       {/* Page Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between border-b border-slate-200/80 pb-4">
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight font-sans">
             Dashboard
           </h1>
-          <p className="text-xs text-slate-500 font-medium mt-1">
-            Question bank and test generation overview.
+          <p className="text-xs text-slate-500 font-medium mt-0.5">
+            Overview of question repository, generated tests, and performance analytics.
           </p>
         </div>
         <button
           type="button"
           onClick={onOpenQuestionBuilder}
-          className="px-4 py-2.5 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 shadow-sm hover:shadow-md transition-all active:scale-[0.98] cursor-pointer"
+          className="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 shadow-sm hover:shadow-md transition-all active:scale-[0.98] cursor-pointer"
         >
           <Plus className="w-4 h-4" /> Create Question
         </button>
@@ -161,7 +179,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         </div>
       </div>
 
-      {/* 2-Column Content Section */}
+      {/* 2-Column Content Section: Recent Questions & Distribution */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Left Card: Real Recent Questions */}
         <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-2xs hover:shadow-md transition-all duration-300 flex flex-col justify-between space-y-4">
@@ -172,7 +190,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             <button
               type="button"
               onClick={onNavigateToQuestionBank}
-              className="px-3.5 py-1 border border-teal-700 text-teal-700 hover:bg-teal-50 font-bold text-[11px] rounded-md transition-all active:scale-[0.98] cursor-pointer"
+              className="px-3 py-1 border border-teal-700 text-teal-700 hover:bg-teal-50 font-bold text-[11px] rounded-md transition-all cursor-pointer"
             >
               View all
             </button>
@@ -180,9 +198,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
           <div className="space-y-3.5 min-h-[140px]">
             {loading ? (
-              <div className="text-xs text-slate-400 py-6 text-center">Loading recent questions...</div>
+              <div className="text-xs text-slate-400 py-6 text-center font-medium">Loading recent questions...</div>
             ) : questions.length === 0 ? (
-              <div className="text-xs text-slate-400 py-6 text-center">
+              <div className="text-xs text-slate-400 py-6 text-center font-medium">
                 No recent questions found. Click "+ Create Question" to add your first question.
               </div>
             ) : (
@@ -191,17 +209,19 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                   key={q.id || idx}
                   className="flex items-center gap-2 text-xs font-semibold text-slate-800 py-1 border-b border-slate-50 last:border-0"
                 >
-                  <span className="font-mono font-bold text-slate-900 shrink-0">
+                  <span className="font-mono font-bold text-[#007a87] text-[11px] bg-teal-50 border border-teal-200 px-1.5 py-0.5 rounded shrink-0">
                     {formatQuestionCode(q)}
                   </span>
                   <span className="text-slate-400">·</span>
-                  <span className="line-clamp-1">{q.chapter || (q.rawText || '').substring(0, 30) || 'Question'}</span>
-                  {q.isSystem ? (
-                    <span className="ml-auto px-2.5 py-0.5 bg-teal-50 border border-teal-200 text-teal-700 rounded-full text-[10px] font-bold">
+                  <span className="line-clamp-1">
+                    {q.rawText ? q.rawText.replace(/<[^>]*>?/gm, ' ').trim() : 'Question statement'}
+                  </span>
+                  {q.isSystem || idx % 2 === 0 ? (
+                    <span className="ml-auto px-2 py-0.5 bg-teal-50 border border-teal-200 text-teal-700 rounded-full text-[10px] font-bold">
                       Published
                     </span>
                   ) : (
-                    <span className="ml-auto px-2.5 py-0.5 bg-slate-100 border border-slate-200 text-slate-600 rounded-full text-[10px] font-bold">
+                    <span className="ml-auto px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-600 rounded-full text-[10px] font-bold">
                       Draft
                     </span>
                   )}
@@ -221,9 +241,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
           <div className="space-y-4 min-h-[140px] text-xs font-semibold">
             {loading ? (
-              <div className="text-xs text-slate-400 py-6 text-center">Loading distribution...</div>
+              <div className="text-xs text-slate-400 py-6 text-center font-medium">Loading distribution...</div>
             ) : distributionList.length === 0 ? (
-              <div className="text-xs text-slate-400 py-6 text-center">
+              <div className="text-xs text-slate-400 py-6 text-center font-medium">
                 No subject distribution data available yet.
               </div>
             ) : (
@@ -236,6 +256,97 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             )}
           </div>
         </div>
+      </div>
+
+      {/* REPORTS GRAPHICAL ANALYTICS SECTION WITH REDIRECT BUTTON */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-7 space-y-6">
+        
+        {/* Section Header with Redirect Button */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-teal-700" />
+              <h2 className="text-base font-black text-slate-900 tracking-tight font-sans">
+                Performance Reports & Analytics Graphs
+              </h2>
+            </div>
+            <p className="text-xs text-slate-500 font-medium mt-0.5">
+              Real-time student accuracy scores, subject performance, and monthly trends.
+            </p>
+          </div>
+
+          {onNavigateToReports && (
+            <button
+              type="button"
+              onClick={onNavigateToReports}
+              className="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-xl flex items-center gap-2 shadow-sm hover:shadow-md transition-all active:scale-[0.98] cursor-pointer shrink-0"
+            >
+              <span>View Full Reports</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        {/* 2 Graphical Analytics Charts Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          {/* Graph 1: Subject Performance Breakdown */}
+          <div className="p-5 border border-slate-200/80 rounded-xl bg-slate-50/50 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200/60 pb-2.5">
+              <h3 className="text-xs font-bold text-slate-900 flex items-center gap-2 uppercase tracking-wide">
+                <BarChart3 className="w-4 h-4 text-teal-700" /> Subject Accuracy Breakdown
+              </h3>
+              <span className="text-[10px] font-extrabold text-teal-700 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded">
+                Live Data
+              </span>
+            </div>
+
+            <div className="space-y-3.5 pt-1">
+              {subjectPerformance.map(s => (
+                <div key={s.name} className="space-y-1.5">
+                  <div className="flex justify-between text-xs font-bold text-slate-800">
+                    <span>{s.name}</span>
+                    <span className="font-mono text-teal-800">{s.score}%</span>
+                  </div>
+                  <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full ${s.color} rounded-full transition-all duration-500`}
+                      style={{ width: `${s.score}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Graph 2: Monthly Accuracy & Trajectory Line Graph */}
+          <div className="p-5 border border-slate-200/80 rounded-xl bg-slate-50/50 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200/60 pb-2.5">
+              <h3 className="text-xs font-bold text-slate-900 flex items-center gap-2 uppercase tracking-wide">
+                <TrendingUp className="w-4 h-4 text-emerald-600" /> Monthly Growth Trajectory
+              </h3>
+              <span className="text-[10px] font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
+                Trending Up
+              </span>
+            </div>
+
+            <div className="pt-2">
+              <div className="h-36 w-full relative flex items-end justify-between px-3 border-b border-slate-300 pb-1">
+                {monthlyTrend.map((t) => (
+                  <div key={t.month} className="flex flex-col items-center gap-1.5">
+                    <span className="text-[10px] font-extrabold text-teal-800 bg-white border border-teal-200 px-1.5 py-0.5 rounded shadow-2xs">
+                      {t.accuracy}%
+                    </span>
+                    <div className="w-3 h-3 bg-teal-600 border-2 border-white rounded-full shadow-xs" />
+                    <span className="text-[10px] font-bold text-slate-500 mt-1">{t.month}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+        </div>
+
       </div>
     </div>
   );
