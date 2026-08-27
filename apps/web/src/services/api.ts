@@ -90,7 +90,7 @@ function getAuthHeader(): Record<string, string> {
     }
   } catch {}
   // Default fallback token for admin session
-  return { Authorization: 'Token cecbb723e23749f160c8b4b528225209deee9436' };
+  return { Authorization: 'Token 8f73d4d931452ac3db8b329c32aa129051278598' };
 }
 
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
