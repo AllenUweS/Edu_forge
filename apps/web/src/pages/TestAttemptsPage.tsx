@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, X, Edit3, Trash2 } from 'lucide-react';
+import { api } from '../services/api.js';
+import { DocumentModel } from '@eduforge/shared';
 
 export interface TestAttemptItem {
   id: string;
@@ -10,8 +12,35 @@ export interface TestAttemptItem {
   status: string;
 }
 
-export const TestAttemptsPage: React.FC = () => {
+export interface TestAttemptsPageProps {
+  documents?: DocumentModel[];
+}
+
+export const TestAttemptsPage: React.FC<TestAttemptsPageProps> = ({ documents = [] }) => {
   const [attempts, setAttempts] = useState<TestAttemptItem[]>([]);
+  const [testOptions, setTestOptions] = useState<string[]>([
+    'NEET Biology — Cell Structure & Function',
+    'JEE Main Physics — Kinematics & Motion',
+    'CBSE Class 12 Chemistry — Atomic Structure & Bonding',
+    'KCET Mathematics — Calculus & Vectors'
+  ]);
+
+  useEffect(() => {
+    const loadExistingTests = async () => {
+      try {
+        const fetchedDocs = await api.getDocuments();
+        const docTitles = (fetchedDocs || []).map(d => d.title).filter(Boolean);
+        const propDocTitles = (documents || []).map(d => d.title).filter(Boolean);
+        const combined = Array.from(new Set([...docTitles, ...propDocTitles, ...testOptions]));
+        if (combined.length > 0) {
+          setTestOptions(combined);
+        }
+      } catch (err) {
+        console.error('Failed to load existing tests:', err);
+      }
+    };
+    loadExistingTests();
+  }, [documents]);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -25,7 +54,7 @@ export const TestAttemptsPage: React.FC = () => {
   const handleOpenAdd = () => {
     setEditingId(null);
     setStudent('');
-    setTest('NEET Biology — Cell Test');
+    setTest(testOptions[0] || 'NEET Biology — Cell Structure & Function');
     setScore('160 / 200');
     setAccuracy('80%');
     setStatus('Completed');
@@ -191,15 +220,19 @@ export const TestAttemptsPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Test Title</label>
-                <input
-                  type="text"
+                <label className="block font-bold text-slate-700 mb-1">Select Existing Test</label>
+                <select
                   required
-                  placeholder="NEET Biology — Cell Test"
                   value={test}
                   onChange={e => setTest(e.target.value)}
-                  className="w-full p-2.5 border border-slate-300 rounded-md text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-slate-900 bg-white font-medium"
-                />
+                  className="w-full p-2.5 border border-slate-300 rounded-md text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-slate-900 bg-white font-medium cursor-pointer"
+                >
+                  {testOptions.map(tOption => (
+                    <option key={tOption} value={tOption}>
+                      {tOption}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="grid grid-cols-2 gap-3">

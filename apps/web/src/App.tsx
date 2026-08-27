@@ -287,7 +287,7 @@ const AppContent: React.FC = () => {
             />
           )}
 
-          {currentPage === 'test_attempts' && <TestAttemptsPage />}
+          {currentPage === 'test_attempts' && <TestAttemptsPage documents={documents} />}
 
           {currentPage === 'reports' && <ReportsPage />}
 
