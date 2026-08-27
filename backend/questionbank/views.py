@@ -104,6 +104,11 @@ class ChapterListCreateView(generics.ListCreateAPIView):
         )
 
 
+class AllChaptersListView(generics.ListCreateAPIView):
+    queryset = Chapter.objects.all()
+    serializer_class = ChapterSerializer
+
+
 class ChapterDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Chapter.objects.all()
     serializer_class = ChapterSerializer

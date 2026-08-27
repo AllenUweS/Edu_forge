@@ -345,25 +345,27 @@ export const api = {
   },
 
   async createSubject(subject: { name: string; code: string }): Promise<any> {
-    if (isFacultyUser()) {
-      try {
-        const raw = localStorage.getItem('eduforge_local_subjects_faculty');
-        const list = raw ? JSON.parse(raw) : [];
-        const newSub = { id: Date.now(), ...subject, chapters: 0, questions: 0, status: 'Active' };
-        list.push(newSub);
-        localStorage.setItem('eduforge_local_subjects_faculty', JSON.stringify(list));
-        return newSub;
-      } catch {
-        return { id: Date.now(), ...subject, chapters: 0, questions: 0, status: 'Active' };
-      }
-    }
     try {
-      return await fetchJson<any>(`${API_BASE}/subjects/`, {
+      const created = await fetchJson<any>(`${API_BASE}/subjects/`, {
         method: 'POST',
         body: JSON.stringify(subject)
       });
+      if (isFacultyUser()) {
+        const raw = localStorage.getItem('eduforge_local_subjects_faculty');
+        const list = raw ? JSON.parse(raw) : [];
+        list.push(created);
+        localStorage.setItem('eduforge_local_subjects_faculty', JSON.stringify(list));
+      }
+      return created;
     } catch {
-      return { id: Date.now(), ...subject, chapters: 0, questions: 0, status: 'Active' };
+      const newSub = { id: Date.now(), ...subject, chapters: 0, questions: 0, status: 'Active' };
+      if (isFacultyUser()) {
+        const raw = localStorage.getItem('eduforge_local_subjects_faculty');
+        const list = raw ? JSON.parse(raw) : [];
+        list.push(newSub);
+        localStorage.setItem('eduforge_local_subjects_faculty', JSON.stringify(list));
+      }
+      return newSub;
     }
   },
 
@@ -416,12 +418,26 @@ export const api = {
 
   async createChapter(subjectId: number | string, chapter: { title: string; name?: string }): Promise<any> {
     try {
-      return await fetchJson<any>(`${API_BASE}/subjects/${subjectId}/chapters/`, {
+      const created = await fetchJson<any>(`${API_BASE}/subjects/${subjectId}/chapters/`, {
         method: 'POST',
-        body: JSON.stringify(chapter)
+        body: JSON.stringify({ name: chapter.title || chapter.name })
       });
+      if (isFacultyUser()) {
+        const raw = localStorage.getItem('eduforge_local_chapters_faculty');
+        const list = raw ? JSON.parse(raw) : [];
+        list.push(created);
+        localStorage.setItem('eduforge_local_chapters_faculty', JSON.stringify(list));
+      }
+      return created;
     } catch {
-      return { id: `CH-${Date.now()}`, title: chapter.title || chapter.name, count: 0 };
+      const newCh = { id: `CH-${Date.now()}`, title: chapter.title || chapter.name, count: 0, subjectId };
+      if (isFacultyUser()) {
+        const raw = localStorage.getItem('eduforge_local_chapters_faculty');
+        const list = raw ? JSON.parse(raw) : [];
+        list.push(newCh);
+        localStorage.setItem('eduforge_local_chapters_faculty', JSON.stringify(list));
+      }
+      return newCh;
     }
   },
 

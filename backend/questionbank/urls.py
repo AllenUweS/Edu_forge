@@ -62,6 +62,12 @@ urlpatterns = [
     ),
 
     path(
+        "chapters/",
+        views.AllChaptersListView.as_view(),
+        name="all-chapters-list"
+    ),
+
+    path(
         "chapters/<int:pk>/",
         views.ChapterDetailView.as_view(),
         name="chapter-detail"
