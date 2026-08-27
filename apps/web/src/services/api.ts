@@ -44,34 +44,7 @@ const STORAGE_KEYS = {
   SETTINGS: 'eduforge_local_settings'
 };
 
-const defaultAdminDocs: DocumentModel[] = Array.from({ length: 10 }, (_, i) => ({
-  id: `test-${100 + i + 1}`,
-  title: `NEET & JEE Mock Test Paper ${i + 1}`,
-  templateId: 'standard-paper',
-  createdAt: new Date(Date.now() - (10 - i) * 86400000).toISOString(),
-  updatedAt: new Date(Date.now() - (10 - i) * 86400000).toISOString(),
-  metadata: {
-    subject: ['Biology', 'Physics', 'Chemistry', 'Mathematics'][i % 4],
-    totalMarks: 720,
-    durationMinutes: 180,
-    totalQuestions: 180
-  },
-  settings: {
-    pageSize: 'A4',
-    orientation: 'portrait',
-    margins: { top: 15, bottom: 15, left: 15, right: 15 },
-    columns: 2,
-    columnGap: 8,
-    columnDivider: true,
-    defaultFont: 'Calibri, sans-serif',
-    defaultFontSize: 10.5,
-    questionSpacing: 6,
-    optionSpacing: 4,
-    lineSpacing: 1.15,
-    paragraphSpacing: 4
-  },
-  sections: []
-}));
+const defaultAdminDocs: DocumentModel[] = [];
 
 function isFacultyUser(): boolean {
   try {
@@ -95,10 +68,10 @@ function getLocalDocs(): DocumentModel[] {
   }
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.DOCS);
-    if (raw && JSON.parse(raw).length > 0) return JSON.parse(raw);
-    return defaultAdminDocs;
+    if (raw !== null) return JSON.parse(raw);
+    return [];
   } catch {
-    return defaultAdminDocs;
+    return [];
   }
 }
 
@@ -175,22 +148,10 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
 export const api = {
   // Documents & Exam Papers
   async getDocuments(search?: string): Promise<DocumentModel[]> {
-    if (isFacultyUser()) {
-      const local = getLocalDocs();
-      if (search) {
-        return local.filter(d => d.title.toLowerCase().includes(search.toLowerCase()));
-      }
-      return local;
-    }
     try {
       const query = search ? `?search=${encodeURIComponent(search)}` : '';
-      let docs: DocumentModel[] = [];
-      try {
-        docs = await fetchJson<DocumentModel[]>(`${API_BASE}/documents${query}`);
-      } catch {
-        docs = await fetchJson<DocumentModel[]>(`${API_BASE}/exam-papers/${query}`);
-      }
-      if (Array.isArray(docs) && docs.length > 0) {
+      const docs = await fetchJson<DocumentModel[]>(`${API_BASE}/exam-papers/${query}`);
+      if (Array.isArray(docs)) {
         cache.documents = docs;
         saveLocalDocs(docs);
         return docs;
