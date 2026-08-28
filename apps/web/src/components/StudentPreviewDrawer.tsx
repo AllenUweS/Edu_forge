@@ -18,14 +18,7 @@ export const StudentPreviewDrawer: React.FC<StudentPreviewDrawerProps> = ({
 
   const defaultQuestionText = question?.rawText || 'Identify the structure shown below.';
   const defaultCode = question?.id ? `BIO-CELL-${question.id.slice(-4)}` : 'BIO-CELL-0016';
-  const defaultOptions = question?.options && question.options.length > 0
-    ? question.options
-    : [
-        { key: 'A', rawText: 'Nucleus' },
-        { key: 'B', rawText: 'Mitochondria' },
-        { key: 'C', rawText: 'Ribosome' },
-        { key: 'D', rawText: 'Golgi apparatus' }
-      ];
+  const defaultOptions = question?.options || [];
 
   const imageSrc = question?.imageUrl || question?.imageUrls?.[0];
 
@@ -73,16 +66,22 @@ export const StudentPreviewDrawer: React.FC<StudentPreviewDrawerProps> = ({
           )}
 
           <div className="space-y-2 pt-2">
-            {defaultOptions.map((opt, idx) => (
-              <div
-                key={opt.key || idx}
-                className="p-3 border border-slate-200 rounded-lg bg-white hover:bg-slate-50 transition-colors flex items-center gap-2.5 text-sm font-medium"
-              >
-                <span className="text-slate-400 font-bold">○</span>
-                <span className="font-bold text-slate-900">{opt.key?.toUpperCase() || String.fromCharCode(65 + idx)}.</span>
-                <MathTextRenderer text={(opt as any).rawText || (typeof (opt as any).content === 'string' ? (opt as any).content : '')} />
+            {defaultOptions.length > 0 ? (
+              defaultOptions.map((opt, idx) => (
+                <div
+                  key={opt.key || idx}
+                  className="p-3 border border-slate-200 rounded-lg bg-white hover:bg-slate-50 transition-colors flex items-center gap-2.5 text-sm font-medium"
+                >
+                  <span className="text-slate-400 font-bold">○</span>
+                  <span className="font-bold text-slate-900">{opt.key?.toUpperCase() || String.fromCharCode(65 + idx)}.</span>
+                  <MathTextRenderer text={(opt as any).rawText || (typeof (opt as any).content === 'string' ? (opt as any).content : '')} />
+                </div>
+              ))
+            ) : (
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-slate-400 text-xs italic text-center font-medium">
+                No options added to this question yet.
               </div>
-            ))}
+            )}
           </div>
         </div>
       </aside>

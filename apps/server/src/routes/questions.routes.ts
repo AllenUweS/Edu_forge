@@ -3,14 +3,14 @@ import { supabase } from '../config/supabase.js';
 
 export const questionsRouter = Router();
 
-// GET /api/questions - Lightweight summaries
+// GET /api/questions - Full question list with options
 questionsRouter.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { subject, chapter, difficulty, search } = req.query;
 
     let query = supabase
       .from('questions')
-      .select('id, question_code, difficulty, marks, question_type, raw_text, subjects(name), chapters(title)');
+      .select('*, subjects(name), chapters(title), question_options(*)');
 
     if (difficulty && difficulty !== 'all') {
       query = query.eq('difficulty', difficulty as string);
@@ -23,22 +23,48 @@ questionsRouter.get('/', async (req: Request, res: Response, next: NextFunction)
     const { data, error } = await query;
 
     if (error) {
-      // Fallback response if DB table is empty/connecting
+      console.error('Supabase getQuestions error:', error);
       return res.json({ success: true, data: [] });
     }
 
-    const summaries = (data || []).map((q: any) => ({
-      id: q.id,
-      questionCode: q.question_code,
-      subject: q.subjects?.name || 'General',
-      chapter: q.chapters?.title || 'General',
-      difficulty: q.difficulty || 'Medium',
-      marks: q.marks || 1,
-      questionType: q.question_type || 'MCQ_SINGLE',
-      questionPreview: q.raw_text ? q.raw_text.substring(0, 120) : 'Question Content'
-    }));
+    const formattedList = (data || []).map((q: any) => {
+      const options = (q.question_options || []).map((opt: any) => {
+        let textVal = opt.raw_text || '';
+        if (!textVal && Array.isArray(opt.content)) {
+          textVal = opt.content.map((c: any) => c.latex ? `\\(${c.latex}\\)` : (c.html || c.text || '')).join(' ');
+        }
+        return {
+          id: opt.id,
+          key: opt.option_key ? opt.option_key.toUpperCase() : 'A',
+          content: opt.content || [],
+          rawText: textVal,
+          isCorrect: q.correct_option === opt.option_key
+        };
+      });
 
-    res.json({ success: true, data: summaries });
+      return {
+        id: q.id,
+        questionCode: q.question_code,
+        questionType: q.question_type || 'MCQ_SINGLE',
+        content: q.content || [],
+        explanation: q.explanation || [],
+        difficulty: q.difficulty || 'Medium',
+        marks: Number(q.marks) || 1,
+        negativeMarks: Number(q.negative_marks) || 0,
+        correctAnswer: (q.correct_option || 'a').toUpperCase(),
+        optionLayout: q.option_layout || 'grid_2x2',
+        year: q.year,
+        source: q.source,
+        rawText: q.raw_text || '',
+        subject: q.subjects?.name || 'General',
+        chapter: q.chapters?.title || 'General',
+        options,
+        createdAt: q.created_at,
+        updatedAt: q.updated_at
+      };
+    });
+
+    res.json({ success: true, data: formattedList });
   } catch (err) {
     next(err);
   }

@@ -96,11 +96,41 @@ export const QuestionBankPage: React.FC<QuestionBankPageProps> = ({
     }
   };
 
-  // Fast Preview Handler
-  const handleFastPreview = (q: Question, e?: React.MouseEvent) => {
+  // Fast Preview Handler with full Supabase detail fetch
+  const handleFastPreview = async (q: Question, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
+    try {
+      if (q.id) {
+        const fullDetail = await api.getQuestion(q.id);
+        if (fullDetail) {
+          setPreviewQuestion(fullDetail);
+          setIsPreviewOpen(true);
+          return;
+        }
+      }
+    } catch {
+      // Fallback to in-memory item
+    }
     setPreviewQuestion(q);
     setIsPreviewOpen(true);
+  };
+
+  // Edit Question Handler with full Supabase detail fetch
+  const handleEditQuestion = async (q: Question, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!onOpenCreateQuestion) return;
+    try {
+      if (q.id) {
+        const fullDetail = await api.getQuestion(q.id);
+        if (fullDetail) {
+          onOpenCreateQuestion(fullDetail);
+          return;
+        }
+      }
+    } catch {
+      // Fallback
+    }
+    onOpenCreateQuestion(q);
   };
 
   // Helper to strip HTML tags and image URLs to display clean question text
@@ -366,10 +396,7 @@ export const QuestionBankPage: React.FC<QuestionBankPageProps> = ({
                         {/* Edit Button */}
                         <button
                           type="button"
-                          onClick={e => {
-                            e.stopPropagation();
-                            onOpenCreateQuestion && onOpenCreateQuestion(q as Question);
-                          }}
+                          onClick={e => handleEditQuestion(q as Question, e)}
                           className="p-1.5 border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 rounded-lg transition-colors cursor-pointer"
                           title="Edit Question"
                         >
