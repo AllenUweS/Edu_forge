@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Eye, Copy, Edit3, X, Save, Printer, FileText } from 'lucide-react';
 import { DocumentModel } from '@eduforge/shared';
 import { api } from '../services/api.js';
+import { MathTextRenderer } from '../equation/MathTextRenderer.js';
+import { OptionLayoutRenderer } from '../questions/OptionLayoutRenderer.js';
 
 export interface TestItem {
   id: string;
@@ -462,29 +464,33 @@ export const TestsPage: React.FC<TestsPageProps> = ({
 
                     <div className="space-y-4">
                       {sec.blocks && sec.blocks.length > 0 ? (
-                        sec.blocks.map((blk: any, bIdx) => (
-                          <div key={blk.id || bIdx} className="p-3 bg-slate-50/70 border border-slate-200/80 rounded-lg space-y-2">
-                            <div className="flex items-start justify-between gap-3">
-                              <p className="font-semibold text-slate-900 text-xs">
-                                <span className="font-bold font-mono mr-2">Q{bIdx + 1}.</span>
-                                {blk.data?.question?.rawText || blk.data?.text || blk.text || 'Question Statement'}
-                              </p>
-                              <span className="text-[11px] font-bold text-slate-500 font-mono">[{blk.data?.question?.marks || 1} Mark]</span>
-                            </div>
+                        sec.blocks.map((blk: any, bIdx) => {
+                          const qObj = blk.question || blk.data?.question;
+                          const qText = qObj?.rawText || blk.data?.text || blk.text || 'Question Statement';
+                          const qOptions = qObj?.options || blk.data?.options;
 
-                            {/* Options if present */}
-                            {blk.data?.question?.options && (
-                              <div className="grid grid-cols-2 gap-2 pt-1 font-medium text-[11px] text-slate-700">
-                                {blk.data.question.options.map((opt: any, oIdx: number) => (
-                                  <div key={oIdx} className="p-1.5 bg-white border border-slate-200 rounded">
-                                    <span className="font-bold mr-1.5 text-teal-700">({String.fromCharCode(65 + oIdx)})</span>
-                                    {opt.text || opt}
-                                  </div>
-                                ))}
+                          return (
+                            <div key={blk.id || bIdx} className="p-3 bg-slate-50/70 border border-slate-200/80 rounded-lg space-y-2">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="font-semibold text-slate-900 text-xs flex items-start gap-2">
+                                  <span className="font-bold font-mono shrink-0">Q{bIdx + 1}.</span>
+                                  <MathTextRenderer text={qText} />
+                                </div>
+                                <span className="text-[11px] font-bold text-slate-500 font-mono shrink-0">[{qObj?.marks || 1} Mark]</span>
                               </div>
-                            )}
-                          </div>
-                        ))
+
+                              {/* Options */}
+                              {qOptions && qOptions.length > 0 && (
+                                <div className="pt-1">
+                                  <OptionLayoutRenderer
+                                    options={qOptions}
+                                    layoutType={qObj?.optionLayout || 'grid_2x2'}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })
                       ) : (
                         <p className="text-slate-400 italic text-center py-2">No question blocks added to this section yet.</p>
                       )}

@@ -123,6 +123,18 @@ const EditableOptionItem: React.FC<{
     }
   };
 
+  const getOptionTextContent = (option: QuestionOption): string => {
+    if (option.rawText && option.rawText.trim()) return option.rawText.trim();
+    if (typeof option.content === 'string') return option.content;
+    if (Array.isArray(option.content)) {
+      return JSON.stringify(option.content);
+    }
+    if (option.content && typeof option.content === 'object') {
+      return JSON.stringify(option.content);
+    }
+    return '';
+  };
+
   return (
     <div
       onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }}
@@ -229,11 +241,16 @@ const EditableOptionItem: React.FC<{
             }`}
             title={isEditable ? 'Click to edit option text or drop science formula' : undefined}
           >
-            {opt.rawText ? (
-              <MathTextRenderer text={opt.rawText} />
-            ) : !opt.imageUrl ? (
-              <span className="text-slate-400 italic text-xs">Empty option...</span>
-            ) : null}
+            {(() => {
+              const textVal = getOptionTextContent(opt);
+              if (textVal) {
+                return <MathTextRenderer text={textVal} />;
+              }
+              if (!opt.imageUrl && !opt.diagramSvg) {
+                return <span className="text-slate-400 italic text-xs">Empty option...</span>;
+              }
+              return null;
+            })()}
           </div>
         )}
       </div>

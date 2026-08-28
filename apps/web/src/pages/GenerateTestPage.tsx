@@ -6,6 +6,8 @@ import {
   HelpCircle, Shuffle, Award, Search, ArrowRight, ArrowLeft, Layers
 } from 'lucide-react';
 import { formatQuestionCode } from '../utils/questionCode.js';
+import { MathTextRenderer } from '../equation/MathTextRenderer.js';
+import { OptionLayoutRenderer } from '../questions/OptionLayoutRenderer.js';
 
 interface GenerateTestPageProps {
   onOpenDocument?: (docId: string) => void;
@@ -730,7 +732,7 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                             </span>
                           </div>
                           <div className="line-clamp-2 leading-relaxed text-slate-900 font-medium">
-                            {q.rawText || 'Question statement text...'}
+                            <MathTextRenderer text={q.rawText || ''} />
                           </div>
                         </div>
 

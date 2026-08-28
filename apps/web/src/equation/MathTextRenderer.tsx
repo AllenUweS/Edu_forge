@@ -121,10 +121,38 @@ export const MathTextRenderer: React.FC<MathTextRendererProps> = ({
   className = '',
   block = false
 }) => {
-  if (!text || typeof text !== 'string') return null;
+  if (!text) return null;
+
+  // Support JSON-stringified block arrays e.g. [{"type":"equation","latex":"..."}]
+  if (typeof text === 'string' && (text.startsWith('[') || text.startsWith('{'))) {
+    try {
+      const parsed = JSON.parse(text);
+      if (Array.isArray(parsed)) {
+        return (
+          <span className={className}>
+            {parsed.map((item: any, idx: number) => {
+              if (item.type === 'equation' || item.latex) {
+                return <KaTeXRenderer key={idx} math={item.latex || item.rawLatex || ''} block={item.displayMode === 'block'} />;
+              }
+              if (item.html || item.text) {
+                return <MathTextRenderer key={idx} text={item.html || item.text} />;
+              }
+              return null;
+            })}
+          </span>
+        );
+      } else if (parsed && (parsed.type === 'equation' || parsed.latex)) {
+        return <KaTeXRenderer math={parsed.latex || parsed.rawLatex || ''} block={parsed.displayMode === 'block'} className={className} />;
+      }
+    } catch {
+      // Not valid JSON, proceed to text parsing
+    }
+  }
+
+  const textStr = typeof text === 'string' ? text : String(text);
 
   // First decode HTML entities if encoded like &lt;p&gt;
-  let decoded = text
+  let decoded = textStr
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
