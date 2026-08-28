@@ -55,45 +55,97 @@ const AppContent: React.FC = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Shared frontend state for subjects and chapters
-  const [subjectsList, setSubjectsList] = useState<SubjectItem[]>([
-    { name: 'Biology', code: 'BIO', chapters: 28, questions: 0, color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-    { name: 'Physics', code: 'PHY', chapters: 32, questions: 0, color: 'bg-sky-50 text-sky-700 border-sky-200' },
-    { name: 'Chemistry', code: 'CHE', chapters: 26, questions: 0, color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
-    { name: 'Mathematics', code: 'MAT', chapters: 24, questions: 0, color: 'bg-amber-50 text-amber-700 border-amber-200' }
-  ]);
+  // Shared frontend state for subjects and chapters synced with Supabase DB
+  const [subjectsList, setSubjectsList] = useState<SubjectItem[]>([]);
+  const [chaptersList, setChaptersList] = useState<ChapterItem[]>([]);
 
-  const [chaptersList, setChaptersList] = useState<ChapterItem[]>([
-    { id: 'BIO-CELL-0012', title: 'Cell Structure & Function', subject: 'Biology', count: 0 },
-    { id: 'PHY-MOT-0041', title: 'Kinematics & Motion', subject: 'Physics', count: 0 },
-    { id: 'CHE-ATOM-0027', title: 'Atomic Structure & Bonding', subject: 'Chemistry', count: 0 },
-    { id: 'PHY-ELE-0089', title: 'Electrostatics & Current', subject: 'Physics', count: 0 },
-    { id: 'CHE-ORG-0105', title: 'Organic Reaction Mechanisms', subject: 'Chemistry', count: 0 },
-    { id: 'BIO-GEN-0054', title: 'Genetics & Inheritance', subject: 'Biology', count: 0 }
-  ]);
+  const loadBackendSubjects = async () => {
+    try {
+      const data = await api.getSubjects();
+      if (data && Array.isArray(data)) {
+        setSubjectsList(data);
+      }
+    } catch (e) {
+      console.error('Failed loading backend subjects:', e);
+    }
+  };
 
-  const handleAddSubject = (newSub: SubjectItem) => {
+  const loadBackendChapters = async () => {
+    try {
+      const data = await api.getChapters();
+      if (data && Array.isArray(data)) {
+        const mapped: ChapterItem[] = data.map((ch: any, idx: number) => ({
+          num: String(idx + 1).padStart(2, '0'),
+          id: String(ch.id || `CH-${idx + 1}`),
+          title: ch.title || ch.name || 'Untitled Chapter',
+          subject: ch.subject || 'Biology',
+          count: ch.count || 0
+        }));
+        setChaptersList(mapped);
+      }
+    } catch (e) {
+      console.error('Failed loading backend chapters:', e);
+    }
+  };
+
+  useEffect(() => {
+    loadBackendSubjects();
+    loadBackendChapters();
+  }, []);
+
+  const handleAddSubject = async (newSub: SubjectItem) => {
     setSubjectsList(prev => [...prev, newSub]);
+    try {
+      await api.createSubject(newSub);
+    } catch (err) {
+      console.error('Failed to create subject in Supabase:', err);
+    } finally {
+      loadBackendSubjects();
+    }
   };
 
-  const handleEditSubject = (originalCode: string, updatedSub: SubjectItem) => {
+  const handleEditSubject = async (originalCode: string, updatedSub: SubjectItem) => {
     setSubjectsList(prev => prev.map(s => s.code === originalCode ? updatedSub : s));
+    try {
+      const target = subjectsList.find(s => s.code === originalCode);
+      if (target?.id) {
+        await api.updateSubject(target.id, updatedSub);
+      }
+    } catch (err) {
+      console.error('Failed to edit subject in Supabase:', err);
+    } finally {
+      loadBackendSubjects();
+    }
   };
 
-  const handleAddChapter = (newCh: ChapterItem) => {
+  const handleAddChapter = async (newCh: ChapterItem) => {
     setChaptersList(prev => [newCh, ...prev]);
-    // Increment chapter count in target subject
-    setSubjectsList(prev =>
-      prev.map(s =>
-        s.name.toLowerCase() === newCh.subject.toLowerCase()
-          ? { ...s, chapters: s.chapters + 1 }
-          : s
-      )
-    );
+    try {
+      await api.createChapter(newCh.subject, {
+        title: newCh.title,
+        code: newCh.id,
+        name: newCh.title
+      });
+    } catch (err) {
+      console.error('Failed to add chapter in Supabase:', err);
+    } finally {
+      loadBackendChapters();
+      loadBackendSubjects();
+    }
   };
 
-  const handleEditChapter = (originalId: string, updatedCh: ChapterItem) => {
+  const handleEditChapter = async (originalId: string, updatedCh: ChapterItem) => {
     setChaptersList(prev => prev.map(c => c.id === originalId ? updatedCh : c));
+    try {
+      await api.updateChapter(originalId, {
+        title: updatedCh.title,
+        code: updatedCh.id
+      });
+    } catch (err) {
+      console.error('Failed to edit chapter in Supabase:', err);
+    } finally {
+      loadBackendChapters();
+    }
   };
 
   const handleDeleteSubject = async (codeOrId: string) => {
@@ -104,6 +156,8 @@ const AppContent: React.FC = () => {
       await api.deleteSubject(targetId);
     } catch (err) {
       console.error('Failed to delete subject:', err);
+    } finally {
+      loadBackendSubjects();
     }
   };
 
@@ -113,6 +167,8 @@ const AppContent: React.FC = () => {
       await api.deleteChapter(id);
     } catch (err) {
       console.error('Failed to delete chapter:', err);
+    } finally {
+      loadBackendChapters();
     }
   };
 

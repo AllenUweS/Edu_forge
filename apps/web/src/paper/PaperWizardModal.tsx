@@ -3,6 +3,7 @@ import { api } from '../services/api.js';
 import { Template, DocumentModel, DocumentSection } from '@eduforge/shared';
 import { RichTextEditor } from '../components/RichTextEditor.js';
 import { FilePlus, X, Check, ArrowRight, ArrowLeft, Columns, Settings2, BookOpen, Plus, Trash2 } from 'lucide-react';
+import { getUserProfile } from '../utils/userProfile.js';
 
 interface PaperWizardModalProps {
   isOpen: boolean;
@@ -15,6 +16,7 @@ export const PaperWizardModal: React.FC<PaperWizardModalProps> = ({
   onClose,
   onCreatePaper
 }) => {
+  const user = getUserProfile();
   const [step, setStep] = useState<number>(1);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
@@ -104,6 +106,8 @@ export const PaperWizardModal: React.FC<PaperWizardModalProps> = ({
         timeAllowedMinutes,
         maxMarks,
         generalInstructions,
+        createdBy: user.name || user.email,
+        author: user.name || user.email,
         headerTemplate: selectedTemplate?.defaultMetadata?.headerTemplate || 'boxed'
       },
       settings: selectedTemplate?.settings || {

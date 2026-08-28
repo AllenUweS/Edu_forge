@@ -213,6 +213,8 @@ export interface PaperMetadata {
   date?: string;
   logoUrl?: string;
   headerTemplate?: 'boxed' | 'classic' | 'minimal' | 'modern' | 'double_line';
+  createdBy?: string;
+  author?: string;
 }
 
 export interface DocumentSettings {

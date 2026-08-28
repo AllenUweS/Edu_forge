@@ -9,6 +9,8 @@ import { formatQuestionCode } from '../utils/questionCode.js';
 import { MathTextRenderer } from '../equation/MathTextRenderer.js';
 import { OptionLayoutRenderer } from '../questions/OptionLayoutRenderer.js';
 
+import { getUserProfile } from '../utils/userProfile.js';
+
 interface GenerateTestPageProps {
   initialDocument?: DocumentModel | null;
   onOpenDocument?: (docId: string) => void;
@@ -20,6 +22,7 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
   onOpenDocument,
   onNavigateToTests
 }) => {
+  const user = getUserProfile();
   // Live Backend Data
   const [questions, setQuestions] = useState<Question[]>([]);
   const [subjects, setSubjects] = useState<any[]>([]);
@@ -30,14 +33,7 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
   const [currentStep, setCurrentStep] = useState<number>(1);
 
   // User Subject Restriction
-  const userSubject = (() => {
-    try {
-      const u = JSON.parse(localStorage.getItem('eduforge_user') || '{}');
-      return u.assigned_subject || 'All';
-    } catch {
-      return 'All';
-    }
-  })();
+  const userSubject = user.assigned_subject;
 
   // Form State
   const [testName, setTestName] = useState<string>('EduForge Practice Test');
@@ -288,6 +284,8 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
         timeAllowedMinutes: Number(durationMinutes) || 60,
         maxMarks: computedTotalMarks,
         totalQuestions: totalSelectedQuestionsCount,
+        createdBy: user.name || user.email,
+        author: user.name || user.email,
         generalInstructions: [
           `There are ${totalSelectedQuestionsCount} multiple-choice questions.`,
           `Each question carries ${marksPerQuestion} marks.`,

@@ -4,6 +4,7 @@ import { api } from '../services/api.js';
 import { RichTextEditor } from '../components/RichTextEditor.js';
 import { StudentPreviewDrawer } from '../components/StudentPreviewDrawer.js';
 import { formatQuestionCode } from '../utils/questionCode.js';
+import { getUserProfile } from '../utils/userProfile.js';
 
 interface ContentBlock {
   id: string;
@@ -21,15 +22,8 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
   initialQuestion,
   onBackToQuestionBank
 }) => {
-  // User Profile Subject Restriction
-  const userSubject = (() => {
-    try {
-      const u = JSON.parse(localStorage.getItem('eduforge_user') || '{}');
-      return u.assigned_subject || 'All';
-    } catch {
-      return 'All';
-    }
-  })();
+  const user = getUserProfile();
+  const userSubject = user.assigned_subject;
 
   // Metadata state
   const [subject, setSubject] = useState(
@@ -194,6 +188,9 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
       difficulty,
       marks,
       negativeMarks,
+      author: user.name || user.email,
+      created_by: user.name || user.email,
+      source: user.name || user.email,
       options: options.map((o, idx) => ({
         ...o,
         key: o.key || String.fromCharCode(65 + idx),
