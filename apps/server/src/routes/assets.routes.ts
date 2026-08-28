@@ -30,7 +30,20 @@ assetsRouter.get('/', async (req: Request, res: Response, next: NextFunction) =>
     if (error || !data) {
       return res.json({ success: true, data: [] });
     }
-    res.json({ success: true, data });
+    const formatted = data.map((a: any) => ({
+      id: a.id,
+      name: a.filename || 'Untitled Asset',
+      filename: a.filename,
+      label: 'FIGURE',
+      url: a.public_url || '',
+      public_url: a.public_url || '',
+      storagePath: a.storage_path,
+      mimeType: a.mime_type,
+      sizeBytes: a.size_bytes,
+      usesCount: 0,
+      createdAt: a.created_at
+    }));
+    res.json({ success: true, data: formatted });
   } catch (err) {
     next(err);
   }

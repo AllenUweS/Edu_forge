@@ -154,17 +154,20 @@ export const MediaLibraryPage: React.FC = () => {
               className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 overflow-hidden flex flex-col justify-between"
             >
               <div className="h-48 m-3 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-center overflow-hidden relative group">
-                <img
-                  src={asset.url}
-                  alt={asset.name}
-                  className="max-h-full max-w-full object-contain p-2"
-                  onError={e => {
-                    // Fallback preview
-                    (e.target as HTMLElement).style.display = 'none';
-                  }}
-                />
+                {asset.url ? (
+                  <img
+                    src={asset.url}
+                    alt={asset.name || 'Media Asset'}
+                    className="max-h-full max-w-full object-contain p-2 transition-transform duration-200 group-hover:scale-105"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-slate-400 gap-1.5 p-4 text-center">
+                    <ImageIcon className="w-10 h-10 text-slate-300" />
+                    <span className="text-[11px] font-bold text-slate-500">Image Asset</span>
+                  </div>
+                )}
                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide absolute bottom-2 left-2 bg-white/90 backdrop-blur-xs px-2 py-0.5 rounded border border-slate-200">
-                  {asset.label}
+                  {asset.label || 'FIGURE'}
                 </span>
               </div>
               <div className="px-5 pb-4 pt-1 text-xs flex items-center justify-between">

@@ -5,7 +5,15 @@ const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://loca
 export const assetsApi = {
   async getMedia(): Promise<any[]> {
     try {
-      return await fetchApi<any[]>('/api/assets');
+      const rawList = await fetchApi<any[]>('/api/assets');
+      if (!Array.isArray(rawList)) return [];
+      return rawList.map(a => ({
+        id: a.id,
+        name: a.name || a.filename || 'Untitled Asset',
+        label: a.label || (a.mimeType ? a.mimeType.split('/')[1]?.toUpperCase() : 'FIGURE') || 'FIGURE',
+        url: a.url || a.public_url || a.publicUrl || '',
+        usesCount: a.usesCount || a.uses_count || 0
+      }));
     } catch {
       return [];
     }
