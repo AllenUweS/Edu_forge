@@ -90,9 +90,10 @@ export const Header: React.FC<HeaderProps> = ({ currentPage, onLogout }) => {
               assignedSubject === 'Chemistry' ? 'bg-cyan-100 text-cyan-800 border border-cyan-200' :
               assignedSubject === 'Biology' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
               assignedSubject === 'Mathematics' ? 'bg-purple-100 text-purple-800 border border-purple-200' :
+              assignedSubject === 'None' ? 'bg-slate-200 text-slate-700 border border-slate-300' :
               'bg-teal-100 text-teal-800 border border-teal-200'
             }`}>
-              {assignedSubject === 'All' ? 'Admin (All)' : `${assignedSubject} Only`}
+              {assignedSubject === 'All' ? 'Admin (All)' : assignedSubject === 'None' ? 'Unassigned Guest' : `${assignedSubject} Only`}
             </span>
           )}
           <ChevronDown className="w-3.5 h-3.5 text-slate-500" />

@@ -96,7 +96,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, o
           </h1>
         </div>
         <span className="text-[11px] text-teal-700 font-extrabold pl-8">
-          {user.assigned_subject === 'All' ? 'Admin Portal' : `${user.assigned_subject} Faculty Portal`}
+          {user.assigned_subject === 'All' ? 'Admin Portal' : user.assigned_subject === 'None' ? 'Unassigned Guest Mode' : `${user.assigned_subject} Faculty Portal`}
         </span>
       </div>
 

@@ -55,7 +55,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       let filteredSubs = subList || [];
       let filteredChs = chList || [];
 
-      if (user.assigned_subject !== 'All') {
+      if (user.assigned_subject === 'None' || user.role === 'guest') {
+        filteredDocs = [];
+        filteredQs = [];
+        filteredSubs = [];
+        filteredChs = [];
+      } else if (user.assigned_subject !== 'All') {
         const targetSubLower = user.assigned_subject.toLowerCase();
         filteredDocs = filteredDocs.filter(d => 
           (((d as any).subject || d.metadata?.subject || '') + ' ' + (d.title || '')).toLowerCase().includes(targetSubLower)
@@ -83,13 +88,17 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   };
 
   // Filtered Subjects & Chapters List
-  const userSubjectsList = user.assigned_subject !== 'All' 
-    ? subjectsList.filter(s => s.name.toLowerCase() === user.assigned_subject.toLowerCase())
-    : subjectsList;
+  const userSubjectsList = (user.assigned_subject === 'None' || user.role === 'guest')
+    ? []
+    : user.assigned_subject !== 'All' 
+      ? subjectsList.filter(s => s.name.toLowerCase() === user.assigned_subject.toLowerCase())
+      : subjectsList;
 
-  const userChaptersList = user.assigned_subject !== 'All'
-    ? chaptersList.filter(c => (c.subject || '').toLowerCase() === user.assigned_subject.toLowerCase())
-    : chaptersList;
+  const userChaptersList = (user.assigned_subject === 'None' || user.role === 'guest')
+    ? []
+    : user.assigned_subject !== 'All'
+      ? chaptersList.filter(c => (c.subject || '').toLowerCase() === user.assigned_subject.toLowerCase())
+      : chaptersList;
 
   // Real Counts from active frontend state + API
   const totalSubjectsCount = userSubjectsList.length > 0 ? userSubjectsList.length : (user.assigned_subject !== 'All' ? 1 : apiSubjects.length);
@@ -177,14 +186,36 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             Overview of question repository, generated tests, and synced performance analytics.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={onOpenQuestionBuilder}
-          className="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 shadow-sm hover:shadow-md transition-all active:scale-[0.98] cursor-pointer"
-        >
-          <Plus className="w-4 h-4" /> Create Question
-        </button>
+        {user.role !== 'guest' && (
+          <button
+            type="button"
+            onClick={onOpenQuestionBuilder}
+            className="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 shadow-sm hover:shadow-md transition-all active:scale-[0.98] cursor-pointer"
+          >
+            <Plus className="w-4 h-4" /> Create Question
+          </button>
+        )}
       </div>
+
+      {/* Guest/Unassigned User Warning Banner */}
+      {(user.assigned_subject === 'None' || user.role === 'guest') && (
+        <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-6 text-amber-900 shadow-sm flex items-start gap-4">
+          <div className="p-3 bg-amber-200/80 text-amber-800 rounded-xl shrink-0 font-bold text-lg">
+            ⚠️
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-sm font-black uppercase tracking-wider text-amber-900">
+              Account Unassigned — Blank Access Mode
+            </h3>
+            <p className="text-xs font-medium text-amber-800 leading-relaxed">
+              Your account (<strong>{user.email}</strong>) has registered successfully. However, you currently have no assigned faculty subject or administrator privileges. All subjects, questions, test papers, attempt records, and admin controls are hidden.
+            </p>
+            <p className="text-xs font-bold text-amber-950 mt-1">
+              👉 Please contact the System Administrator (<code className="bg-amber-200/60 px-1.5 py-0.5 rounded text-amber-900 font-mono">admin@eduforge.com</code>) to assign your faculty role (Physics, Chemistry, Biology, or Mathematics) or upgrade your account.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* 4 Stat Cards Displaying Real Backend Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">

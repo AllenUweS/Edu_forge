@@ -40,18 +40,40 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         }
 
         if (data.session) {
+          const cleanEmail = (data.session.user.email || '').toLowerCase().trim();
           const meta = data.session.user.user_metadata || {};
+
+          let defaultSub = 'None';
+          let defaultRole = 'guest';
+
+          if (cleanEmail === 'admin@eduforge.com') {
+            defaultSub = 'All';
+            defaultRole = 'admin';
+          } else if (cleanEmail.includes('physics')) {
+            defaultSub = 'Physics';
+            defaultRole = 'faculty';
+          } else if (cleanEmail.includes('chemistry')) {
+            defaultSub = 'Chemistry';
+            defaultRole = 'faculty';
+          } else if (cleanEmail.includes('biology')) {
+            defaultSub = 'Biology';
+            defaultRole = 'faculty';
+          } else if (cleanEmail.includes('maths') || cleanEmail.includes('math')) {
+            defaultSub = 'Mathematics';
+            defaultRole = 'faculty';
+          }
+
           const userProfile = {
             email: data.session.user.email,
-            name: meta.name || data.session.user.email?.split('@')[0] || 'User',
-            role: meta.role || 'faculty',
-            assigned_subject: meta.assigned_subject || 'All'
+            name: meta.name || (defaultSub !== 'None' ? `${defaultSub} Faculty` : cleanEmail.split('@')[0] || 'New User'),
+            role: meta.role || defaultRole,
+            assigned_subject: meta.assigned_subject || defaultSub
           };
           localStorage.setItem('eduforge_auth', 'true');
           localStorage.setItem('eduforge_user', JSON.stringify(userProfile));
           onLoginSuccess();
         } else {
-          setSuccessMessage('Registration successful! Please check your email or log in with your credentials.');
+          setSuccessMessage('Registration successful! Please log in with your credentials.');
           setIsSignUp(false);
         }
       } else {
@@ -66,12 +88,34 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         }
 
         if (data.session) {
+          const cleanEmail = (data.session.user.email || '').toLowerCase().trim();
           const meta = data.session.user.user_metadata || {};
+
+          let defaultSub = 'None';
+          let defaultRole = 'guest';
+
+          if (cleanEmail === 'admin@eduforge.com') {
+            defaultSub = 'All';
+            defaultRole = 'admin';
+          } else if (cleanEmail.includes('physics')) {
+            defaultSub = 'Physics';
+            defaultRole = 'faculty';
+          } else if (cleanEmail.includes('chemistry')) {
+            defaultSub = 'Chemistry';
+            defaultRole = 'faculty';
+          } else if (cleanEmail.includes('biology')) {
+            defaultSub = 'Biology';
+            defaultRole = 'faculty';
+          } else if (cleanEmail.includes('maths') || cleanEmail.includes('math')) {
+            defaultSub = 'Mathematics';
+            defaultRole = 'faculty';
+          }
+
           const userProfile = {
             email: data.session.user.email,
-            name: meta.name || data.session.user.email?.split('@')[0] || 'User',
-            role: meta.role || 'faculty',
-            assigned_subject: meta.assigned_subject || 'All'
+            name: meta.name || (defaultSub !== 'None' ? `${defaultSub} Faculty` : cleanEmail.split('@')[0] || 'User'),
+            role: meta.role || defaultRole,
+            assigned_subject: meta.assigned_subject || defaultSub
           };
           localStorage.setItem('eduforge_auth', 'true');
           localStorage.setItem('eduforge_user', JSON.stringify(userProfile));
