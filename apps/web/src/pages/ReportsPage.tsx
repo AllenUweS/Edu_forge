@@ -3,7 +3,10 @@ import { Download, BarChart3, TrendingUp, Award } from 'lucide-react';
 import { api } from '../services/api.js';
 import { Question, DocumentModel } from '@eduforge/shared';
 
+import { getUserProfile } from '../utils/userProfile.js';
+
 export const ReportsPage: React.FC = () => {
+  const user = getUserProfile();
   const [selectedRange, setSelectedRange] = useState('This Month');
   const [questions, setQuestions] = useState<Question[]>([]);
   const [documents, setDocuments] = useState<DocumentModel[]>([]);
@@ -22,9 +25,27 @@ export const ReportsPage: React.FC = () => {
         api.getQuestions(),
         api.getSubjects()
       ]);
-      setDocuments(docs || []);
-      setQuestions(qList || []);
-      setApiSubjects(subList || []);
+
+      let filteredDocs = docs || [];
+      let filteredQs = qList || [];
+      let filteredSubs = subList || [];
+
+      if (user.assigned_subject !== 'All') {
+        const targetSubLower = user.assigned_subject.toLowerCase();
+        filteredDocs = filteredDocs.filter(d => 
+          (((d as any).subject || d.metadata?.subject || '') + ' ' + (d.title || '')).toLowerCase().includes(targetSubLower)
+        );
+        filteredQs = filteredQs.filter(q => 
+          (q.subject || '').toLowerCase().includes(targetSubLower)
+        );
+        filteredSubs = filteredSubs.filter(s => 
+          (s.name || '').toLowerCase().includes(targetSubLower)
+        );
+      }
+
+      setDocuments(filteredDocs);
+      setQuestions(filteredQs);
+      setApiSubjects(filteredSubs);
     } catch (err) {
       console.error('Failed to load reports data:', err);
     } finally {
@@ -303,46 +324,48 @@ export const ReportsPage: React.FC = () => {
       </div>
 
       {/* GRAPHICAL REPRESENTATION CHARTS */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className={user.assigned_subject !== 'All' ? 'grid grid-cols-1 gap-6' : 'grid grid-cols-1 lg:grid-cols-2 gap-6'}>
         
-        {/* Chart 1: Real Subject Distribution Share (Bar Chart) */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-6 space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <div>
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                <BarChart3 className="w-4 h-4 text-teal-700" /> Subject Question Share
-              </h3>
-              <p className="text-[11px] text-slate-500 font-medium">Real distribution share calculated from Question Bank</p>
+        {/* Chart 1: Real Subject Distribution Share (Admin Only) */}
+        {user.assigned_subject === 'All' && (
+          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-teal-700" /> Subject Question Share
+                </h3>
+                <p className="text-[11px] text-slate-500 font-medium">Real distribution share calculated from Question Bank</p>
+              </div>
+              <span className="text-[10px] font-bold text-teal-700 bg-teal-50 border border-teal-200 px-2.5 py-1 rounded-md">
+                Synced Real Data
+              </span>
             </div>
-            <span className="text-[10px] font-bold text-teal-700 bg-teal-50 border border-teal-200 px-2.5 py-1 rounded-md">
-              Synced Real Data
-            </span>
-          </div>
 
-          <div className="space-y-4 pt-2">
-            {loading ? (
-              <div className="text-xs text-slate-400 py-6 text-center">Loading subject metrics...</div>
-            ) : (
-              subjectPerformance.map(s => (
-                <div key={s.name} className="space-y-1.5">
-                  <div className="flex justify-between text-xs font-bold text-slate-800">
-                    <span>{s.name}</span>
-                    <span className="font-mono text-teal-800">{s.count} Questions ({s.percent}%)</span>
+            <div className="space-y-4 pt-2">
+              {loading ? (
+                <div className="text-xs text-slate-400 py-6 text-center">Loading subject metrics...</div>
+              ) : (
+                subjectPerformance.map(s => (
+                  <div key={s.name} className="space-y-1.5">
+                    <div className="flex justify-between text-xs font-bold text-slate-800">
+                      <span>{s.name}</span>
+                      <span className="font-mono text-teal-800">{s.count} Questions ({s.percent}%)</span>
+                    </div>
+                    <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full ${s.color} rounded-full transition-all duration-500`}
+                        style={{ width: `${s.percent}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full ${s.color} rounded-full transition-all duration-500`}
-                      style={{ width: `${s.percent}%` }}
-                    />
-                  </div>
-                </div>
-              ))
-            )}
+                ))
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Chart 2: Difficulty Distribution Graph */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-6 space-y-4">
+        {/* Chart 2: Difficulty Distribution Graph (Extends Horizontally for Faculty) */}
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-6 space-y-4 w-full">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div>
               <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">

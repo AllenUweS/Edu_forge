@@ -357,44 +357,46 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           )}
         </div>
 
-        {/* 2 Graphical Analytics Charts Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Graphical Analytics Charts Grid */}
+        <div className={user.assigned_subject !== 'All' ? 'grid grid-cols-1 gap-6' : 'grid grid-cols-1 lg:grid-cols-2 gap-6'}>
           
-          {/* Graph 1: Subject Question Share (Bar Chart) */}
-          <div className="p-5 border border-slate-200/80 rounded-xl bg-slate-50/50 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200/60 pb-2.5">
-              <h3 className="text-xs font-bold text-slate-900 flex items-center gap-2 uppercase tracking-wide">
-                <BarChart3 className="w-4 h-4 text-teal-700" /> Subject Question Share
-              </h3>
-              <span className="text-[10px] font-extrabold text-teal-700 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded">
-                Synced Real Data
-              </span>
-            </div>
+          {/* Graph 1: Subject Question Share (Bar Chart - Admin Only) */}
+          {user.assigned_subject === 'All' && (
+            <div className="p-5 border border-slate-200/80 rounded-xl bg-slate-50/50 space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-200/60 pb-2.5">
+                <h3 className="text-xs font-bold text-slate-900 flex items-center gap-2 uppercase tracking-wide">
+                  <BarChart3 className="w-4 h-4 text-teal-700" /> Subject Question Share
+                </h3>
+                <span className="text-[10px] font-extrabold text-teal-700 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded">
+                  Synced Real Data
+                </span>
+              </div>
 
-            <div className="space-y-3.5 pt-1">
-              {loading ? (
-                <div className="text-xs text-slate-400 py-4 text-center">Loading subject metrics...</div>
-              ) : (
-                subjectPerformance.map(s => (
-                  <div key={s.name} className="space-y-1.5">
-                    <div className="flex justify-between text-xs font-bold text-slate-800">
-                      <span>{s.name}</span>
-                      <span className="font-mono text-teal-800">{s.count} Questions ({s.percent}%)</span>
+              <div className="space-y-3.5 pt-1">
+                {loading ? (
+                  <div className="text-xs text-slate-400 py-4 text-center">Loading subject metrics...</div>
+                ) : (
+                  subjectPerformance.map(s => (
+                    <div key={s.name} className="space-y-1.5">
+                      <div className="flex justify-between text-xs font-bold text-slate-800">
+                        <span>{s.name}</span>
+                        <span className="font-mono text-teal-800">{s.count} Questions ({s.percent}%)</span>
+                      </div>
+                      <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full ${s.color} rounded-full transition-all duration-500`}
+                          style={{ width: `${s.percent}%` }}
+                        />
+                      </div>
                     </div>
-                    <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full ${s.color} rounded-full transition-all duration-500`}
-                        style={{ width: `${s.percent}%` }}
-                      />
-                    </div>
-                  </div>
-                ))
-              )}
+                  ))
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Graph 2: Difficulty Level Distribution */}
-          <div className="p-5 border border-slate-200/80 rounded-xl bg-slate-50/50 space-y-4">
+          {/* Graph 2: Difficulty Level Distribution (Full Width for Faculty) */}
+          <div className="p-5 border border-slate-200/80 rounded-xl bg-slate-50/50 space-y-4 w-full">
             <div className="flex items-center justify-between border-b border-slate-200/60 pb-2.5">
               <h3 className="text-xs font-bold text-slate-900 flex items-center gap-2 uppercase tracking-wide">
                 <Award className="w-4 h-4 text-amber-500" /> Question Bank Difficulty Balance
