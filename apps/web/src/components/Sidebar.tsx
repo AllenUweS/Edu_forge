@@ -40,7 +40,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, o
   const group1: NavItem[] = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'question_bank', label: 'Question Bank', icon: Database },
-    { id: 'subjects', label: 'Subjects', icon: BookOpen },
+    ...(user.role === 'admin' ? [{ id: 'subjects' as PageView, label: 'Subjects', icon: BookOpen }] : []),
     { id: 'chapters', label: 'Chapters', icon: Layers }
   ];
 
