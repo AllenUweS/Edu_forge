@@ -1,6 +1,19 @@
 import { fetchApi } from './client.js';
 
-const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:4000';
+const getApiBaseUrl = (): string => {
+  if (typeof window !== 'undefined') {
+    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      return `${window.location.origin}/api`;
+    }
+  }
+  const envUrl = import.meta.env.VITE_API_BASE_URL;
+  if (envUrl && envUrl.trim() && !envUrl.includes('localhost')) {
+    return envUrl.trim();
+  }
+  return 'http://localhost:4000';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 export const assetsApi = {
   async getMedia(): Promise<any[]> {
@@ -24,7 +37,8 @@ export const assetsApi = {
       const formData = new FormData();
       formData.append('file', file);
 
-      const res = await fetch(`${API_BASE_URL}/api/assets`, {
+      const endpoint = API_BASE_URL.endsWith('/api') ? `${API_BASE_URL}/assets` : `${API_BASE_URL}/api/assets`;
+      const res = await fetch(endpoint, {
         method: 'POST',
         body: formData
       });
