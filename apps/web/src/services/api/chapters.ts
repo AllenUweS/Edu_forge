@@ -6,14 +6,14 @@ export const chaptersApi = {
     return fetchApi<any[]>(`/api/chapters${query}`);
   },
 
-  async createChapter(subjectId: string | number, chapter: { title: string; name?: string; code?: string }): Promise<any> {
+  async createChapter(subjectId: string | number, chapter: { title: string; name?: string; code?: string; subject?: string }): Promise<any> {
     return fetchApi<any>('/api/chapters', {
       method: 'POST',
       body: JSON.stringify({ subjectId, ...chapter })
     });
   },
 
-  async updateChapter(id: string | number, chapter: { title: string; name?: string; code?: string }): Promise<any> {
+  async updateChapter(id: string | number, chapter: { title: string; name?: string; code?: string; subject?: string; subjectId?: string }): Promise<any> {
     return fetchApi<any>(`/api/chapters/${id}`, {
       method: 'PUT',
       body: JSON.stringify(chapter)

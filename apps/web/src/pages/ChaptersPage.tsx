@@ -113,36 +113,46 @@ export const ChaptersPage: React.FC<ChaptersPageProps> = ({
     e.preventDefault();
     if (!title.trim()) return;
 
-    if (editingId) {
-      const updatedCh: ChapterItem = {
-        id: editingId,
-        title: title.trim(),
-        subject: selectedSubject,
-        count: 0
-      };
-      if (onEditChapter) {
-        onEditChapter(editingId, updatedCh);
-      } else {
-        await api.updateChapter(editingId, { title: title.trim(), name: title.trim() });
+    try {
+      if (editingId) {
+        const updatedCh: ChapterItem = {
+          id: editingId,
+          title: title.trim(),
+          subject: selectedSubject,
+          count: 0
+        };
+        await api.updateChapter(editingId, { title: title.trim(), name: title.trim(), subject: selectedSubject });
+        if (onEditChapter) {
+          onEditChapter(editingId, updatedCh);
+        }
         setLocalChapters(localChapters.map(c => (c.id === editingId ? updatedCh : c)));
-      }
-    } else {
-      const subObj = availableSubjects.find(s => s.name === selectedSubject) || availableSubjects[0];
-      const codeStr = `${subObj?.code || 'SUB'}-${String(chapters.length + 1).padStart(2, '0')}`;
-      const newCh: ChapterItem = {
-        num: String(chapters.length + 1).padStart(2, '0'),
-        id: codeStr,
-        title: title.trim(),
-        subject: selectedSubject,
-        count: 0
-      };
-      if (onAddChapter) {
-        onAddChapter(newCh);
       } else {
-        const subId = (subObj as any)?.id || 1;
-        const created = await api.createChapter(subId, { title: title.trim() });
-        setLocalChapters(prev => [...prev, created || newCh]);
+        const subObj = availableSubjects.find(s => s.name === selectedSubject) || availableSubjects[0];
+        const codeStr = `${subObj?.code || 'SUB'}-${String(chapters.length + 1).padStart(2, '0')}`;
+        
+        const created = await api.createChapter(selectedSubject, {
+          title: title.trim(),
+          code: codeStr,
+          name: title.trim()
+        });
+
+        const newCh: ChapterItem = {
+          num: String(chapters.length + 1).padStart(2, '0'),
+          id: created?.id || codeStr,
+          title: created?.title || title.trim(),
+          subject: selectedSubject,
+          count: 0
+        };
+
+        if (onAddChapter) {
+          onAddChapter(newCh);
+        }
+        setLocalChapters(prev => [newCh, ...prev]);
       }
+    } catch (err) {
+      console.error('Failed submitting chapter:', err);
+    } finally {
+      loadBackendChapters();
     }
 
     setTitle('');
