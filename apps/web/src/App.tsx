@@ -24,6 +24,7 @@ import { DocumentModel, Template, Question } from '@eduforge/shared';
 import { ThemeProvider } from './state/ThemeContext.js';
 
 import { supabase } from './lib/supabase.js';
+import { getUserProfile, UserProfile } from './utils/userProfile.js';
 
 const AppContent: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
@@ -33,11 +34,59 @@ const AppContent: React.FC = () => {
   const [activeDocumentId, setActiveDocumentId] = useState<string | null>(null);
   const [documents, setDocuments] = useState<DocumentModel[]>([]);
   const [activeChapterFilter, setActiveChapterFilter] = useState<{ id?: string; title?: string } | null>(null);
+  const [currentUser, setCurrentUser] = useState<UserProfile>(getUserProfile());
+
+  const syncSessionUser = (sessionUser?: any) => {
+    if (!sessionUser) {
+      setCurrentUser(getUserProfile());
+      return;
+    }
+    const cleanEmail = (sessionUser.email || '').toLowerCase().trim();
+    let defaultSub: 'Physics' | 'Chemistry' | 'Biology' | 'Mathematics' | 'All' | 'None' = 'None';
+    let defaultRole: 'admin' | 'faculty' | 'guest' = 'guest';
+    let defaultName = 'User';
+
+    if (cleanEmail === 'admin@eduforge.com' || cleanEmail.startsWith('admin@')) {
+      defaultSub = 'All';
+      defaultRole = 'admin';
+      defaultName = 'System Admin';
+    } else if (cleanEmail.includes('physics')) {
+      defaultSub = 'Physics';
+      defaultRole = 'faculty';
+      defaultName = 'Physics Faculty';
+    } else if (cleanEmail.includes('chemistry')) {
+      defaultSub = 'Chemistry';
+      defaultRole = 'faculty';
+      defaultName = 'Chemistry Faculty';
+    } else if (cleanEmail.includes('biology')) {
+      defaultSub = 'Biology';
+      defaultRole = 'faculty';
+      defaultName = 'Biology Faculty';
+    } else if (cleanEmail.includes('maths') || cleanEmail.includes('math')) {
+      defaultSub = 'Mathematics';
+      defaultRole = 'faculty';
+      defaultName = 'Mathematics Faculty';
+    } else {
+      defaultSub = 'None';
+      defaultRole = 'guest';
+      defaultName = cleanEmail.split('@')[0] || 'Guest User';
+    }
+
+    const prof: UserProfile = {
+      email: sessionUser.email,
+      name: defaultName,
+      role: defaultRole,
+      assigned_subject: defaultSub
+    };
+    localStorage.setItem('eduforge_user', JSON.stringify(prof));
+    setCurrentUser(prof);
+  };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         localStorage.setItem('eduforge_auth', 'true');
+        syncSessionUser(session.user);
         setIsAuthenticated(true);
       }
     });
@@ -45,9 +94,11 @@ const AppContent: React.FC = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
         localStorage.setItem('eduforge_auth', 'true');
+        syncSessionUser(session.user);
         setIsAuthenticated(true);
       } else {
         localStorage.removeItem('eduforge_auth');
+        localStorage.removeItem('eduforge_user');
         setIsAuthenticated(false);
       }
     });
@@ -276,11 +327,14 @@ const AppContent: React.FC = () => {
       // Ignore signout error if offline
     }
     localStorage.removeItem('eduforge_auth');
+    localStorage.removeItem('eduforge_user');
+    setCurrentUser(getUserProfile());
     setIsAuthenticated(false);
   };
 
   const handleLoginSuccess = () => {
     localStorage.setItem('eduforge_auth', 'true');
+    setCurrentUser(getUserProfile());
     setIsAuthenticated(true);
   };
 

@@ -41,33 +41,42 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
         if (data.session) {
           const cleanEmail = (data.session.user.email || '').toLowerCase().trim();
-          const meta = data.session.user.user_metadata || {};
 
-          let defaultSub = 'None';
-          let defaultRole = 'guest';
+          let defaultSub: 'Physics' | 'Chemistry' | 'Biology' | 'Mathematics' | 'All' | 'None' = 'None';
+          let defaultRole: 'admin' | 'faculty' | 'guest' = 'guest';
+          let defaultName = 'User';
 
-          if (cleanEmail === 'admin@eduforge.com') {
+          if (cleanEmail === 'admin@eduforge.com' || cleanEmail.startsWith('admin@')) {
             defaultSub = 'All';
             defaultRole = 'admin';
+            defaultName = 'System Admin';
           } else if (cleanEmail.includes('physics')) {
             defaultSub = 'Physics';
             defaultRole = 'faculty';
+            defaultName = 'Physics Faculty';
           } else if (cleanEmail.includes('chemistry')) {
             defaultSub = 'Chemistry';
             defaultRole = 'faculty';
+            defaultName = 'Chemistry Faculty';
           } else if (cleanEmail.includes('biology')) {
             defaultSub = 'Biology';
             defaultRole = 'faculty';
+            defaultName = 'Biology Faculty';
           } else if (cleanEmail.includes('maths') || cleanEmail.includes('math')) {
             defaultSub = 'Mathematics';
             defaultRole = 'faculty';
+            defaultName = 'Mathematics Faculty';
+          } else {
+            defaultSub = 'None';
+            defaultRole = 'guest';
+            defaultName = cleanEmail.split('@')[0] || 'Guest User';
           }
 
           const userProfile = {
             email: data.session.user.email,
-            name: meta.name || (defaultSub !== 'None' ? `${defaultSub} Faculty` : cleanEmail.split('@')[0] || 'New User'),
-            role: meta.role || defaultRole,
-            assigned_subject: meta.assigned_subject || defaultSub
+            name: defaultName,
+            role: defaultRole,
+            assigned_subject: defaultSub
           };
           localStorage.setItem('eduforge_auth', 'true');
           localStorage.setItem('eduforge_user', JSON.stringify(userProfile));
@@ -89,33 +98,42 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
         if (data.session) {
           const cleanEmail = (data.session.user.email || '').toLowerCase().trim();
-          const meta = data.session.user.user_metadata || {};
 
-          let defaultSub = 'None';
-          let defaultRole = 'guest';
+          let defaultSub: 'Physics' | 'Chemistry' | 'Biology' | 'Mathematics' | 'All' | 'None' = 'None';
+          let defaultRole: 'admin' | 'faculty' | 'guest' = 'guest';
+          let defaultName = 'User';
 
-          if (cleanEmail === 'admin@eduforge.com') {
+          if (cleanEmail === 'admin@eduforge.com' || cleanEmail.startsWith('admin@')) {
             defaultSub = 'All';
             defaultRole = 'admin';
+            defaultName = 'System Admin';
           } else if (cleanEmail.includes('physics')) {
             defaultSub = 'Physics';
             defaultRole = 'faculty';
+            defaultName = 'Physics Faculty';
           } else if (cleanEmail.includes('chemistry')) {
             defaultSub = 'Chemistry';
             defaultRole = 'faculty';
+            defaultName = 'Chemistry Faculty';
           } else if (cleanEmail.includes('biology')) {
             defaultSub = 'Biology';
             defaultRole = 'faculty';
+            defaultName = 'Biology Faculty';
           } else if (cleanEmail.includes('maths') || cleanEmail.includes('math')) {
             defaultSub = 'Mathematics';
             defaultRole = 'faculty';
+            defaultName = 'Mathematics Faculty';
+          } else {
+            defaultSub = 'None';
+            defaultRole = 'guest';
+            defaultName = cleanEmail.split('@')[0] || 'User';
           }
 
           const userProfile = {
             email: data.session.user.email,
-            name: meta.name || (defaultSub !== 'None' ? `${defaultSub} Faculty` : cleanEmail.split('@')[0] || 'User'),
-            role: meta.role || defaultRole,
-            assigned_subject: meta.assigned_subject || defaultSub
+            name: defaultName,
+            role: defaultRole,
+            assigned_subject: defaultSub
           };
           localStorage.setItem('eduforge_auth', 'true');
           localStorage.setItem('eduforge_user', JSON.stringify(userProfile));

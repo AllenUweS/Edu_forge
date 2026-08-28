@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronDown, User, LogOut, Shield, X, Check, Mail } from 'lucide-react';
 import { PageView } from './Sidebar.js';
+import { getUserProfile } from '../utils/userProfile.js';
 
 interface HeaderProps {
   currentPage: PageView;
@@ -28,25 +29,16 @@ export const Header: React.FC<HeaderProps> = ({ currentPage, onLogout }) => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
-  // Active User Profile State
-  const [userName, setUserName] = useState('System Admin');
-  const [userEmail, setUserEmail] = useState('admin@eduforge.com');
-  const [userRole, setUserRole] = useState('Administrator');
-  const [assignedSubject, setAssignedSubject] = useState('All');
+  const user = getUserProfile();
+  const [userName, setUserName] = useState(user.name);
+  const [userEmail, setUserEmail] = useState(user.email);
+  const assignedSubject = user.assigned_subject;
+  const userRole = user.role === 'admin' ? 'Administrator' : user.assigned_subject === 'None' ? 'Unassigned Guest' : `${user.assigned_subject} Faculty`;
 
   useEffect(() => {
-    try {
-      const savedUser = localStorage.getItem('eduforge_user');
-      if (savedUser) {
-        const u = JSON.parse(savedUser);
-        if (u.name) setUserName(u.name);
-        if (u.email) setUserEmail(u.email);
-        if (u.assigned_subject) setAssignedSubject(u.assigned_subject);
-        if (u.role) {
-          setUserRole(u.role === 'admin' ? 'Administrator' : `${u.assigned_subject || 'Faculty'} Faculty`);
-        }
-      }
-    } catch {}
+    const u = getUserProfile();
+    setUserName(u.name);
+    setUserEmail(u.email);
   }, []);
 
   const handleSaveProfile = (e: React.FormEvent) => {
