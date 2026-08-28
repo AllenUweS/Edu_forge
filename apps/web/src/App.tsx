@@ -321,9 +321,9 @@ const AppContent: React.FC = () => {
             <GenerateTestPage
               initialDocument={editingDocumentForGenerate}
               onOpenDocument={handleOpenDocument}
-              onNavigateToTests={() => {
+              onNavigateToTests={async () => {
                 setEditingDocumentForGenerate(null);
-                loadDocs();
+                await loadDocs();
                 setCurrentPage('tests');
               }}
             />

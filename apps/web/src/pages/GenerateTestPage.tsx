@@ -244,36 +244,48 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
   const computedTotalMarks = totalSelectedQuestionsCount * marksPerQuestion;
 
   const buildDocumentModel = (): Partial<DocumentModel> => {
-    const selectedQuestionsList = questions.filter(q => selectedQuestionIds.includes(q.id));
+    const selectedQuestionsList = questions.filter(q =>
+      selectedQuestionIds.some(id => String(id) === String(q.id))
+    );
 
-    const docSections: DocumentSection[] = testSections.map((sec, idx) => ({
-      id: `sec-${Date.now()}-${idx + 1}`,
-      title: sec.name,
-      instructions: `Attempt all questions. Each question carries ${marksPerQuestion} marks.`,
-      marks: sec.questionsCount * marksPerQuestion,
-      blocks: selectedQuestionsList.slice(0, sec.questionsCount).map((q, qIdx) => ({
-        id: `blk-${Date.now()}-${qIdx}`,
-        type: 'question' as const,
-        question: q
-      }))
-    }));
+    const docSections: DocumentSection[] = testSections.map((sec, idx) => {
+      const sectionQuestions = selectedQuestionsList.length > 0
+        ? selectedQuestionsList
+        : questions.slice(0, sec.questionsCount || 10);
+
+      return {
+        id: `sec-${Date.now()}-${idx + 1}`,
+        title: sec.name || `Section ${String.fromCharCode(65 + idx)} — ${selectedSubject}`,
+        instructions: `Attempt all questions. Each question carries ${marksPerQuestion} marks.`,
+        marks: (sec.questionsCount || sectionQuestions.length) * marksPerQuestion,
+        blocks: sectionQuestions.map((q, qIdx) => ({
+          id: `blk-${Date.now()}-${qIdx}`,
+          type: 'question' as const,
+          question: q,
+          questionId: q.id
+        }))
+      };
+    });
 
     return {
-      title: testName || 'Generated Test Paper',
-      templateId: 'a4-single-column',
+      title: testName.trim() || `${selectedSubject} ${examType} Test Paper`,
+      templateId: undefined,
       metadata: {
         instituteName: 'APEX INSTITUTE OF SCIENCE & TECHNOLOGY',
         examName: `${examType} EXAMINATION 2026`,
         subject: selectedSubject,
-        timeAllowedMinutes: durationMinutes,
+        chapter: selectedChapter,
+        timeAllowedMinutes: Number(durationMinutes) || 60,
         maxMarks: computedTotalMarks,
+        totalQuestions: totalSelectedQuestionsCount,
         generalInstructions: [
           `There are ${totalSelectedQuestionsCount} multiple-choice questions.`,
           `Each question carries ${marksPerQuestion} marks.`,
           `One mark (${negativeMarks}) will be deducted for an incorrect answer.`,
           'Calculators and smart devices are strictly prohibited.'
         ]
-      },
+      } as any,
+      settings: paperSettings as any,
       sections: docSections
     };
   };
@@ -285,36 +297,33 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
         await api.updateDocument(initialDocument.id, { ...docModel, id: initialDocument.id } as DocumentModel);
         alert('Test paper updated successfully in Supabase!');
       } else {
-        await api.createDocument(docModel);
-        alert('Test paper draft saved to Supabase!');
+        const created = await api.createDocument(docModel);
+        alert(`Test paper "${created?.title || docModel.title}" saved to Supabase!`);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to save draft:', err);
-      alert('Test paper draft saved!');
+      alert(`Failed to save test paper draft: ${err.message || 'Server error'}`);
     }
   };
 
   const handlePublishTest = async () => {
     try {
       const docModel = buildDocumentModel();
+      let savedDoc: DocumentModel;
       if (initialDocument?.id) {
-        await api.updateDocument(initialDocument.id, { ...docModel, id: initialDocument.id } as DocumentModel);
-        alert('Test paper published successfully!');
+        savedDoc = await api.updateDocument(initialDocument.id, { ...docModel, id: initialDocument.id } as DocumentModel);
+        alert('Test paper updated and published successfully!');
       } else {
-        await api.createDocument(docModel);
-        alert('Test paper published successfully!');
+        savedDoc = await api.createDocument(docModel);
+        alert(`Test paper "${savedDoc?.title || docModel.title}" published successfully to Tests section!`);
       }
       resetFormToBlank();
       if (onNavigateToTests) {
         onNavigateToTests();
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to publish test:', err);
-      alert('Test paper published successfully!');
-      resetFormToBlank();
-      if (onNavigateToTests) {
-        onNavigateToTests();
-      }
+      alert(`Failed to publish test paper: ${err.message || 'Server error'}`);
     }
   };
 
