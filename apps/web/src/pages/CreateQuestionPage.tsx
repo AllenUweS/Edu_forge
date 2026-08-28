@@ -67,8 +67,9 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
       setDifficulty(initialQuestion.difficulty || 'Medium');
       setMarks(initialQuestion.marks || 4);
       setNegativeMarks(initialQuestion.negativeMarks || 1);
+      const questionStatement = initialQuestion.rawText || (Array.isArray(initialQuestion.content) ? initialQuestion.content.map((b: any) => b.text || b.html || '').join(' ') : '');
       setBlocks([
-        { id: 'blk-1', type: 'text', text: initialQuestion.rawText || '' },
+        { id: 'blk-1', type: 'text', text: questionStatement },
         ...(initialQuestion.imageUrl ? [{ id: 'blk-2', type: 'image' as const, imageUrl: initialQuestion.imageUrl }] : [])
       ]);
       const loadedOpts = (initialQuestion.options || []).map((opt, idx) => {

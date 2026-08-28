@@ -88,12 +88,19 @@ questionsRouter.get('/:id', async (req: Request, res: Response, next: NextFuncti
       });
     }
 
-    const options = (q.question_options || []).map((opt: any) => ({
-      id: opt.id,
-      key: opt.option_key,
-      content: opt.content || [],
-      rawText: opt.raw_text || ''
-    }));
+    const options = (q.question_options || []).map((opt: any) => {
+      let textVal = opt.raw_text || '';
+      if (!textVal && Array.isArray(opt.content)) {
+        textVal = opt.content.map((c: any) => c.latex ? `\\(${c.latex}\\)` : (c.html || c.text || '')).join(' ');
+      }
+      return {
+        id: opt.id,
+        key: opt.option_key ? opt.option_key.toUpperCase() : 'A',
+        rawText: textVal,
+        content: opt.content || [],
+        isCorrect: (q.correct_option || '').toLowerCase() === (opt.option_key || '').toLowerCase()
+      };
+    });
 
     const fullQuestion = {
       id: q.id,
@@ -101,13 +108,15 @@ questionsRouter.get('/:id', async (req: Request, res: Response, next: NextFuncti
       questionType: q.question_type || 'MCQ_SINGLE',
       content: q.content || [],
       explanation: q.explanation || [],
+      explanationText: typeof q.explanation === 'string' ? q.explanation : (Array.isArray(q.explanation) ? q.explanation.map((e: any) => e.text || e.html || '').join(' ') : ''),
       difficulty: q.difficulty || 'Medium',
       marks: Number(q.marks) || 1,
       negativeMarks: Number(q.negative_marks) || 0,
-      correctAnswer: q.correct_option || 'a',
+      correctAnswer: (q.correct_option || 'a').toUpperCase(),
       optionLayout: q.option_layout || 'grid_2x2',
       year: q.year,
       source: q.source,
+      rawText: q.raw_text || (Array.isArray(q.content) ? q.content.map((b: any) => b.text || b.html || '').join(' ') : ''),
       subject: q.subjects?.name || 'General',
       chapter: q.chapters?.title || 'General',
       options,
