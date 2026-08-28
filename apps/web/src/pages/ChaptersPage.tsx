@@ -3,6 +3,8 @@ import { Plus, X, Search, Edit3, Trash2 } from 'lucide-react';
 import { SubjectItem } from './SubjectsPage.js';
 import { api } from '../services/api.js';
 
+import { getUserProfile } from '../utils/userProfile.js';
+
 export interface ChapterItem {
   num?: string;
   id: string;
@@ -28,6 +30,7 @@ export const ChaptersPage: React.FC<ChaptersPageProps> = ({
   onDeleteChapter,
   onNavigateToQuestionBank
 }) => {
+  const user = getUserProfile();
   const defaultSubjects = [
     { name: 'Biology', code: 'BIO' },
     { name: 'Physics', code: 'PHY' },
@@ -35,7 +38,10 @@ export const ChaptersPage: React.FC<ChaptersPageProps> = ({
     { name: 'Mathematics', code: 'MAT' }
   ];
 
-  const availableSubjects = subjectsList !== undefined ? subjectsList : defaultSubjects;
+  const rawAvailableSubjects = subjectsList !== undefined ? subjectsList : defaultSubjects;
+  const availableSubjects = user.assigned_subject !== 'All'
+    ? rawAvailableSubjects.filter(s => s.name.toLowerCase() === user.assigned_subject.toLowerCase())
+    : rawAvailableSubjects;
 
   const [localChapters, setLocalChapters] = useState<ChapterItem[]>([]);
 
@@ -61,7 +67,10 @@ export const ChaptersPage: React.FC<ChaptersPageProps> = ({
     }
   }, [chaptersList]);
 
-  const chapters = chaptersList || localChapters;
+  const rawChapters = chaptersList || localChapters;
+  const chapters = user.assigned_subject !== 'All'
+    ? rawChapters.filter(c => (c.subject || '').toLowerCase() === user.assigned_subject.toLowerCase())
+    : rawChapters;
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);

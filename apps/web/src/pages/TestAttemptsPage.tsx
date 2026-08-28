@@ -3,6 +3,8 @@ import { Plus, X, Edit3, Trash2 } from 'lucide-react';
 import { api } from '../services/api.js';
 import { DocumentModel } from '@eduforge/shared';
 
+import { getUserProfile } from '../utils/userProfile.js';
+
 export interface TestAttemptItem {
   id: string;
   student: string;
@@ -17,6 +19,7 @@ export interface TestAttemptsPageProps {
 }
 
 export const TestAttemptsPage: React.FC<TestAttemptsPageProps> = ({ documents = [] }) => {
+  const user = getUserProfile();
   const [attempts, setAttempts] = useState<TestAttemptItem[]>([]);
   const [testOptions, setTestOptions] = useState<string[]>([
     'NEET Biology — Cell Structure & Function',
@@ -50,6 +53,14 @@ export const TestAttemptsPage: React.FC<TestAttemptsPageProps> = ({ documents = 
       console.error('Failed to load attempts data:', err);
     }
   };
+
+  const displayAttempts = user.assigned_subject !== 'All'
+    ? attempts.filter(a => (a.test || '').toLowerCase().includes(user.assigned_subject.toLowerCase()))
+    : attempts;
+
+  const displayTestOptions = user.assigned_subject !== 'All'
+    ? testOptions.filter(t => t.toLowerCase().includes(user.assigned_subject.toLowerCase()))
+    : testOptions;
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -162,14 +173,14 @@ export const TestAttemptsPage: React.FC<TestAttemptsPageProps> = ({ documents = 
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
-            {attempts.length === 0 ? (
+            {displayAttempts.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-5 py-8 text-center text-slate-400">
                   No test attempts logged yet. Click "+ Log Attempt" to record a result.
                 </td>
               </tr>
             ) : (
-              attempts.map(a => (
+              displayAttempts.map((a, idx) => (
                 <tr key={a.id} className="hover:bg-slate-50/80 transition-colors">
                   <td className="px-5 py-3.5 font-bold text-slate-900">{a.student}</td>
                   <td className="px-5 py-3.5">{a.test}</td>
@@ -243,7 +254,7 @@ export const TestAttemptsPage: React.FC<TestAttemptsPageProps> = ({ documents = 
                   onChange={e => setTest(e.target.value)}
                   className="w-full p-2.5 border border-slate-300 rounded-md text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-slate-900 bg-white font-medium cursor-pointer"
                 >
-                  {testOptions.map(tOption => (
+                  {displayTestOptions.map(tOption => (
                     <option key={tOption} value={tOption}>
                       {tOption}
                     </option>

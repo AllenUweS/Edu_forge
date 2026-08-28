@@ -4,6 +4,8 @@ import {
   FileText, ClipboardCheck, BarChart3, Image, Settings, LogOut
 } from 'lucide-react';
 
+import { getUserProfile } from '../utils/userProfile.js';
+
 export type PageView =
   | 'dashboard'
   | 'question_bank'
@@ -33,6 +35,8 @@ interface NavItem {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, onLogout }) => {
+  const user = getUserProfile();
+
   const group1: NavItem[] = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'question_bank', label: 'Question Bank', icon: Database },
@@ -91,8 +95,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, o
             EduForge
           </h1>
         </div>
-        <span className="text-[11px] text-slate-500 font-semibold pl-8">
-          MCQ Generator
+        <span className="text-[11px] text-teal-700 font-extrabold pl-8">
+          {user.assigned_subject === 'All' ? 'Admin Portal' : `${user.assigned_subject} Faculty Portal`}
         </span>
       </div>
 

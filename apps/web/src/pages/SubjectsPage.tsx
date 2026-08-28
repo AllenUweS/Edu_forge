@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Plus, X, Edit3, Trash2 } from 'lucide-react';
 import { api } from '../services/api.js';
 
+import { getUserProfile } from '../utils/userProfile.js';
+
 export interface SubjectItem {
   id?: number | string;
   name: string;
@@ -25,6 +27,7 @@ export const SubjectsPage: React.FC<SubjectsPageProps> = ({
   onEditSubject,
   onDeleteSubject
 }) => {
+  const user = getUserProfile();
   const [localSubjects, setLocalSubjects] = useState<SubjectItem[]>([]);
 
   const loadBackendSubjects = async () => {
@@ -42,7 +45,10 @@ export const SubjectsPage: React.FC<SubjectsPageProps> = ({
     }
   }, [subjectsList]);
 
-  const subjects = subjectsList || localSubjects;
+  const rawSubjects = subjectsList || localSubjects;
+  const subjects = user.assigned_subject !== 'All'
+    ? rawSubjects.filter(s => s.name.toLowerCase() === user.assigned_subject.toLowerCase())
+    : rawSubjects;
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);

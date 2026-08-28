@@ -5,6 +5,8 @@ import { api } from '../services/api.js';
 import { MathTextRenderer } from '../equation/MathTextRenderer.js';
 import { OptionLayoutRenderer } from '../questions/OptionLayoutRenderer.js';
 
+import { getUserProfile } from '../utils/userProfile.js';
+
 export interface TestItem {
   id: string;
   name: string;
@@ -31,6 +33,7 @@ export const TestsPage: React.FC<TestsPageProps> = ({
   onDeleteDocument,
   onDuplicateDocument
 }) => {
+  const user = getUserProfile();
   const [docs, setDocs] = useState<DocumentModel[]>(propDocs || []);
   const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
 
@@ -57,6 +60,10 @@ export const TestsPage: React.FC<TestsPageProps> = ({
   useEffect(() => {
     fetchLatestDocs();
   }, [propDocs]);
+
+  const displayDocs = user.assigned_subject !== 'All'
+    ? docs.filter(d => (((d as any).subject || d.metadata?.subject || '') + ' ' + (d.title || '')).toLowerCase().includes(user.assigned_subject.toLowerCase()))
+    : docs;
 
   const toggleSelectDoc = (id: string) => {
     const sId = String(id);
@@ -202,7 +209,7 @@ export const TestsPage: React.FC<TestsPageProps> = ({
             </button>
           )}
 
-          {docs.length > 0 && (
+          {displayDocs.length > 0 && (
             <button
               type="button"
               onClick={handleDeleteAllDocs}
@@ -232,7 +239,7 @@ export const TestsPage: React.FC<TestsPageProps> = ({
               <th className="px-3 py-3 w-10 text-center">
                 <input
                   type="checkbox"
-                  checked={docs.length > 0 && selectedDocIds.length === docs.length}
+                  checked={displayDocs.length > 0 && selectedDocIds.length === displayDocs.length}
                   onChange={toggleSelectAllDocs}
                   className="w-4 h-4 text-teal-600 rounded border-slate-300 cursor-pointer"
                 />
@@ -246,7 +253,7 @@ export const TestsPage: React.FC<TestsPageProps> = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
-            {docs.length === 0 ? (
+            {displayDocs.length === 0 ? (
               <tr>
                 <td colSpan={7} className="px-5 py-12 text-center text-slate-400">
                   <div className="flex flex-col items-center justify-center space-y-2">
@@ -257,7 +264,7 @@ export const TestsPage: React.FC<TestsPageProps> = ({
                 </td>
               </tr>
             ) : (
-              docs.map(d => {
+              displayDocs.map(d => {
                 const totalQ = d.sections?.reduce((acc, s) => acc + (s.blocks?.length || 0), 0) || (d.metadata as any)?.totalQuestions || 25;
                 const durationText = `${d.metadata?.timeAllowedMinutes || (d.metadata as any)?.durationMinutes || 60} min`;
                 const subjectText = d.metadata?.subject || 'Physics & Chemistry';

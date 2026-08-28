@@ -6,6 +6,8 @@ import { SubjectItem } from './SubjectsPage.js';
 import { ChapterItem } from './ChaptersPage.js';
 import { formatQuestionCode } from '../utils/questionCode.js';
 
+import { getUserProfile } from '../utils/userProfile.js';
+
 interface DashboardPageProps {
   subjectsList?: SubjectItem[];
   chaptersList?: ChapterItem[];
@@ -26,6 +28,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   onNavigateToQuestionBank,
   onNavigateToReports
 }) => {
+  const user = getUserProfile();
+
   const [questions, setQuestions] = useState<Question[]>([]);
   const [documents, setDocuments] = useState<DocumentModel[]>([]);
   const [apiSubjects, setApiSubjects] = useState<any[]>([]);
@@ -45,10 +49,32 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         api.getSubjects(),
         api.getChapters()
       ]);
-      setDocuments(docs || []);
-      setQuestions(qList || []);
-      setApiSubjects(subList || []);
-      setApiChapters(chList || []);
+
+      let filteredDocs = docs || [];
+      let filteredQs = qList || [];
+      let filteredSubs = subList || [];
+      let filteredChs = chList || [];
+
+      if (user.assigned_subject !== 'All') {
+        const targetSubLower = user.assigned_subject.toLowerCase();
+        filteredDocs = filteredDocs.filter(d => 
+          (((d as any).subject || d.metadata?.subject || '') + ' ' + (d.title || '')).toLowerCase().includes(targetSubLower)
+        );
+        filteredQs = filteredQs.filter(q => 
+          (q.subject || '').toLowerCase().includes(targetSubLower)
+        );
+        filteredSubs = filteredSubs.filter(s => 
+          (s.name || '').toLowerCase().includes(targetSubLower)
+        );
+        filteredChs = filteredChs.filter(c => 
+          ((c.subject_name || c.subject || '')).toLowerCase().includes(targetSubLower)
+        );
+      }
+
+      setDocuments(filteredDocs);
+      setQuestions(filteredQs);
+      setApiSubjects(filteredSubs);
+      setApiChapters(filteredChs);
     } catch (err) {
       console.error('Failed to load dashboard:', err);
     } finally {
@@ -56,9 +82,18 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     }
   };
 
+  // Filtered Subjects & Chapters List
+  const userSubjectsList = user.assigned_subject !== 'All' 
+    ? subjectsList.filter(s => s.name.toLowerCase() === user.assigned_subject.toLowerCase())
+    : subjectsList;
+
+  const userChaptersList = user.assigned_subject !== 'All'
+    ? chaptersList.filter(c => (c.subject || '').toLowerCase() === user.assigned_subject.toLowerCase())
+    : chaptersList;
+
   // Real Counts from active frontend state + API
-  const totalSubjectsCount = subjectsList.length > 0 ? subjectsList.length : apiSubjects.length;
-  const totalChaptersCount = chaptersList.length > 0 ? chaptersList.length : apiChapters.length;
+  const totalSubjectsCount = userSubjectsList.length > 0 ? userSubjectsList.length : (user.assigned_subject !== 'All' ? 1 : apiSubjects.length);
+  const totalChaptersCount = userChaptersList.length > 0 ? userChaptersList.length : apiChapters.length;
   const totalQuestionsCount = questions.length;
 
   // Dynamic Question Distribution by Subject (calculated 100% strictly from real question bank records)
