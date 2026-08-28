@@ -40,7 +40,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         }
 
         if (data.session) {
+          const meta = data.session.user.user_metadata || {};
+          const userProfile = {
+            email: data.session.user.email,
+            name: meta.name || data.session.user.email?.split('@')[0] || 'User',
+            role: meta.role || 'faculty',
+            assigned_subject: meta.assigned_subject || 'All'
+          };
           localStorage.setItem('eduforge_auth', 'true');
+          localStorage.setItem('eduforge_user', JSON.stringify(userProfile));
           onLoginSuccess();
         } else {
           setSuccessMessage('Registration successful! Please check your email or log in with your credentials.');
@@ -58,7 +66,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         }
 
         if (data.session) {
+          const meta = data.session.user.user_metadata || {};
+          const userProfile = {
+            email: data.session.user.email,
+            name: meta.name || data.session.user.email?.split('@')[0] || 'User',
+            role: meta.role || 'faculty',
+            assigned_subject: meta.assigned_subject || 'All'
+          };
           localStorage.setItem('eduforge_auth', 'true');
+          localStorage.setItem('eduforge_user', JSON.stringify(userProfile));
           onLoginSuccess();
         }
       }

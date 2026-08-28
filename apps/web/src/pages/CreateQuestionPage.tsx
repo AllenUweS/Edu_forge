@@ -21,8 +21,20 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
   initialQuestion,
   onBackToQuestionBank
 }) => {
+  // User Profile Subject Restriction
+  const userSubject = (() => {
+    try {
+      const u = JSON.parse(localStorage.getItem('eduforge_user') || '{}');
+      return u.assigned_subject || 'All';
+    } catch {
+      return 'All';
+    }
+  })();
+
   // Metadata state
-  const [subject, setSubject] = useState(initialQuestion?.subject || 'Biology');
+  const [subject, setSubject] = useState(
+    initialQuestion?.subject || (userSubject !== 'All' ? userSubject : 'Biology')
+  );
   const [chapter, setChapter] = useState(initialQuestion?.chapter || 'Cell Structure and Function');
   const [difficulty, setDifficulty] = useState<QuestionDifficulty>(initialQuestion?.difficulty || 'Medium');
   const [marks, setMarks] = useState<number>(initialQuestion?.marks || 4);

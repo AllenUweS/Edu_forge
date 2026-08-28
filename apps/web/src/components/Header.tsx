@@ -29,21 +29,37 @@ export const Header: React.FC<HeaderProps> = ({ currentPage, onLogout }) => {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   // Active User Profile State
-  const [userName, setUserName] = useState('Admin User');
-  const [userEmail, setUserEmail] = useState('admin@eduforge.in');
+  const [userName, setUserName] = useState('System Admin');
+  const [userEmail, setUserEmail] = useState('admin@eduforge.com');
   const [userRole, setUserRole] = useState('Administrator');
+  const [assignedSubject, setAssignedSubject] = useState('All');
+
+  useEffect(() => {
+    try {
+      const savedUser = localStorage.getItem('eduforge_user');
+      if (savedUser) {
+        const u = JSON.parse(savedUser);
+        if (u.name) setUserName(u.name);
+        if (u.email) setUserEmail(u.email);
+        if (u.assigned_subject) setAssignedSubject(u.assigned_subject);
+        if (u.role) {
+          setUserRole(u.role === 'admin' ? 'Administrator' : `${u.assigned_subject || 'Faculty'} Faculty`);
+        }
+      }
+    } catch {}
+  }, []);
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const authData = localStorage.getItem('eduforge_auth');
-      const parsed = authData ? JSON.parse(authData) : {};
+      const savedUser = localStorage.getItem('eduforge_user');
+      const parsed = savedUser ? JSON.parse(savedUser) : {};
       const updated = {
         ...parsed,
         name: userName,
         email: userEmail
       };
-      localStorage.setItem('eduforge_auth', JSON.stringify(updated));
+      localStorage.setItem('eduforge_user', JSON.stringify(updated));
     } catch {}
     setIsProfileModalOpen(false);
   };
@@ -68,6 +84,17 @@ export const Header: React.FC<HeaderProps> = ({ currentPage, onLogout }) => {
             {userName.charAt(0)}
           </div>
           <span className="font-bold text-slate-900">{userName}</span>
+          {assignedSubject && (
+            <span className={`text-[10px] px-2 py-0.5 rounded-md font-extrabold uppercase ${
+              assignedSubject === 'Physics' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
+              assignedSubject === 'Chemistry' ? 'bg-cyan-100 text-cyan-800 border border-cyan-200' :
+              assignedSubject === 'Biology' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
+              assignedSubject === 'Mathematics' ? 'bg-purple-100 text-purple-800 border border-purple-200' :
+              'bg-teal-100 text-teal-800 border border-teal-200'
+            }`}>
+              {assignedSubject === 'All' ? 'Admin (All)' : `${assignedSubject} Only`}
+            </span>
+          )}
           <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
         </button>
 

@@ -144,7 +144,24 @@ export const QuestionBankPage: React.FC<QuestionBankPageProps> = ({
     return clean || 'Question statement text';
   };
 
+  const userSubject = (() => {
+    try {
+      const u = JSON.parse(localStorage.getItem('eduforge_user') || '{}');
+      return u.assigned_subject || 'All';
+    } catch {
+      return 'All';
+    }
+  })();
+
   const filteredList = questions.filter(q => {
+    if (userSubject !== 'All') {
+      const userSubLower = userSubject.toLowerCase();
+      const qSubLower = (q.subject || '').toLowerCase();
+      if (qSubLower && !qSubLower.includes(userSubLower) && !userSubLower.includes(qSubLower)) {
+        return false;
+      }
+    }
+
     if (selectedChapter && selectedChapter.title) {
       const chTitle = selectedChapter.title.toLowerCase();
       const chId = (selectedChapter.id || '').toLowerCase();

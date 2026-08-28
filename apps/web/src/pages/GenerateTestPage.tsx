@@ -29,10 +29,20 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
   // Step state (1: Configure, 2: Select Questions, 3: Preview, 4: Publish)
   const [currentStep, setCurrentStep] = useState<number>(1);
 
+  // User Subject Restriction
+  const userSubject = (() => {
+    try {
+      const u = JSON.parse(localStorage.getItem('eduforge_user') || '{}');
+      return u.assigned_subject || 'All';
+    } catch {
+      return 'All';
+    }
+  })();
+
   // Form State
-  const [testName, setTestName] = useState<string>('NEET Biology — Cell Structure Test');
+  const [testName, setTestName] = useState<string>('EduForge Practice Test');
   const [examType, setExamType] = useState<string>('NEET');
-  const [selectedSubject, setSelectedSubject] = useState<string>('Biology');
+  const [selectedSubject, setSelectedSubject] = useState<string>(userSubject !== 'All' ? userSubject : 'Biology');
   const [selectedChapter, setSelectedChapter] = useState<string>('Cell Structure and Function');
   const [durationMinutes, setDurationMinutes] = useState<number>(60);
   
