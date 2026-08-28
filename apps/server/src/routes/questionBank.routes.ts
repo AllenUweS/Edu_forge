@@ -35,7 +35,7 @@ questionBankRouter.get('/', async (req: Request, res: Response, next: NextFuncti
       difficulty: q.difficulty || 'Medium',
       marks: Number(q.marks) || 1,
       negativeMarks: Number(q.negative_marks) || 0,
-      correctAnswer: q.correct_option || 'a',
+      correctAnswer: (q.correct_option || 'a').toUpperCase(),
       optionLayout: q.option_layout || 'grid_2x2',
       year: q.year,
       source: q.source,
@@ -44,8 +44,10 @@ questionBankRouter.get('/', async (req: Request, res: Response, next: NextFuncti
       rawText: q.raw_text || '',
       options: (q.question_options || []).map((opt: any) => ({
         id: opt.id,
-        key: opt.option_key,
-        content: opt.content || []
+        key: opt.option_key ? opt.option_key.toUpperCase() : 'A',
+        rawText: opt.raw_text || (Array.isArray(opt.content) ? opt.content.map((c: any) => c.latex ? `\\(${c.latex}\\)` : (c.html || c.text || '')).join(' ') : ''),
+        content: opt.content || [],
+        isCorrect: (q.correct_option || '').toLowerCase() === (opt.option_key || '').toLowerCase()
       })),
       createdAt: q.created_at,
       updatedAt: q.updated_at
@@ -84,7 +86,7 @@ questionBankRouter.get('/:id', async (req: Request, res: Response, next: NextFun
       difficulty: q.difficulty || 'Medium',
       marks: Number(q.marks) || 1,
       negativeMarks: Number(q.negative_marks) || 0,
-      correctAnswer: q.correct_option || 'a',
+      correctAnswer: (q.correct_option || 'a').toUpperCase(),
       optionLayout: q.option_layout || 'grid_2x2',
       year: q.year,
       source: q.source,
@@ -93,8 +95,10 @@ questionBankRouter.get('/:id', async (req: Request, res: Response, next: NextFun
       rawText: q.raw_text || '',
       options: (q.question_options || []).map((opt: any) => ({
         id: opt.id,
-        key: opt.option_key,
-        content: opt.content || []
+        key: opt.option_key ? opt.option_key.toUpperCase() : 'A',
+        rawText: opt.raw_text || (Array.isArray(opt.content) ? opt.content.map((c: any) => c.latex ? `\\(${c.latex}\\)` : (c.html || c.text || '')).join(' ') : ''),
+        content: opt.content || [],
+        isCorrect: (q.correct_option || '').toLowerCase() === (opt.option_key || '').toLowerCase()
       })),
       createdAt: q.created_at,
       updatedAt: q.updated_at
