@@ -1,8 +1,8 @@
-# EduForge — Desktop Scientific Document Editor & Question Paper Authoring Suite
+# EduForge — Scientific Document Editor & Exam Paper Authoring Suite
 
 <div align="center">
   <img src="apps/web/public/logo.png" alt="EduForge Logo" width="120" />
-  <h3>Professional Question Paper Authoring, Scientific Typesetting & Desktop Publishing</h3>
+  <h3>Professional Question Paper Authoring, Scientific Typesetting & Cloud Exam Management</h3>
   <p>Built for educators, universities, exam boards, and STEM publishers.</p>
 </div>
 
@@ -10,37 +10,40 @@
 
 ## ✨ Features
 
-### 📄 Real-Time A4 Two-Column Canvas & MS Word Experience
+### 📄 Real-Time A4 Two-Column Canvas & Exam Paper Editor
 - **Pixel-Perfect A4 Pagination**: Automatic column-balancing, section splitting, margin guides, and column divider rendering in real time.
-- **MS Word-Style Ribbon Toolbar**: Full Home, Insert, Page Layout, Math & Science, Review, and View ribbon tabs.
+- **MS Word-Style Ribbon Toolbar**: Home, Insert, Page Layout, Math & Science, Review, and View ribbon tabs.
 - **80+ Typography & Custom Font Styles**: Standard, STEM, Monospace, and Display font families with live preview.
 - **Rich Document Formatting**: Bold, italic, underline styles, superscript, subscript, alignment, line spacing, list bullets/numbering, margins, and headers.
 
-### 📐 Scientific Typesetting & Math AST Builder
-- **Visual Construct Palette**: Fractions, radicals, integrals, summations, matrices, limits, vectors, brackets, and chemical equations.
-- **High-Resolution KaTeX Rendering**: Fast 120Hz/144Hz math rendering with formula caching and LaTeX syntax support.
-- **23 Physics Chapters Catalog**: 200+ standard symbols, SI units, dimensions, and formula annotations.
-- **Chemistry & Periodic Table**: 118 interactive elements and standard chemical notation structures.
-- **Comprehensive Units & Constants**: Base SI units, derived units, metric prefixes, and universal physical constants.
+### 📐 MathType & KaTeX Scientific Typesetting Engine
+- **Visual MathType Editor**: Integrated TipTap rich text editor with visual equation creation and symbol insertion.
+- **LaTeX Delimiter Parsing**: Automatic pre-conversion of `\(`...`\)` and `\[`...`\]` LaTeX delimiters into high-performance KaTeX math expressions.
+- **High-Resolution KaTeX Rendering**: Fast 120Hz/144Hz formula rendering with caching across question statements, option layouts, solution explanations, and preview drawers.
+- **Physics & Chemistry Catalog**: 200+ standard symbols, SI units, dimensions, and periodic table elements.
 
-### ❓ Question Bank & Exam Paper Wizard
-- **Step-by-Step Question Paper Wizard**: Automated template selection, metadata configuration, and section layout generation.
-- **Structured MCQ Builder**: Multi-layout support (2x2 Grid, Vertical Stack, Horizontal Inline) with answer keys, negative marking, and step-by-step explanations.
-- **Local SQLite Repository**: 100% offline data storage for questions, templates, and exam documents.
-- **Import & Export**: JSON interchange for bulk question bank import/export.
+### ❓ Cloud Question Bank & Supabase Persistence
+- **Full Supabase PostgreSQL Integration**: Real-time cloud storage for questions, options (`question_options`), solution explanations, subjects, and chapters.
+- **Structured MCQ Options Engine**: Multi-layout support (2x2 Grid, Vertical Stack, Horizontal Inline) with option key mapping (A, B, C, D), correct answer flags, and raw text/content fallback.
+- **Instant Student Preview Drawer**: Fast preview modal fetching full question data and rendering formatted KaTeX formulas and options.
+- **Seamless Question Editing**: Fully pre-populates existing question statements, options, solution explanations, difficulty, and marks when editing in Question Bank.
 
-### 🎨 Themes & Modern UI
-- **3 Dynamic UI Themes**: Dark, White, and Dark Blue (Navy).
-- **Persistent White Paper Canvas**: The A4 examination sheet strictly stays 100% pure white (`#ffffff`) with high-contrast text across all UI themes.
-- **Manrope UI Typography**: Modern UI aesthetics with high display refresh rate support (60Hz / 120Hz / 144Hz).
+### 📋 Interactive Test Generator & Document Editor
+- **4-Step Exam Wizard**: Configure exam metadata, search & select questions from Question Bank, preview layout, and publish.
+- **Open in Document Editor Integration**: Edit test papers directly with pre-selected question IDs, subject/chapter metadata, duration, and marking schemes.
+- **Export & Print**: DOCX export for Microsoft Word and high-contrast HTML/CSS print engine.
+
+### 🔐 Authentication & Cloud Security
+- **Supabase Authentication**: Integrated user authentication, token verification, and role-based access for Admin users.
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Frontend**: React 18, Vite 5, Tailwind CSS, Lucide Icons, KaTeX
-- **Backend**: Node.js, Express, TypeScript, Better-SQLite3
-- **Shared Core**: Shared TypeScript interfaces, types, and AST structures
+- **Frontend**: React 18, Vite 5, Tailwind CSS (v4), TipTap Editor, MathType, KaTeX, Lucide React Icons
+- **Backend**: Node.js, Express, TypeScript, `@supabase/supabase-js` SDK
+- **Database & Storage**: Supabase Cloud PostgreSQL, Supabase Storage (`question-assets`), Supabase Auth
+- **Shared Core**: `@eduforge/shared` unified TypeScript models and interfaces
 - **Export Engine**: `docx` for Microsoft Word DOCX export, HTML/CSS for print/PDF generation
 
 ---
@@ -62,6 +65,17 @@ cd EduForge
 npm install
 ```
 
+### Environment Setup
+
+Create `.env` in `apps/server/` and `apps/web/`:
+
+```env
+SUPABASE_URL="https://your-project.supabase.co"
+SUPABASE_SERVICE_ROLE_KEY="your-supabase-service-role-key"
+SUPABASE_ANON_KEY="your-supabase-anon-key"
+PORT=4000
+```
+
 ### Development
 
 ```bash
@@ -69,16 +83,16 @@ npm install
 npm run dev
 ```
 
-- **Web App**: http://localhost:3000
-- **API Server**: http://localhost:3001
+- **Web App**: http://localhost:3000 (or http://localhost:5173)
+- **API Server**: http://localhost:4000
 
 ### Build & Test
 
 ```bash
-# Build all workspaces
+# Build all workspaces (shared, server, web)
 npm run build
 
-# Run unit tests
+# Run tests
 npm test
 ```
 
@@ -89,11 +103,11 @@ npm test
 ```
 eduforge/
 ├── apps/
-│   ├── server/       # Express + SQLite REST API server
+│   ├── server/       # Express + Supabase Node.js REST API server
 │   └── web/          # React + Vite desktop web editor
 ├── packages/
 │   └── shared/       # Shared TypeScript models, types & AST
-├── resources/        # Seed datasets (physics, chemistry, units, constants, templates)
+├── supabase/         # PostgreSQL schema definitions & migrations
 └── package.json      # Monorepo root config
 ```
 
