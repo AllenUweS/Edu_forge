@@ -221,7 +221,12 @@ export const MathTextRenderer: React.FC<MathTextRendererProps> = ({
   let trimmed = cleanHtmlTags(decoded);
   if (!trimmed) return null;
 
-
+  // Convert LaTeX inline \( ... \) and block \[ ... \] delimiters to $ ... $ and $$ ... $$
+  if (trimmed.includes('\\(') || trimmed.includes('\\[')) {
+    trimmed = trimmed
+      .replace(/\\\[([\s\S]*?)\\\]/g, '$$$$ $1 $$$$')
+      .replace(/\\\(([\s\S]*?)\\\)/g, '$$ $1 $$');
+  }
 
   // 1. Explicit $...$ or $$...$$ delimiters
   if (trimmed.includes('$')) {
@@ -276,14 +281,16 @@ export const MathTextRenderer: React.FC<MathTextRendererProps> = ({
   const wordCount = trimmed.split(/\s+/).length;
   const hasEnglishWords = /\b(the|is|are|of|in|to|and|for|with|from|by|at|which|what|calculate|find|determine|when|if|where|each|connected|equivalent|combination|resistor|resistors|identical)\b/i.test(trimmed);
 
-  const isPureFormula = !hasEnglishWords && wordCount <= 4 && (
+  const isPureFormula = !hasEnglishWords && (
     (trimmed.startsWith('\\') && !trimmed.includes('. ')) ||
-    (trimmed.includes('\\frac') && !trimmed.includes('. ')) ||
+    (trimmed.includes('\\frac')) ||
+    (trimmed.includes('\\sqrt')) ||
+    (trimmed.includes('\\pm')) ||
     (trimmed.includes('\\rightleftharpoons')) ||
-    (trimmed.includes('\\rightarrow') && trimmed.includes('\\text{')) ||
-    (trimmed.includes('=') && (trimmed.includes('\\') || trimmed.includes('^') || trimmed.includes('_')) && !trimmed.includes('. ') && trimmed.length < 50) ||
+    (trimmed.includes('\\rightarrow')) ||
+    (trimmed.includes('=') && (trimmed.includes('\\') || trimmed.includes('^') || trimmed.includes('_'))) ||
     (/^\d+\s*\\Omega$/.test(trimmed)) ||
-    (/^[a-zA-Z]\s*=\s*\\frac/.test(trimmed))
+    (/^[a-zA-Z0-9_\^\+\-\*/\(\)\{\}\s\\=]+$/.test(trimmed) && (trimmed.includes('^') || trimmed.includes('_') || trimmed.includes('\\')))
   );
 
   if (isPureFormula) {

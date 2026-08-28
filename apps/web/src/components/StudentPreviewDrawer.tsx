@@ -1,6 +1,7 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import { Question } from '@eduforge/shared';
+import { MathTextRenderer } from '../equation/MathTextRenderer.js';
 
 interface StudentPreviewDrawerProps {
   isOpen: boolean;
@@ -55,10 +56,9 @@ export const StudentPreviewDrawer: React.FC<StudentPreviewDrawerProps> = ({
           <span className="text-xs font-mono text-slate-400 block">{defaultCode}</span>
           <h3 className="text-base font-bold text-slate-900">Question Preview</h3>
 
-          <div
-            className="text-base leading-relaxed text-slate-900 font-medium"
-            dangerouslySetInnerHTML={{ __html: defaultQuestionText }}
-          />
+          <div className="text-base leading-relaxed text-slate-900 font-medium">
+            <MathTextRenderer text={defaultQuestionText} />
+          </div>
 
           {imageSrc && (
             <div className="my-3 p-2 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-center">
@@ -80,7 +80,7 @@ export const StudentPreviewDrawer: React.FC<StudentPreviewDrawerProps> = ({
               >
                 <span className="text-slate-400 font-bold">○</span>
                 <span className="font-bold text-slate-900">{opt.key?.toUpperCase() || String.fromCharCode(65 + idx)}.</span>
-                <span dangerouslySetInnerHTML={{ __html: opt.rawText || '' }} />
+                <MathTextRenderer text={(opt as any).rawText || (typeof (opt as any).content === 'string' ? (opt as any).content : '')} />
               </div>
             ))}
           </div>

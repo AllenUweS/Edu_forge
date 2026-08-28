@@ -71,16 +71,38 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
         { id: 'blk-1', type: 'text', text: initialQuestion.rawText || '' },
         ...(initialQuestion.imageUrl ? [{ id: 'blk-2', type: 'image' as const, imageUrl: initialQuestion.imageUrl }] : [])
       ]);
-      setOptions(
-        initialQuestion.options && initialQuestion.options.length > 0
-          ? initialQuestion.options
-          : [
-              { id: 'opt-1', key: 'A', rawText: '', isCorrect: true, content: [] },
-              { id: 'opt-2', key: 'B', rawText: '', isCorrect: false, content: [] },
-              { id: 'opt-3', key: 'C', rawText: '', isCorrect: false, content: [] },
-              { id: 'opt-4', key: 'D', rawText: '', isCorrect: false, content: [] }
-            ]
-      );
+      const loadedOpts = (initialQuestion.options || []).map((opt, idx) => {
+        let textVal = opt.rawText || '';
+        if (!textVal && typeof opt.content === 'string') textVal = opt.content;
+        if (!textVal && Array.isArray(opt.content)) {
+          textVal = (opt.content as any[])
+            .map(c => c.latex ? `\\(${c.latex}\\)` : (c.html || c.text || ''))
+            .join(' ');
+        }
+        return {
+          id: opt.id || `opt-${idx + 1}`,
+          key: opt.key ? opt.key.toUpperCase() : String.fromCharCode(65 + idx),
+          rawText: textVal,
+          isCorrect: Boolean(
+            opt.isCorrect ||
+            (initialQuestion.correctAnswer && initialQuestion.correctAnswer.toUpperCase() === (opt.key || String.fromCharCode(65 + idx)).toUpperCase())
+          ),
+          content: opt.content || []
+        };
+      });
+
+      while (loadedOpts.length < 4) {
+        const idx = loadedOpts.length;
+        loadedOpts.push({
+          id: `opt-${idx + 1}`,
+          key: String.fromCharCode(65 + idx),
+          rawText: '',
+          isCorrect: idx === 0,
+          content: []
+        });
+      }
+
+      setOptions(loadedOpts);
       setSolutionText(initialQuestion.explanationText || '');
     } else {
       // Fresh reset for NEW question creation
