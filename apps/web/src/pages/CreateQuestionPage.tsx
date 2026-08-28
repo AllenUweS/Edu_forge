@@ -182,7 +182,12 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
       difficulty,
       marks,
       negativeMarks,
-      options,
+      options: options.map((o, idx) => ({
+        ...o,
+        key: o.key || String.fromCharCode(65 + idx),
+        rawText: o.rawText || '',
+        content: [{ type: 'text', html: o.rawText || '' }]
+      })),
       correctAnswer: correctOpt?.key || 'A',
       explanationText: solutionText
     } as any;

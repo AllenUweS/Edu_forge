@@ -182,6 +182,43 @@ async function resolveSubjectAndChapter(subjectName?: string, chapterTitle?: str
   return { subject_id, chapter_id };
 }
 
+// Helper to insert options into Supabase with automatic schema fallback
+async function saveQuestionOptions(questionId: string, options: any[]) {
+  if (!Array.isArray(options) || options.length === 0) return;
+
+  const formattedOpts = options.map((opt: any, idx: number) => {
+    let rawVal = opt.rawText || '';
+    if (!rawVal && Array.isArray(opt.content)) {
+      rawVal = opt.content.map((c: any) => c.latex ? `\\(${c.latex}\\)` : (c.html || c.text || '')).join(' ');
+    } else if (!rawVal && typeof opt.content === 'string') {
+      rawVal = opt.content;
+    }
+
+    const contentBlocks = Array.isArray(opt.content) && opt.content.length > 0
+      ? opt.content
+      : [{ type: 'text', html: rawVal || '' }];
+
+    return {
+      question_id: questionId,
+      option_key: (opt.key || String.fromCharCode(97 + idx)).toLowerCase(),
+      content: contentBlocks,
+      raw_text: rawVal,
+      sort_order: idx + 1
+    };
+  });
+
+  // Try inserting with raw_text
+  const { error } = await supabase.from('question_options').insert(formattedOpts);
+  if (error) {
+    console.warn('Initial option insert failed, falling back to content-only insert:', error.message);
+    const contentOnlyOpts = formattedOpts.map(({ raw_text, ...rest }) => rest);
+    const { error: fallbackErr } = await supabase.from('question_options').insert(contentOnlyOpts);
+    if (fallbackErr) {
+      console.error('Failed inserting question options fallback:', fallbackErr);
+    }
+  }
+}
+
 // POST /api/questions - Create Question
 questionsRouter.post('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -226,21 +263,7 @@ questionsRouter.post('/', async (req: Request, res: Response, next: NextFunction
 
     // Save options if present
     if (Array.isArray(body.options) && body.options.length > 0) {
-      const opts = body.options.map((opt: any, idx: number) => {
-        let rawVal = opt.rawText || '';
-        if (!rawVal && Array.isArray(opt.content)) {
-          rawVal = opt.content.map((c: any) => c.latex ? `\\(${c.latex}\\)` : (c.html || c.text || '')).join(' ');
-        }
-        return {
-          question_id: newQ.id,
-          option_key: (opt.key || String.fromCharCode(97 + idx)).toLowerCase(),
-          content: opt.content || (rawVal ? [{ type: 'text', html: rawVal }] : []),
-          raw_text: rawVal,
-          sort_order: idx + 1
-        };
-      });
-      const { error: optErr } = await supabase.from('question_options').insert(opts);
-      if (optErr) console.error('Supabase Option Insert Error:', optErr);
+      await saveQuestionOptions(newQ.id, body.options);
     }
 
     res.status(201).json({ success: true, data: { ...body, id: newQ.id, questionCode } });
@@ -277,22 +300,8 @@ questionsRouter.put('/:id', async (req: Request, res: Response, next: NextFuncti
     if (error) throw error;
 
     if (Array.isArray(body.options) && body.options.length > 0) {
-      await supabase.from('question_options').delete().eq('question_id', id);
-      const opts = body.options.map((opt: any, idx: number) => {
-        let rawVal = opt.rawText || '';
-        if (!rawVal && Array.isArray(opt.content)) {
-          rawVal = opt.content.map((c: any) => c.latex ? `\\(${c.latex}\\)` : (c.html || c.text || '')).join(' ');
-        }
-        return {
-          question_id: id,
-          option_key: (opt.key || String.fromCharCode(97 + idx)).toLowerCase(),
-          content: opt.content || (rawVal ? [{ type: 'text', html: rawVal }] : []),
-          raw_text: rawVal,
-          sort_order: idx + 1
-        };
-      });
-      const { error: optErr } = await supabase.from('question_options').insert(opts);
-      if (optErr) console.error('Supabase Option Update Error:', optErr);
+      await supabase.from('question_options').delete().eq('question_id', String(id));
+      await saveQuestionOptions(String(id), body.options);
     }
 
     res.json({ success: true, data: { ...body, id } });
