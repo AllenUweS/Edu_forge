@@ -23,6 +23,8 @@ import { api } from './services/api.js';
 import { DocumentModel, Template, Question } from '@eduforge/shared';
 import { ThemeProvider } from './state/ThemeContext.js';
 
+import { supabase } from './lib/supabase.js';
+
 const AppContent: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     return localStorage.getItem('eduforge_auth') === 'true';
@@ -31,6 +33,27 @@ const AppContent: React.FC = () => {
   const [activeDocumentId, setActiveDocumentId] = useState<string | null>(null);
   const [documents, setDocuments] = useState<DocumentModel[]>([]);
   const [activeChapterFilter, setActiveChapterFilter] = useState<{ id?: string; title?: string } | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        localStorage.setItem('eduforge_auth', 'true');
+        setIsAuthenticated(true);
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        localStorage.setItem('eduforge_auth', 'true');
+        setIsAuthenticated(true);
+      } else {
+        localStorage.removeItem('eduforge_auth');
+        setIsAuthenticated(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   // Shared frontend state for subjects and chapters
   const [subjectsList, setSubjectsList] = useState<SubjectItem[]>([
@@ -183,7 +206,12 @@ const AppContent: React.FC = () => {
     await handleCreatePaper(newDoc);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // Ignore signout error if offline
+    }
     localStorage.removeItem('eduforge_auth');
     setIsAuthenticated(false);
   };
