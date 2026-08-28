@@ -11,6 +11,7 @@ import { scienceRouter } from './routes/science.routes.js';
 import { assetsRouter } from './routes/assets.routes.js';
 import { papersRouter } from './routes/papers.routes.js';
 import { settingsRouter } from './routes/settings.routes.js';
+import { attemptsRouter } from './routes/attempts.routes.js';
 
 export const app = express();
 
@@ -35,6 +36,8 @@ app.use('/api/assets', assetsRouter);
 app.use('/api/media', assetsRouter); // Alias for media upload
 app.use('/api/papers', papersRouter);
 app.use('/api/exam-papers', papersRouter); // Alias for papers
+app.use('/api/attempts', attemptsRouter);
+app.use('/api/test-attempts', attemptsRouter); // Alias for attempts
 app.use('/api/settings', settingsRouter);
 
 // Global Error Handler

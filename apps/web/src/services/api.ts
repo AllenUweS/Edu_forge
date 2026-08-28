@@ -7,6 +7,7 @@ import { assetsApi } from './api/assets.js';
 import { symbolsApi } from './api/symbols.js';
 import { scienceApi } from './api/science.js';
 import { settingsApi } from './api/settings.js';
+import { attemptsApi } from './api/attempts.js';
 
 export const api = {
   // Papers & Documents
@@ -18,6 +19,13 @@ export const api = {
   deleteDocument: papersApi.deleteDocument.bind(papersApi),
   exportDocx: papersApi.exportDocx.bind(papersApi),
   exportPdfHtml: papersApi.exportPdfHtml.bind(papersApi),
+
+  // Test Attempt Logs
+  getAttempts: attemptsApi.getAttempts.bind(attemptsApi),
+  getAttempt: attemptsApi.getAttempt.bind(attemptsApi),
+  createAttempt: attemptsApi.createAttempt.bind(attemptsApi),
+  updateAttempt: attemptsApi.updateAttempt.bind(attemptsApi),
+  deleteAttempt: attemptsApi.deleteAttempt.bind(attemptsApi),
 
   // Subjects & Chapters
   getSubjects: subjectsApi.getSubjects.bind(subjectsApi),

@@ -26,21 +26,30 @@ export const TestAttemptsPage: React.FC<TestAttemptsPageProps> = ({ documents = 
   ]);
 
   useEffect(() => {
-    const loadExistingTests = async () => {
-      try {
-        const fetchedDocs = await api.getDocuments();
-        const docTitles = (fetchedDocs || []).map(d => d.title).filter(Boolean);
-        const propDocTitles = (documents || []).map(d => d.title).filter(Boolean);
-        const combined = Array.from(new Set([...docTitles, ...propDocTitles, ...testOptions]));
-        if (combined.length > 0) {
-          setTestOptions(combined);
-        }
-      } catch (err) {
-        console.error('Failed to load existing tests:', err);
-      }
-    };
-    loadExistingTests();
+    loadData();
   }, [documents]);
+
+  const loadData = async () => {
+    try {
+      const [fetchedDocs, fetchedAttempts] = await Promise.all([
+        api.getDocuments().catch(() => []),
+        api.getAttempts().catch(() => [])
+      ]);
+
+      if (fetchedAttempts && fetchedAttempts.length > 0) {
+        setAttempts(fetchedAttempts as any[]);
+      }
+
+      const docTitles = (fetchedDocs || []).map(d => d.title).filter(Boolean);
+      const propDocTitles = (documents || []).map(d => d.title).filter(Boolean);
+      const combined = Array.from(new Set([...docTitles, ...propDocTitles, ...testOptions]));
+      if (combined.length > 0) {
+        setTestOptions(combined);
+      }
+    } catch (err) {
+      console.error('Failed to load attempts data:', err);
+    }
+  };
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -71,48 +80,55 @@ export const TestAttemptsPage: React.FC<TestAttemptsPageProps> = ({ documents = 
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('Delete this test attempt record?')) {
       setAttempts(prev => prev.filter(a => a.id !== id));
+      try {
+        await api.deleteAttempt(id);
+      } catch (err) {
+        console.error('Failed to delete attempt log:', err);
+      }
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!student.trim() || !test.trim()) return;
 
+    const payload = {
+      student: student.trim(),
+      test: test.trim(),
+      score: score.trim(),
+      accuracy: accuracy.trim(),
+      status
+    };
+
     if (editingId) {
       setAttempts(prev =>
-        prev.map(a =>
-          a.id === editingId
-            ? {
-                ...a,
-                student: student.trim(),
-                test: test.trim(),
-                score: score.trim(),
-                accuracy: accuracy.trim(),
-                status
-              }
-            : a
-        )
+        prev.map(a => (a.id === editingId ? { ...a, ...payload } : a))
       );
+      setIsModalOpen(false);
+      try {
+        await api.updateAttempt(editingId, payload);
+      } catch (err) {
+        console.error('Failed to update attempt log:', err);
+      }
     } else {
-      setAttempts(prev => [
-        ...prev,
-        {
-          id: String(Date.now()),
-          student: student.trim(),
-          test: test.trim(),
-          score: score.trim(),
-          accuracy: accuracy.trim(),
-          status
-        }
-      ]);
+      setIsModalOpen(false);
+      try {
+        const created = await api.createAttempt(payload);
+        setAttempts(prev => [created as any, ...prev]);
+      } catch (err) {
+        console.error('Failed to create attempt log:', err);
+        setAttempts(prev => [
+          { id: `att-${Date.now()}`, ...payload },
+          ...prev
+        ]);
+      }
     }
 
     setStudent('');
     setEditingId(null);
-    setIsModalOpen(false);
   };
 
   return (
