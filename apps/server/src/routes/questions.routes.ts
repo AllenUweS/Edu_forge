@@ -217,13 +217,19 @@ questionsRouter.post('/', async (req: Request, res: Response, next: NextFunction
 
     // Save options if present
     if (Array.isArray(body.options) && body.options.length > 0) {
-      const opts = body.options.map((opt: any, idx: number) => ({
-        question_id: newQ.id,
-        option_key: (opt.key || String.fromCharCode(97 + idx)).toLowerCase(),
-        content: opt.content || (opt.rawText ? [{ type: 'text', html: opt.rawText }] : []),
-        raw_text: opt.rawText || '',
-        sort_order: idx + 1
-      }));
+      const opts = body.options.map((opt: any, idx: number) => {
+        let rawVal = opt.rawText || '';
+        if (!rawVal && Array.isArray(opt.content)) {
+          rawVal = opt.content.map((c: any) => c.latex ? `\\(${c.latex}\\)` : (c.html || c.text || '')).join(' ');
+        }
+        return {
+          question_id: newQ.id,
+          option_key: (opt.key || String.fromCharCode(97 + idx)).toLowerCase(),
+          content: opt.content || (rawVal ? [{ type: 'text', html: rawVal }] : []),
+          raw_text: rawVal,
+          sort_order: idx + 1
+        };
+      });
       const { error: optErr } = await supabase.from('question_options').insert(opts);
       if (optErr) console.error('Supabase Option Insert Error:', optErr);
     }
@@ -263,14 +269,21 @@ questionsRouter.put('/:id', async (req: Request, res: Response, next: NextFuncti
 
     if (Array.isArray(body.options) && body.options.length > 0) {
       await supabase.from('question_options').delete().eq('question_id', id);
-      const opts = body.options.map((opt: any, idx: number) => ({
-        question_id: id,
-        option_key: (opt.key || String.fromCharCode(97 + idx)).toLowerCase(),
-        content: opt.content || (opt.rawText ? [{ type: 'text', html: opt.rawText }] : []),
-        raw_text: opt.rawText || '',
-        sort_order: idx + 1
-      }));
-      await supabase.from('question_options').insert(opts);
+      const opts = body.options.map((opt: any, idx: number) => {
+        let rawVal = opt.rawText || '';
+        if (!rawVal && Array.isArray(opt.content)) {
+          rawVal = opt.content.map((c: any) => c.latex ? `\\(${c.latex}\\)` : (c.html || c.text || '')).join(' ');
+        }
+        return {
+          question_id: id,
+          option_key: (opt.key || String.fromCharCode(97 + idx)).toLowerCase(),
+          content: opt.content || (rawVal ? [{ type: 'text', html: rawVal }] : []),
+          raw_text: rawVal,
+          sort_order: idx + 1
+        };
+      });
+      const { error: optErr } = await supabase.from('question_options').insert(opts);
+      if (optErr) console.error('Supabase Option Update Error:', optErr);
     }
 
     res.json({ success: true, data: { ...body, id } });
