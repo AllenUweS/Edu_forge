@@ -14,7 +14,15 @@ const getApiBaseUrl = (): string => {
 const API_BASE_URL = getApiBaseUrl();
 
 export async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
+  let cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  let base = API_BASE_URL.replace(/\/+$/, '');
+
+  // Prevent duplicate /api/api if both base and endpoint contain /api
+  if (base.endsWith('/api') && cleanEndpoint.startsWith('/api/')) {
+    cleanEndpoint = cleanEndpoint.replace(/^\/api/, '');
+  }
+
+  const url = endpoint.startsWith('http') ? endpoint : `${base}${cleanEndpoint}`;
 
   const res = await fetch(url, {
     ...options,
