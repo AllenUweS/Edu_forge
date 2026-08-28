@@ -121,31 +121,35 @@ export const ChaptersPage: React.FC<ChaptersPageProps> = ({
           subject: selectedSubject,
           count: 0
         };
-        await api.updateChapter(editingId, { title: title.trim(), name: title.trim(), subject: selectedSubject });
         if (onEditChapter) {
           onEditChapter(editingId, updatedCh);
+        } else {
+          await api.updateChapter(editingId, { title: title.trim(), name: title.trim(), subject: selectedSubject });
         }
         setLocalChapters(localChapters.map(c => (c.id === editingId ? updatedCh : c)));
       } else {
         const subObj = availableSubjects.find(s => s.name === selectedSubject) || availableSubjects[0];
         const codeStr = `${subObj?.code || 'SUB'}-${String(chapters.length + 1).padStart(2, '0')}`;
         
-        const created = await api.createChapter(selectedSubject, {
-          title: title.trim(),
-          code: codeStr,
-          name: title.trim()
-        });
-
         const newCh: ChapterItem = {
           num: String(chapters.length + 1).padStart(2, '0'),
-          id: created?.id || codeStr,
-          title: created?.title || title.trim(),
+          id: codeStr,
+          title: title.trim(),
           subject: selectedSubject,
           count: 0
         };
 
         if (onAddChapter) {
           onAddChapter(newCh);
+        } else {
+          const created = await api.createChapter(selectedSubject, {
+            title: title.trim(),
+            code: codeStr,
+            name: title.trim()
+          });
+          if (created) {
+            newCh.id = created.id;
+          }
         }
         setLocalChapters(prev => [newCh, ...prev]);
       }
