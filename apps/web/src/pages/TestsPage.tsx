@@ -17,6 +17,7 @@ export interface TestItem {
 interface TestsPageProps {
   documents?: DocumentModel[];
   onOpenDocument?: (id: string) => void;
+  onOpenSelectQuestions?: (doc: DocumentModel) => void;
   onNewPaperWizard?: () => void;
   onDeleteDocument?: (id: string) => void;
   onDuplicateDocument?: (id: string) => void;
@@ -25,6 +26,7 @@ interface TestsPageProps {
 export const TestsPage: React.FC<TestsPageProps> = ({
   documents: propDocs,
   onOpenDocument,
+  onOpenSelectQuestions,
   onNewPaperWizard,
   onDeleteDocument,
   onDuplicateDocument
@@ -386,11 +388,15 @@ export const TestsPage: React.FC<TestsPageProps> = ({
                   type="button"
                   onClick={() => {
                     setIsEditModalOpen(false);
-                    if (onOpenDocument) onOpenDocument(editingDoc.id);
+                    if (onOpenSelectQuestions && editingDoc) {
+                      onOpenSelectQuestions(editingDoc);
+                    } else if (onOpenDocument) {
+                      onOpenDocument(editingDoc.id);
+                    }
                   }}
                   className="px-3.5 py-2 text-teal-700 hover:bg-teal-50 font-bold rounded-lg transition-colors cursor-pointer"
                 >
-                  Open in Document Editor
+                  Open Select Questions Editor
                 </button>
 
                 <div className="flex items-center gap-2">

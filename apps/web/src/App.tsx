@@ -147,6 +147,13 @@ const AppContent: React.FC = () => {
   const [isQuestionBuilderOpen, setIsQuestionBuilderOpen] = useState(false);
   const [isTemplateGalleryOpen, setIsTemplateGalleryOpen] = useState(false);
 
+  const [editingDocumentForGenerate, setEditingDocumentForGenerate] = useState<DocumentModel | null>(null);
+
+  const handleOpenSelectQuestions = (doc: DocumentModel) => {
+    setEditingDocumentForGenerate(doc);
+    setCurrentPage('generate_test');
+  };
+
   const handleOpenDocument = (docId: string) => {
     setActiveDocumentId(docId);
     setCurrentPage('editor');
@@ -312,8 +319,13 @@ const AppContent: React.FC = () => {
 
           {currentPage === 'generate_test' && (
             <GenerateTestPage
+              initialDocument={editingDocumentForGenerate}
               onOpenDocument={handleOpenDocument}
-              onNavigateToTests={() => setCurrentPage('tests')}
+              onNavigateToTests={() => {
+                setEditingDocumentForGenerate(null);
+                loadDocs();
+                setCurrentPage('tests');
+              }}
             />
           )}
 
@@ -321,7 +333,11 @@ const AppContent: React.FC = () => {
             <TestsPage
               documents={documents}
               onOpenDocument={handleOpenDocument}
-              onNewPaperWizard={() => setCurrentPage('generate_test')}
+              onOpenSelectQuestions={handleOpenSelectQuestions}
+              onNewPaperWizard={() => {
+                setEditingDocumentForGenerate(null);
+                setCurrentPage('generate_test');
+              }}
               onDeleteDocument={handleDeleteDocument}
               onDuplicateDocument={handleDuplicateDocument}
             />

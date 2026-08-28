@@ -10,11 +10,13 @@ import { MathTextRenderer } from '../equation/MathTextRenderer.js';
 import { OptionLayoutRenderer } from '../questions/OptionLayoutRenderer.js';
 
 interface GenerateTestPageProps {
+  initialDocument?: DocumentModel | null;
   onOpenDocument?: (docId: string) => void;
   onNavigateToTests?: () => void;
 }
 
 export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
+  initialDocument,
   onOpenDocument,
   onNavigateToTests
 }) => {
@@ -129,7 +131,7 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
 
   useEffect(() => {
     loadBackendData();
-  }, []);
+  }, [initialDocument]);
 
   const loadBackendData = async () => {
     try {
@@ -143,8 +145,34 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
       setSubjects(subList || []);
       setChapters(chList || []);
 
-      // Pre-select first question if available
-      if (qList && qList.length > 0) {
+      if (initialDocument) {
+        setTestName(initialDocument.title || '');
+        if (initialDocument.metadata?.subject) {
+          setSelectedSubject(initialDocument.metadata.subject);
+        }
+        if (initialDocument.metadata?.timeAllowedMinutes) {
+          setDurationMinutes(Number(initialDocument.metadata.timeAllowedMinutes));
+        }
+
+        const qIds: string[] = [];
+        initialDocument.sections?.forEach(sec => {
+          sec.blocks?.forEach((b: any) => {
+            if (b.type === 'question' && b.question?.id) {
+              qIds.push(b.question.id);
+            } else if (b.questionId) {
+              qIds.push(b.questionId);
+            }
+          });
+        });
+
+        if (qIds.length > 0) {
+          setSelectedQuestionIds(Array.from(new Set(qIds)));
+        } else if (qList && qList.length > 0) {
+          setSelectedQuestionIds([qList[0].id]);
+        }
+
+        setCurrentStep(2); // Open directly to Step 2: Select Questions
+      } else if (qList && qList.length > 0) {
         setSelectedQuestionIds([qList[0].id]);
       }
     } catch (err) {
@@ -180,23 +208,21 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
     setSelectedQuestionIds(filteredQuestions.map(q => q.id));
   };
 
-  const handleAutoSelect = () => {
-    const easyQs = filteredQuestions.filter(q => (q.difficulty || '').toLowerCase() === 'easy');
-    const medQs = filteredQuestions.filter(q => (q.difficulty || '').toLowerCase() === 'medium');
-    const hardQs = filteredQuestions.filter(q => (q.difficulty || '').toLowerCase() === 'hard');
+  const handleDeselectAll = () => {
+    setSelectedQuestionIds([]);
+  };
 
-    const selected = [
-      ...easyQs.slice(0, easyCount).map(q => q.id),
-      ...medQs.slice(0, mediumCount).map(q => q.id),
-      ...hardQs.slice(0, hardCount).map(q => q.id)
-    ];
+  const handleAutoSelectDistribution = () => {
+    const easyQ = questions.filter(q => (q.difficulty || '').toLowerCase() === 'easy').map(q => q.id);
+    const medQ = questions.filter(q => (q.difficulty || '').toLowerCase() === 'medium').map(q => q.id);
+    const hardQ = questions.filter(q => (q.difficulty || '').toLowerCase() === 'hard').map(q => q.id);
 
-    if (selected.length === 0 && filteredQuestions.length > 0) {
-      const targetCount = easyCount + mediumCount + hardCount;
-      setSelectedQuestionIds(filteredQuestions.slice(0, targetCount).map(q => q.id));
-    } else {
-      setSelectedQuestionIds(selected);
-    }
+    const chosenEasy = easyQ.slice(0, easyCount);
+    const chosenMed = medQ.slice(0, mediumCount);
+    const chosenHard = hardQ.slice(0, hardCount);
+
+    const combined = Array.from(new Set([...chosenEasy, ...chosenMed, ...chosenHard]));
+    setSelectedQuestionIds(combined.length > 0 ? combined : questions.slice(0, 50).map(q => q.id));
     alert('Questions automatically selected based on your distribution rules!');
   };
 
@@ -254,9 +280,14 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
 
   const handleSaveDraft = async () => {
     try {
-      const newDoc = buildDocumentModel();
-      await api.createDocument(newDoc);
-      alert('Test paper draft saved to Supabase!');
+      const docModel = buildDocumentModel();
+      if (initialDocument?.id) {
+        await api.updateDocument(initialDocument.id, { ...docModel, id: initialDocument.id } as DocumentModel);
+        alert('Test paper updated successfully in Supabase!');
+      } else {
+        await api.createDocument(docModel);
+        alert('Test paper draft saved to Supabase!');
+      }
     } catch (err) {
       console.error('Failed to save draft:', err);
       alert('Test paper draft saved!');
@@ -265,9 +296,14 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
 
   const handlePublishTest = async () => {
     try {
-      const newDoc = buildDocumentModel();
-      await api.createDocument(newDoc);
-      alert('Test paper published successfully!');
+      const docModel = buildDocumentModel();
+      if (initialDocument?.id) {
+        await api.updateDocument(initialDocument.id, { ...docModel, id: initialDocument.id } as DocumentModel);
+        alert('Test paper published successfully!');
+      } else {
+        await api.createDocument(docModel);
+        alert('Test paper published successfully!');
+      }
       resetFormToBlank();
       if (onNavigateToTests) {
         onNavigateToTests();
@@ -650,7 +686,7 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                   </button>
                   <button
                     type="button"
-                    onClick={handleAutoSelect}
+                    onClick={handleAutoSelectDistribution}
                     className="px-3.5 py-1.5 bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold rounded-lg transition-all active:scale-95 cursor-pointer shadow-sm"
                   >
                     Auto Select
