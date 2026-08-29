@@ -423,13 +423,12 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
 
   // Automatically selects questions based on configured difficulty percentage rules (Easy / Medium / Hard)
   const handleAutoSelectDistribution = () => {
-    const secToUse = targetSectionId || testSections[0]?.id || 'sec-1';
-    const targetSecObj = testSections.find(s => s.id === secToUse);
-    const targetTotal = Number(targetSecObj?.questionsCount) || 50;
+    // Total questions to select across ALL configured test sections
+    const totalPaperTarget = testSections.reduce((sum, sec) => sum + (Number(sec.questionsCount) || 0), 0) || 50;
 
-    const calcEasy = Math.round((targetTotal * easyPercent) / 100);
-    const calcMed = Math.round((targetTotal * mediumPercent) / 100);
-    const calcHard = Math.max(0, targetTotal - calcEasy - calcMed);
+    const calcEasy = Math.round((totalPaperTarget * easyPercent) / 100);
+    const calcMed = Math.round((totalPaperTarget * mediumPercent) / 100);
+    const calcHard = Math.max(0, totalPaperTarget - calcEasy - calcMed);
 
     // Filter questions matching current subject and chapter filters if set
     const candidatePool = questions.filter(q => {
@@ -449,17 +448,28 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
     const chosenHard = hardQ.slice(0, calcHard);
 
     const combined = Array.from(new Set([...chosenEasy, ...chosenMed, ...chosenHard]));
-    const finalSelection = combined.length > 0 ? combined : poolToUse.slice(0, targetTotal).map(q => q.id);
+    const finalSelection = combined.length > 0 ? combined : poolToUse.slice(0, totalPaperTarget).map(q => q.id);
 
     setSelectedQuestionIds(finalSelection);
-    setQuestionSectionMap(prev => {
-      const updated = { ...prev };
-      finalSelection.forEach(id => {
-        if (!updated[id]) updated[id] = secToUse;
+
+    // Distribute finalSelection across testSections based on target counts
+    const newSectionMap: Record<string, string> = {};
+    let cursor = 0;
+
+    testSections.forEach((sec, idx) => {
+      const secTarget = Number(sec.questionsCount) || Math.floor(finalSelection.length / testSections.length);
+      const chunk = idx === testSections.length - 1
+        ? finalSelection.slice(cursor)
+        : finalSelection.slice(cursor, cursor + secTarget);
+
+      chunk.forEach(qId => {
+        newSectionMap[qId] = sec.id;
       });
-      return updated;
+      cursor += secTarget;
     });
-    alert(`Auto-selected ${finalSelection.length} questions based on your ${easyPercent}% Easy / ${mediumPercent}% Medium / ${hardPercent}% Hard distribution rule!`);
+
+    setQuestionSectionMap(newSectionMap);
+    alert(`Auto-selected ${finalSelection.length} questions distributed across all ${testSections.length} section(s) based on your ${easyPercent}% Easy / ${mediumPercent}% Medium / ${hardPercent}% Hard distribution rule!`);
   };
 
   // Section Management: Adds a new section (e.g. Section B)
@@ -1589,18 +1599,26 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                     </div>
                   ) : (
                     testSections.map((sec, secIdx) => {
-                      // Filter selected questions assigned to this section
-                      const sectionQuestions = questions
-                        .filter(q => selectedQuestionIds.includes(q.id))
-                        .filter(q => {
-                          const assignedSecId = questionSectionMap[q.id];
-                          if (assignedSecId) return assignedSecId === sec.id;
-                          const qIndex = selectedQuestionIds.indexOf(q.id);
-                          const fallbackSecId = testSections[qIndex % testSections.length]?.id;
-                          return fallbackSecId === sec.id;
-                        });
+                      const selectedQs = questions.filter(q => selectedQuestionIds.includes(q.id));
+                      let sectionQuestions: typeof selectedQs = [];
 
-                      if (sectionQuestions.length === 0 && selectedQuestionIds.length > 0) return null;
+                      // Check if questions are explicitly assigned to MULTIPLE distinct section IDs
+                      const distinctMappedSections = Array.from(new Set(selectedQuestionIds.map(id => questionSectionMap[id]).filter(Boolean)));
+
+                      if (distinctMappedSections.length > 1) {
+                        sectionQuestions = selectedQs.filter(q => questionSectionMap[q.id] === sec.id);
+                      } else {
+                        // Automatically partition selectedQs across testSections based on target counts
+                        let startOffset = 0;
+                        for (let i = 0; i < secIdx; i++) {
+                          const target = Number(testSections[i]?.questionsCount) || Math.floor(selectedQs.length / testSections.length);
+                          startOffset += target;
+                        }
+                        const currentTarget = Number(sec.questionsCount) || Math.floor(selectedQs.length / testSections.length);
+                        const endOffset = secIdx === testSections.length - 1 ? selectedQs.length : startOffset + currentTarget;
+
+                        sectionQuestions = selectedQs.slice(startOffset, Math.min(selectedQs.length, Math.max(startOffset, endOffset)));
+                      }
 
                       return (
                         <div key={sec.id} className="space-y-4 pt-4 border-t border-slate-300 first:border-t-0 first:pt-0">
@@ -1611,7 +1629,7 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                                 {sec.name || `Section ${String.fromCharCode(65 + secIdx)}`}
                               </h3>
                               <p className="text-[10px] text-slate-500 font-semibold mt-0.5">
-                                {sec.questionsCount ? `Target: ${sec.questionsCount} Qs` : ''} • ({sectionQuestions.length} Questions assigned)
+                                {sec.questionsCount ? `Target: ${sec.questionsCount} Qs` : ''} • ({sectionQuestions.length} Questions in this section)
                               </p>
                             </div>
                             <span className="text-[10px] font-extrabold text-teal-900 bg-teal-50 border border-teal-200 px-3 py-1 rounded-full uppercase">
@@ -1620,7 +1638,12 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                           </div>
 
                           {/* Section Questions */}
-                          <div className="space-y-6">
+                          {sectionQuestions.length === 0 ? (
+                            <div className="p-4 text-center text-slate-400 font-semibold text-xs italic border border-dashed border-slate-200 rounded-lg">
+                              No questions assigned to this section yet. Select target section in Step 2 to add questions here.
+                            </div>
+                          ) : (
+                            <div className="space-y-6">
                             {sectionQuestions.map((q, qIdx) => {
                               const globalQNum = selectedQuestionIds.indexOf(q.id) + 1;
                               const targetOptKey = (((q as any).correct_option || (q as any).correctOption || 'a')).toString().toLowerCase().trim();
@@ -1727,6 +1750,7 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                               );
                             })}
                           </div>
+                        )}
                         </div>
                       );
                     })
