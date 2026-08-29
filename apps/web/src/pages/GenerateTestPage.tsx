@@ -237,6 +237,16 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
   };
 
   /**
+   * Helper to retrieve list of available subject names
+   */
+  const getAvailableSubjectNames = (): string[] => {
+    if (subjects.length > 0) {
+      return subjects.map(s => s.name);
+    }
+    return ['Biology', 'Physics', 'Chemistry', 'Mathematics'];
+  };
+
+  /**
    * Handles Subject change from dropdown, updating default chapter and initial section name.
    */
   const handleSubjectChange = (newSub: string) => {
@@ -421,66 +431,98 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
     setQuestionSectionMap({});
   };
 
+  /**
+   * Handles switching the active Target Test Section in Step 2.
+   * Automatically syncs the Subject Filter and Chapter Filter to match the section's configured subject!
+   */
+  const handleTargetSectionChange = (newSecId: string) => {
+    setTargetSectionId(newSecId);
+    const targetSec = testSections.find(s => s.id === newSecId);
+    if (targetSec) {
+      let subToUse = (targetSec as any).subject;
+      if (!subToUse && targetSec.name) {
+        const parts = targetSec.name.split('—').map(s => s.trim());
+        if (parts.length > 1) {
+          subToUse = parts[1];
+        } else {
+          const matched = subjects.find(sub => targetSec.name.toLowerCase().includes(sub.name.toLowerCase()));
+          if (matched) subToUse = matched.name;
+        }
+      }
+
+      if (subToUse) {
+        const availableSubs = getAvailableSubjectNames();
+        const matched = availableSubs.find(s => s.toLowerCase() === subToUse?.toLowerCase());
+        if (matched) {
+          setSelectedSubjectFilter(matched);
+          setSelectedChapterFilter('all');
+        }
+      }
+    }
+  };
+
   // Automatically selects questions based on configured difficulty percentage rules (Easy / Medium / Hard)
   const handleAutoSelectDistribution = () => {
-    // Total questions to select across ALL configured test sections
-    const totalPaperTarget = testSections.reduce((sum, sec) => sum + (Number(sec.questionsCount) || 0), 0) || 50;
-
-    const calcEasy = Math.round((totalPaperTarget * easyPercent) / 100);
-    const calcMed = Math.round((totalPaperTarget * mediumPercent) / 100);
-    const calcHard = Math.max(0, totalPaperTarget - calcEasy - calcMed);
-
-    // Filter questions matching current subject and chapter filters if set
-    const candidatePool = questions.filter(q => {
-      const matchSubject = selectedSubjectFilter === 'all' || (q.subject || '').toLowerCase() === selectedSubjectFilter.toLowerCase();
-      const matchChapter = selectedChapterFilter === 'all' || (q.chapter || '').toLowerCase() === selectedChapterFilter.toLowerCase();
-      return matchSubject && matchChapter;
-    });
-
-    const poolToUse = candidatePool.length > 0 ? candidatePool : questions;
-
-    const easyQ = poolToUse.filter(q => (q.difficulty || '').toLowerCase() === 'easy').map(q => q.id);
-    const medQ = poolToUse.filter(q => (q.difficulty || '').toLowerCase() === 'medium').map(q => q.id);
-    const hardQ = poolToUse.filter(q => (q.difficulty || '').toLowerCase() === 'hard').map(q => q.id);
-
-    const chosenEasy = easyQ.slice(0, calcEasy);
-    const chosenMed = medQ.slice(0, calcMed);
-    const chosenHard = hardQ.slice(0, calcHard);
-
-    const combined = Array.from(new Set([...chosenEasy, ...chosenMed, ...chosenHard]));
-    const finalSelection = combined.length > 0 ? combined : poolToUse.slice(0, totalPaperTarget).map(q => q.id);
-
-    setSelectedQuestionIds(finalSelection);
-
-    // Distribute finalSelection across testSections based on target counts
     const newSectionMap: Record<string, string> = {};
-    let cursor = 0;
+    let allChosen: string[] = [];
 
-    testSections.forEach((sec, idx) => {
-      const secTarget = Number(sec.questionsCount) || Math.floor(finalSelection.length / testSections.length);
-      const chunk = idx === testSections.length - 1
-        ? finalSelection.slice(cursor)
-        : finalSelection.slice(cursor, cursor + secTarget);
+    testSections.forEach((sec) => {
+      const secTarget = Number(sec.questionsCount) || 25;
+      let secSub = (sec as any).subject;
+      if (!secSub && sec.name) {
+        const parts = sec.name.split('—').map(s => s.trim());
+        if (parts.length > 1) secSub = parts[1];
+      }
+      if (!secSub) secSub = selectedSubject;
 
-      chunk.forEach(qId => {
+      const calcEasy = Math.round((secTarget * easyPercent) / 100);
+      const calcMed = Math.round((secTarget * mediumPercent) / 100);
+      const calcHard = Math.max(0, secTarget - calcEasy - calcMed);
+
+      const secPool = questions.filter(q => {
+        const qSub = (q.subject || '').toLowerCase();
+        return qSub.includes(secSub.toLowerCase()) || secSub.toLowerCase().includes(qSub);
+      });
+
+      const poolToUse = secPool.length > 0 ? secPool : questions;
+
+      const easyQ = poolToUse.filter(q => (q.difficulty || '').toLowerCase() === 'easy').map(q => q.id);
+      const medQ = poolToUse.filter(q => (q.difficulty || '').toLowerCase() === 'medium').map(q => q.id);
+      const hardQ = poolToUse.filter(q => (q.difficulty || '').toLowerCase() === 'hard').map(q => q.id);
+
+      const chosenEasy = easyQ.slice(0, calcEasy);
+      const chosenMed = medQ.slice(0, calcMed);
+      const chosenHard = hardQ.slice(0, calcHard);
+
+      const combined = Array.from(new Set([...chosenEasy, ...chosenMed, ...chosenHard]));
+      const finalSecSelection = combined.length > 0 ? combined : poolToUse.slice(0, secTarget).map(q => q.id);
+
+      finalSecSelection.forEach(qId => {
         newSectionMap[qId] = sec.id;
       });
-      cursor += secTarget;
+      allChosen = [...allChosen, ...finalSecSelection];
     });
 
+    const uniqueSelection = Array.from(new Set(allChosen));
+    setSelectedQuestionIds(uniqueSelection);
     setQuestionSectionMap(newSectionMap);
-    alert(`Auto-selected ${finalSelection.length} questions distributed across all ${testSections.length} section(s) based on your ${easyPercent}% Easy / ${mediumPercent}% Medium / ${hardPercent}% Hard distribution rule!`);
+    alert(`Auto-selected ${uniqueSelection.length} questions matching your section configurations and difficulty percentages (${easyPercent}% Easy / ${mediumPercent}% Medium / ${hardPercent}% Hard)!`);
   };
 
   // Section Management: Adds a new section (e.g. Section B)
   const handleAddSection = () => {
     const nextChar = String.fromCharCode(65 + testSections.length);
+    const availableSubs = getAvailableSubjectNames();
+    const subForSec = availableSubs[testSections.length % availableSubs.length] || selectedSubject;
     const newSecId = `sec-${Date.now()}`;
-    setTestSections(prev => [
-      ...prev,
-      { id: newSecId, name: `Section ${nextChar} — ${selectedSubject}`, questionsCount: 25 }
-    ]);
-    setTargetSectionId(newSecId);
+    const newSec = {
+      id: newSecId,
+      name: `Section ${nextChar} — ${subForSec}`,
+      questionsCount: 25,
+      subject: subForSec
+    };
+    setTestSections(prev => [...prev, newSec]);
+    handleTargetSectionChange(newSecId);
   };
 
   // Section Management: Removes a section
@@ -489,7 +531,7 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
     const remaining = testSections.filter(s => s.id !== id);
     setTestSections(remaining);
     if (targetSectionId === id) {
-      setTargetSectionId(remaining[0]?.id || 'sec-1');
+      handleTargetSectionChange(remaining[0]?.id || 'sec-1');
     }
   };
 
@@ -979,7 +1021,7 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                   </label>
                   <select
                     value={targetSectionId}
-                    onChange={e => setTargetSectionId(e.target.value)}
+                    onChange={e => handleTargetSectionChange(e.target.value)}
                     className="w-full text-xs font-bold p-2.5 border border-teal-300 rounded-xl text-teal-900 bg-teal-50/70 focus:ring-2 focus:ring-teal-600 cursor-pointer shadow-2xs"
                   >
                     {testSections.map((sec, idx) => (
@@ -1298,7 +1340,7 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
                           <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1">
                             Section Name
@@ -1311,9 +1353,35 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                               updated[idx].name = e.target.value;
                               setTestSections(updated);
                             }}
-                            placeholder="e.g., Section A - Multiple Choice"
+                            placeholder="e.g., Section A — Physics"
                             className="w-full text-xs font-bold p-2 border border-slate-300 rounded-lg text-slate-900 bg-white"
                           />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1">
+                            Section Subject
+                          </label>
+                          <select
+                            value={(sec as any).subject || (sec.name.split('—')[1] || '').trim() || selectedSubject}
+                            onChange={e => {
+                              const newSub = e.target.value;
+                              const updated = [...testSections];
+                              (updated[idx] as any).subject = newSub;
+                              const secLetter = String.fromCharCode(65 + idx);
+                              updated[idx].name = `Section ${secLetter} — ${newSub}`;
+                              setTestSections(updated);
+
+                              if (targetSectionId === sec.id) {
+                                setSelectedSubjectFilter(newSub);
+                                setSelectedChapterFilter('all');
+                              }
+                            }}
+                            className="w-full text-xs font-bold p-2 border border-slate-300 rounded-lg text-slate-900 bg-white cursor-pointer"
+                          >
+                            {getAvailableSubjectNames().map(s => (
+                              <option key={s} value={s}>{s}</option>
+                            ))}
+                          </select>
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="flex-1">
@@ -1541,10 +1609,23 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                 {/* Paper Header */}
                 <div className="text-center border-b-2 border-slate-900 pb-4 space-y-1">
                   <h1 className="text-xl font-black tracking-tight text-slate-900 uppercase">
-                    {examType} {selectedSubject.toUpperCase()}
+                    {(() => {
+                      const secSubs = Array.from(new Set(testSections.map(sec => {
+                        let sub = (sec as any).subject;
+                        if (!sub && sec.name) {
+                          const parts = sec.name.split('—').map(s => s.trim());
+                          if (parts.length > 1) sub = parts[1];
+                        }
+                        return sub || selectedSubject;
+                      }).filter(Boolean)));
+
+                      return secSubs.length > 1
+                        ? `${examType} MOCK TEST (${secSubs.join(' • ').toUpperCase()})`
+                        : `${examType} ${selectedSubject.toUpperCase()}`;
+                    })()}
                   </h1>
                   <h2 className="text-sm font-bold text-slate-700 uppercase">
-                    {selectedChapter ? `${selectedChapter.toUpperCase()} TEST` : 'QUESTION PAPER'}
+                    {testName.toUpperCase() || (selectedChapter ? `${selectedChapter.toUpperCase()} TEST` : 'QUESTION PAPER')}
                   </h2>
                   <p className="text-xs font-bold text-emerald-800 uppercase tracking-wide">
                     {isAnswerKeyMode ? '✓ OFFICIAL ANSWER KEY & DETAILED SOLUTIONS' : 'MULTIPLE CHOICE QUESTIONS'}
