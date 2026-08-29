@@ -286,24 +286,33 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 No test papers generated yet. Click "Generate Test Paper" to create your first exam.
               </div>
             ) : (
-              documents.slice(0, 4).map(doc => (
-                <div
-                  key={doc.id}
-                  className="flex items-center justify-between p-3.5 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-100/60 transition-all"
-                >
-                  <div className="space-y-0.5">
-                    <p className="text-xs font-bold text-slate-900">
-                      {doc.title}
-                    </p>
-                    <p className="text-[11px] text-slate-400 font-medium">
-                      {doc.sections?.length || 0} Sections · {doc.sections?.reduce((acc: number, s: any) => acc + (s.items?.length || 0), 0) || 0} Questions
-                    </p>
+              documents.slice(0, 4).map(doc => {
+                const qCount = (doc.sections && doc.sections.length > 0)
+                  ? doc.sections.reduce((acc: number, s: any) => {
+                      const items = s.blocks || s.items || s.questions || [];
+                      return acc + (Array.isArray(items) ? items.length : 0);
+                    }, 0)
+                  : Number((doc.metadata as any)?.totalQuestions || (doc.metadata as any)?.questionsCount || (doc as any)?.totalQuestions || 0);
+
+                return (
+                  <div
+                    key={doc.id}
+                    className="flex items-center justify-between p-3.5 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-100/60 transition-all"
+                  >
+                    <div className="space-y-0.5">
+                      <p className="text-xs font-bold text-slate-900">
+                        {doc.title}
+                      </p>
+                      <p className="text-[11px] text-slate-400 font-medium">
+                        {doc.sections?.length || 0} Sections · {qCount} Questions
+                      </p>
+                    </div>
+                    <span className="px-2.5 py-1 bg-white border border-slate-200 text-teal-800 rounded-lg text-[10px] font-bold font-mono shadow-2xs">
+                      {qCount} Qs
+                    </span>
                   </div>
-                  <span className="px-2.5 py-1 bg-white border border-slate-200 text-teal-800 rounded-lg text-[10px] font-bold font-mono shadow-2xs">
-                    {doc.sections?.reduce((acc: number, s: any) => acc + (s.items?.length || 0), 0) || 0} Qs
-                  </span>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
