@@ -173,41 +173,69 @@ html, body {
   transform: scale(0.98);
 }
 
-/* Print CSS - Ensures ONLY the Test Paper Sheet itself is printed / saved as PDF */
+/* Print CSS - Universal & Clean Multi-page PDF Export */
 @media print {
-  body, html {
-    background: white !important;
-    margin: 0 !important;
-    padding: 0 !important;
+  @page {
+    size: A4 portrait;
+    margin: 12mm 15mm 15mm 15mm;
   }
 
-  /* Hide all app layouts, sidebars, headers, modal toolbars, buttons, and overlays */
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  /* Hide main app root when exporting via cloned print container */
+  body:has(#print-paper-export-root) #root {
+    display: none !important;
+  }
+
+  #print-paper-export-root {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    overflow: visible !important;
+  }
+
+  /* Hide UI elements, toolbars, buttons, and navigation bars */
   aside, header, nav, button, .no-print {
     display: none !important;
   }
 
-  body * {
-    visibility: hidden !important;
-  }
-
-  /* Show ONLY printable paper sheet content */
-  .printable-paper-sheet,
-  .printable-paper-sheet * {
-    visibility: visible !important;
-  }
-
+  /* Ensure printable paper sheet flows naturally without absolute position duplication */
   .printable-paper-sheet {
+    position: static !important;
     display: block !important;
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
     margin: 0 !important;
-    padding: 10mm 15mm !important;
+    padding: 0 !important;
     box-shadow: none !important;
     border: none !important;
-    background: white !important;
-    color: black !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    overflow: visible !important;
+  }
+
+  /* Prevent question cards from breaking/slicing across page boundaries */
+  .question-item-block {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    margin-bottom: 1.25rem !important;
+  }
+
+  /* Keep section headers attached to the following questions */
+  .section-header-block {
+    break-after: avoid !important;
+    page-break-after: avoid !important;
+    margin-top: 1.5rem !important;
+    margin-bottom: 1rem !important;
   }
 }

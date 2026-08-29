@@ -510,7 +510,7 @@ export const TestsPage: React.FC<TestsPageProps> = ({
               {/* Sections & Questions */}
               {previewDoc.sections && previewDoc.sections.length > 0 ? (
                 previewDoc.sections.map((sec, sIdx) => (
-                  <div key={sec.id || sIdx} className="bg-white p-6 rounded-xl border border-slate-200 shadow-2xs space-y-4">
+                  <div key={sec.id || sIdx} className="section-header-block bg-white p-6 rounded-xl border border-slate-200 shadow-2xs space-y-4">
                     <div className="border-b border-slate-200 pb-2">
                       <h2 className="font-bold text-sm text-slate-900">{sec.title || `SECTION ${String.fromCharCode(65 + sIdx)}`}</h2>
                       {sec.instructions && <p className="text-slate-500 text-[11px] font-medium">{sec.instructions}</p>}
@@ -524,7 +524,7 @@ export const TestsPage: React.FC<TestsPageProps> = ({
                           const qOptions = qObj?.options || blk.data?.options;
 
                           return (
-                            <div key={blk.id || bIdx} className="p-3 bg-slate-50/70 border border-slate-200/80 rounded-lg space-y-2">
+                            <div key={blk.id || bIdx} className="question-item-block p-3 bg-slate-50/70 border border-slate-200/80 rounded-lg space-y-2">
                               <div className="flex items-start justify-between gap-3">
                                 <div className="font-semibold text-slate-900 text-xs flex items-start gap-2">
                                   <span className="font-bold font-mono shrink-0">Q{bIdx + 1}.</span>
