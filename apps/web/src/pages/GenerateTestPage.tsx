@@ -1526,34 +1526,65 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
               {/* Print Media Styles */}
               <style>{`
                 @media print {
-                  body * {
-                    visibility: hidden !important;
+                  body {
+                    background: #fff !important;
+                    color: #000 !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    overflow: visible !important;
                   }
-                  .printable-paper-sheet, .printable-paper-sheet * {
-                    visibility: visible !important;
+                  header, nav, footer, aside, .no-print, .modal-header-controls, .modal-footer-controls {
+                    display: none !important;
+                  }
+                  .fixed, .fixed.inset-0 {
+                    position: static !important;
+                    inset: auto !important;
+                    z-index: auto !important;
+                    background: none !important;
+                    backdrop-filter: none !important;
+                    padding: 0 !important;
+                    margin: 0 !important;
+                    overflow: visible !important;
+                    height: auto !important;
+                    max-height: none !important;
+                    display: block !important;
+                  }
+                  .max-h-\[92vh\], .overflow-hidden, .overflow-y-auto, .flex-1 {
+                    position: static !important;
+                    max-height: none !important;
+                    height: auto !important;
+                    overflow: visible !important;
+                    border: none !important;
+                    box-shadow: none !important;
+                    display: block !important;
+                    background: transparent !important;
                   }
                   .printable-paper-sheet {
-                    position: absolute !important;
-                    left: 0 !important;
-                    top: 0 !important;
+                    position: static !important;
                     width: 100% !important;
                     max-width: 100% !important;
                     margin: 0 !important;
-                    padding: 15mm !important;
+                    padding: 0 !important;
                     border: none !important;
                     box-shadow: none !important;
                     background: #fff !important;
-                  }
-                  .no-print {
-                    display: none !important;
+                    display: block !important;
+                    overflow: visible !important;
                   }
                   .question-item-block {
                     break-inside: avoid !important;
                     page-break-inside: avoid !important;
+                    margin-bottom: 1.25rem !important;
                   }
                   .section-header-block {
                     break-after: avoid !important;
                     page-break-after: avoid !important;
+                    margin-top: 1.5rem !important;
+                    margin-bottom: 1rem !important;
+                  }
+                  @page {
+                    size: A4 portrait;
+                    margin: 15mm 15mm 15mm 15mm;
                   }
                 }
               `}</style>
@@ -1600,24 +1631,35 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                   ) : (
                     testSections.map((sec, secIdx) => {
                       const selectedQs = questions.filter(q => selectedQuestionIds.includes(q.id));
-                      let sectionQuestions: typeof selectedQs = [];
 
-                      // Check if questions are explicitly assigned to MULTIPLE distinct section IDs
-                      const distinctMappedSections = Array.from(new Set(selectedQuestionIds.map(id => questionSectionMap[id]).filter(Boolean)));
+                      // 1. Explicit matching for this section
+                      let sectionQuestions = selectedQs.filter(q => questionSectionMap[q.id] === sec.id);
 
-                      if (distinctMappedSections.length > 1) {
-                        sectionQuestions = selectedQs.filter(q => questionSectionMap[q.id] === sec.id);
-                      } else {
-                        // Automatically partition selectedQs across testSections based on target counts
-                        let startOffset = 0;
-                        for (let i = 0; i < secIdx; i++) {
-                          const target = Number(testSections[i]?.questionsCount) || Math.floor(selectedQs.length / testSections.length);
-                          startOffset += target;
+                      // 2. Fallback resolution if no questions explicitly matched this section via section map
+                      if (sectionQuestions.length === 0) {
+                        const unmappedQs = selectedQs.filter(q => {
+                          const mappedSecId = questionSectionMap[q.id];
+                          return !mappedSecId || !testSections.some(s => s.id === mappedSecId);
+                        });
+
+                        const emptySections = testSections.filter(s => !selectedQs.some(q => questionSectionMap[q.id] === s.id));
+                        const emptyIdx = emptySections.findIndex(s => s.id === sec.id);
+
+                        if (unmappedQs.length > 0 && emptyIdx >= 0) {
+                          const perSecCount = Math.ceil(unmappedQs.length / Math.max(1, emptySections.length));
+                          sectionQuestions = unmappedQs.slice(emptyIdx * perSecCount, (emptyIdx + 1) * perSecCount);
+                        } else {
+                          // Partition selectedQs across testSections based on target counts
+                          let startOffset = 0;
+                          for (let i = 0; i < secIdx; i++) {
+                            const target = Number(testSections[i]?.questionsCount) || Math.floor(selectedQs.length / testSections.length);
+                            startOffset += target;
+                          }
+                          const currentTarget = Number(sec.questionsCount) || Math.floor(selectedQs.length / testSections.length);
+                          const endOffset = secIdx === testSections.length - 1 ? selectedQs.length : startOffset + currentTarget;
+
+                          sectionQuestions = selectedQs.slice(startOffset, Math.min(selectedQs.length, Math.max(startOffset, endOffset)));
                         }
-                        const currentTarget = Number(sec.questionsCount) || Math.floor(selectedQs.length / testSections.length);
-                        const endOffset = secIdx === testSections.length - 1 ? selectedQs.length : startOffset + currentTarget;
-
-                        sectionQuestions = selectedQs.slice(startOffset, Math.min(selectedQs.length, Math.max(startOffset, endOffset)));
                       }
 
                       return (
