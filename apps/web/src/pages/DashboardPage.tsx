@@ -311,19 +311,18 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               documents.slice(0, 4).map(doc => (
                 <div
                   key={doc.id}
-                  onClick={() => onOpenDocument(doc.id)}
-                  className="flex items-center justify-between p-3 rounded-xl border border-slate-100 hover:border-teal-200 hover:bg-teal-50/30 transition-all cursor-pointer group"
+                  className="flex items-center justify-between p-3.5 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-100/60 transition-all"
                 >
                   <div className="space-y-0.5">
-                    <p className="text-xs font-bold text-slate-900 group-hover:text-teal-800 transition-colors">
+                    <p className="text-xs font-bold text-slate-900">
                       {doc.title}
                     </p>
                     <p className="text-[11px] text-slate-400 font-medium">
                       {doc.sections?.length || 0} Sections · {doc.sections?.reduce((acc: number, s: any) => acc + (s.items?.length || 0), 0) || 0} Questions
                     </p>
                   </div>
-                  <span className="px-2.5 py-1 bg-slate-100 group-hover:bg-teal-100 text-slate-600 group-hover:text-teal-800 rounded-lg text-[10px] font-bold transition-colors">
-                    Open Editor →
+                  <span className="px-2.5 py-1 bg-white border border-slate-200 text-teal-800 rounded-lg text-[10px] font-bold font-mono shadow-2xs">
+                    {doc.sections?.reduce((acc: number, s: any) => acc + (s.items?.length || 0), 0) || 0} Qs
                   </span>
                 </div>
               ))
