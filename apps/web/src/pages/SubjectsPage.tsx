@@ -28,27 +28,32 @@ export const SubjectsPage: React.FC<SubjectsPageProps> = ({
   onDeleteSubject
 }) => {
   const user = getUserProfile();
-  const [localSubjects, setLocalSubjects] = useState<SubjectItem[]>([]);
+  const [subjects, setSubjects] = useState<SubjectItem[]>(subjectsList || []);
 
   const loadBackendSubjects = async () => {
     try {
       const data = await api.getSubjects();
-      setLocalSubjects(data || []);
+      if (data && Array.isArray(data)) {
+        setSubjects(data);
+      }
     } catch (e) {
       console.error('Failed to load subjects:', e);
     }
   };
 
   useEffect(() => {
-    if (!subjectsList) {
-      loadBackendSubjects();
+    loadBackendSubjects();
+  }, []);
+
+  useEffect(() => {
+    if (subjectsList && subjectsList.length > 0) {
+      setSubjects(subjectsList);
     }
   }, [subjectsList]);
 
-  const rawSubjects = subjectsList || localSubjects;
-  const subjects = user.assigned_subject !== 'All'
-    ? rawSubjects.filter(s => s.name.toLowerCase() === user.assigned_subject.toLowerCase())
-    : rawSubjects;
+  const displaySubjects = user.assigned_subject !== 'All'
+    ? subjects.filter(s => s.name.toLowerCase() === user.assigned_subject.toLowerCase())
+    : subjects;
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -81,7 +86,7 @@ export const SubjectsPage: React.FC<SubjectsPageProps> = ({
     if (confirm(`Are you sure you want to delete subject "${subIdentifier}"?`)) {
       const targetId = s.id || s.code;
       // Optimistic delete
-      setLocalSubjects(prev => prev.filter(item => item.code !== s.code && item.id !== s.id));
+      setSubjects(prev => prev.filter(item => item.code !== s.code && item.id !== s.id));
       try {
         if (onDeleteSubject) {
           onDeleteSubject(s.code);
@@ -117,7 +122,7 @@ export const SubjectsPage: React.FC<SubjectsPageProps> = ({
         if (subToEdit?.id) {
           await api.updateSubject(subToEdit.id, updatedSub);
         }
-        setLocalSubjects(localSubjects.map(s => (s.code === editingCode ? updatedSub : s)));
+        setSubjects(prev => prev.map(s => (s.code === editingCode ? updatedSub : s)));
       }
     } else {
       const newSub: SubjectItem = {
@@ -132,7 +137,7 @@ export const SubjectsPage: React.FC<SubjectsPageProps> = ({
         onAddSubject(newSub);
       } else {
         const created = await api.createSubject(newSub);
-        setLocalSubjects(prev => [...prev, created || newSub]);
+        setSubjects(prev => [...prev, created || newSub]);
       }
     }
 
@@ -150,7 +155,7 @@ export const SubjectsPage: React.FC<SubjectsPageProps> = ({
       <div className="flex items-center justify-between border-b border-slate-200 pb-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Subjects</h1>
-          <p className="text-xs text-slate-500 font-medium mt-0.5">Manage subjects ({subjects.length} active).</p>
+          <p className="text-xs text-slate-500 font-medium mt-0.5">Manage subjects ({displaySubjects.length} active).</p>
         </div>
         <button
           type="button"
@@ -175,14 +180,14 @@ export const SubjectsPage: React.FC<SubjectsPageProps> = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
-            {subjects.length === 0 ? (
+            {displaySubjects.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-5 py-10 text-center text-slate-400 font-medium">
                   No subjects created yet. Click "+ Add Subject" to add your first subject.
                 </td>
               </tr>
             ) : (
-              subjects.map(s => (
+              displaySubjects.map(s => (
                 <tr key={s.id || s.code} className="hover:bg-slate-50/80 transition-colors">
                   <td className="px-5 py-3.5 font-bold text-slate-900">{s.name}</td>
                   <td className="px-5 py-3.5 font-mono text-slate-600">{s.code}</td>

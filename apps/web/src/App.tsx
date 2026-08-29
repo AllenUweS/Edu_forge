@@ -143,7 +143,7 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     loadBackendSubjects();
     loadBackendChapters();
-  }, []);
+  }, [currentPage]);
 
   const handleAddSubject = async (newSub: SubjectItem) => {
     setSubjectsList(prev => [...prev, newSub]);

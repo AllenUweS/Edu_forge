@@ -44,34 +44,40 @@ export const ChaptersPage: React.FC<ChaptersPageProps> = ({
     ? rawAvailableSubjects.filter(s => s.name.toLowerCase() === user.assigned_subject.toLowerCase())
     : rawAvailableSubjects;
 
-  const [localChapters, setLocalChapters] = useState<ChapterItem[]>([]);
+  const [chapters, setChapters] = useState<ChapterItem[]>(chaptersList || []);
 
   const loadBackendChapters = async () => {
     try {
       const data = await api.getChapters();
-      const mapped: ChapterItem[] = (data || []).map((ch: any, idx: number) => ({
-        num: String(idx + 1).padStart(2, '0'),
-        id: String(ch.id || `CH-${idx + 1}`),
-        title: ch.name || ch.title || 'Untitled Chapter',
-        subject: ch.subject || 'Biology',
-        count: ch.count || 0
-      }));
-      setLocalChapters(mapped);
+      if (data && Array.isArray(data)) {
+        const mapped: ChapterItem[] = data.map((ch: any, idx: number) => ({
+          num: String(idx + 1).padStart(2, '0'),
+          id: String(ch.id || `CH-${idx + 1}`),
+          code: ch.code || ch.chapter_code || `CH-${String(idx + 1).padStart(2, '0')}`,
+          title: ch.name || ch.title || 'Untitled Chapter',
+          subject: ch.subject || 'Biology',
+          count: Number(ch.count) || 0
+        }));
+        setChapters(mapped);
+      }
     } catch (e) {
       console.error('Failed to load chapters:', e);
     }
   };
 
   useEffect(() => {
-    if (!chaptersList) {
-      loadBackendChapters();
+    loadBackendChapters();
+  }, []);
+
+  useEffect(() => {
+    if (chaptersList && chaptersList.length > 0) {
+      setChapters(chaptersList);
     }
   }, [chaptersList]);
 
-  const rawChapters = chaptersList || localChapters;
-  const chapters = user.assigned_subject !== 'All'
-    ? rawChapters.filter(c => (c.subject || '').toLowerCase() === user.assigned_subject.toLowerCase())
-    : rawChapters;
+  const displayChapters = user.assigned_subject !== 'All'
+    ? chapters.filter(c => (c.subject || '').toLowerCase() === user.assigned_subject.toLowerCase())
+    : chapters;
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -96,7 +102,7 @@ export const ChaptersPage: React.FC<ChaptersPageProps> = ({
   const handleDelete = async (id: string) => {
     if (confirm(`Are you sure you want to delete chapter ${id}?`)) {
       // Optimistic delete
-      setLocalChapters(prev => prev.filter(c => String(c.id) !== String(id)));
+      setChapters(prev => prev.filter(c => String(c.id) !== String(id)));
       try {
         if (onDeleteChapter) {
           onDeleteChapter(id);
@@ -127,7 +133,7 @@ export const ChaptersPage: React.FC<ChaptersPageProps> = ({
         } else {
           await api.updateChapter(editingId, { title: title.trim(), name: title.trim(), subject: selectedSubject });
         }
-        setLocalChapters(localChapters.map(c => (c.id === editingId ? updatedCh : c)));
+        setChapters(prev => prev.map(c => (c.id === editingId ? updatedCh : c)));
       } else {
         const subObj = availableSubjects.find(s => s.name === selectedSubject) || availableSubjects[0];
         const codeStr = `${subObj?.code || 'SUB'}-${String(chapters.length + 1).padStart(2, '0')}`;
@@ -152,7 +158,7 @@ export const ChaptersPage: React.FC<ChaptersPageProps> = ({
             newCh.id = created.id;
           }
         }
-        setLocalChapters(prev => [newCh, ...prev]);
+        setChapters(prev => [newCh, ...prev]);
       }
     } catch (err) {
       console.error('Failed submitting chapter:', err);
@@ -171,7 +177,7 @@ export const ChaptersPage: React.FC<ChaptersPageProps> = ({
       <div className="flex items-center justify-between border-b border-slate-200 pb-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Chapters</h1>
-          <p className="text-xs text-slate-500 font-medium mt-0.5">Subject → Chapter → Questions ({chapters.length} active)</p>
+          <p className="text-xs text-slate-500 font-medium mt-0.5">Subject → Chapter → Questions ({displayChapters.length} active)</p>
         </div>
         <button
           type="button"
@@ -195,14 +201,14 @@ export const ChaptersPage: React.FC<ChaptersPageProps> = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
-            {chapters.length === 0 ? (
+            {displayChapters.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-5 py-10 text-center text-slate-400 font-medium">
                   No chapters created yet. Click "+ Add Chapter" to add your first chapter.
                 </td>
               </tr>
             ) : (
-              chapters.map((ch, idx) => (
+              displayChapters.map((ch, idx) => (
                 <tr key={ch.id || idx} className="hover:bg-slate-50/80 transition-colors">
                   <td className="px-5 py-3.5 font-mono text-slate-500">{ch.num || String(idx + 1).padStart(2, '0')}</td>
                   <td className="px-5 py-3.5 font-bold text-slate-900">{ch.title}</td>
