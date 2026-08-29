@@ -6,18 +6,49 @@ export const subjectsRouter = Router();
 // GET /api/subjects
 subjectsRouter.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { data, error } = await supabase.from('subjects').select('*').order('name');
-    if (error) {
+    const [subsRes, chsRes, qsRes] = await Promise.all([
+      supabase.from('subjects').select('*').order('name'),
+      supabase.from('chapters').select('id, subject_id, subject'),
+      supabase.from('questions').select('id, subject_id, subject')
+    ]);
+
+    if (subsRes.error) {
+      console.error('Supabase getSubjects error:', subsRes.error);
       return res.json({ success: true, data: [] });
     }
-    const formatted = (data || []).map((s: any) => ({
-      id: s.id,
-      name: s.name,
-      code: s.code,
-      color: s.color || 'bg-slate-50 text-slate-700 border-slate-200',
-      chapters: 0,
-      questions: 0
-    }));
+
+    const subjects = subsRes.data || [];
+    const chapters = chsRes.data || [];
+    const questions = qsRes.data || [];
+
+    const formatted = subjects.map((s: any) => {
+      const sId = String(s.id || '').toLowerCase();
+      const sName = String(s.name || '').trim().toLowerCase();
+
+      // Count chapters belonging to this subject
+      const chCount = chapters.filter((c: any) => {
+        const cSubId = c.subject_id ? String(c.subject_id).toLowerCase() : '';
+        const cSubName = c.subject ? String(c.subject).trim().toLowerCase() : '';
+        return (cSubId && cSubId === sId) || (cSubName && cSubName === sName);
+      }).length;
+
+      // Count questions belonging to this subject
+      const qCount = questions.filter((q: any) => {
+        const qSubId = q.subject_id ? String(q.subject_id).toLowerCase() : '';
+        const qSubName = q.subject ? String(q.subject).trim().toLowerCase() : '';
+        return (qSubId && qSubId === sId) || (qSubName && (qSubName === sName || qSubName.includes(sName)));
+      }).length;
+
+      return {
+        id: s.id,
+        name: s.name,
+        code: s.code,
+        color: s.color || 'bg-slate-50 text-slate-700 border-slate-200',
+        chapters: chCount,
+        questions: qCount
+      };
+    });
+
     res.json({ success: true, data: formatted });
   } catch (err) {
     next(err);

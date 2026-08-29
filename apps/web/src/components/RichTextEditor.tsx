@@ -15,6 +15,7 @@ import {
 import { api } from '../services/api.js';
 import { MathTextRenderer } from '../equation/MathTextRenderer.js';
 import { MathTypeModal } from './MathTypeModal.js';
+import { ImageLibraryModal } from './ImageLibraryModal.js';
 
 // Custom TipTap Global Extension for Text Alignment (Left, Center, Right, Justify)
 export const CustomTextAlign = Extension.create({
@@ -127,6 +128,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
 }) => {
   const [showMathMenu, setShowMathMenu] = useState(false);
   const [isMathTypeOpen, setIsMathTypeOpen] = useState(false);
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(showPreview);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [selectedImageSrc, setSelectedImageSrc] = useState<string | null>(null);
@@ -238,6 +240,24 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       console.error('Error processing image:', err);
     } finally {
       setIsUploadingImage(false);
+    }
+  };
+
+  const insertImageUrl = (url: string) => {
+    if (url && editor) {
+      editor
+        .chain()
+        .focus()
+        .setImage({
+          src: url,
+          width: '50%',
+          alignment: 'center'
+        } as any)
+        .run();
+
+      if (onImagePasted) {
+        onImagePasted(url);
+      }
     }
   };
 
@@ -547,9 +567,9 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
           {/* Add Image Button */}
           <button
             type="button"
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => setIsImageModalOpen(true)}
             className="p-1 rounded hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
-            title="Insert Image (or paste via Ctrl+V)"
+            title="Select Image from Library or Upload (or paste via Ctrl+V)"
           >
             <ImageIcon className="w-3.5 h-3.5 text-indigo-600" />
           </button>
@@ -737,6 +757,13 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         isOpen={isMathTypeOpen}
         onClose={() => setIsMathTypeOpen(false)}
         onInsertFormula={handleInsertFormula}
+      />
+
+      {/* Image Library & Upload Picker Modal */}
+      <ImageLibraryModal
+        isOpen={isImageModalOpen}
+        onClose={() => setIsImageModalOpen(false)}
+        onSelectImage={url => insertImageUrl(url)}
       />
     </div>
   );

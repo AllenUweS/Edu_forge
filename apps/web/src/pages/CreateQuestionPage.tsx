@@ -3,6 +3,7 @@ import { Question, QuestionOption, QuestionDifficulty } from '@eduforge/shared';
 import { api } from '../services/api.js';
 import { RichTextEditor } from '../components/RichTextEditor.js';
 import { StudentPreviewDrawer } from '../components/StudentPreviewDrawer.js';
+import { ImageLibraryModal } from '../components/ImageLibraryModal.js';
 import { formatQuestionCode } from '../utils/questionCode.js';
 import { getUserProfile } from '../utils/userProfile.js';
 
@@ -62,8 +63,9 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
   // Internal Note
   const [internalNote, setInternalNote] = useState('');
 
-  // Student Preview Drawer
+  // Student Preview Drawer & Image Library Modal State
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [activeImageBlockId, setActiveImageBlockId] = useState<string | null>(null);
 
   // Synchronize or Reset form fields whenever initialQuestion changes
   React.useEffect(() => {
@@ -145,6 +147,10 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
 
   const updateTextBlock = (id: string, text: string) => {
     setBlocks(prev => prev.map(b => (b.id === id ? { ...b, text } : b)));
+  };
+
+  const updateImageBlockUrl = (id: string, imageUrl: string) => {
+    setBlocks(prev => prev.map(b => (b.id === id ? { ...b, imageUrl } : b)));
   };
 
   const updateOptionText = (index: number, text: string) => {
@@ -396,6 +402,17 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
                         onChange={txt => updateTextBlock(b.id, txt)}
                         placeholder="Enter text block content..."
                       />
+                    ) : b.imageUrl ? (
+                      <div className="py-4 text-center space-y-2 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                        <img src={b.imageUrl} alt="Diagram" className="max-h-48 mx-auto rounded border border-slate-200 object-contain shadow-2xs" />
+                        <button
+                          type="button"
+                          onClick={() => setActiveImageBlockId(b.id)}
+                          className="px-3 py-1 bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 text-xs font-bold rounded-md shadow-2xs transition-colors cursor-pointer"
+                        >
+                          Change / Select Image
+                        </button>
+                      </div>
                     ) : (
                       <div className="py-6 text-center space-y-2 bg-slate-50 border border-dashed border-slate-300 rounded-lg">
                         <div className="text-xs font-bold text-slate-400 uppercase tracking-wide">
@@ -403,9 +420,10 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
                         </div>
                         <button
                           type="button"
-                          className="px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 text-xs font-bold rounded-md shadow-2xs transition-colors cursor-pointer"
+                          onClick={() => setActiveImageBlockId(b.id)}
+                          className="px-3 rounded-lg py-1.5 bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold shadow-2xs transition-colors cursor-pointer"
                         >
-                          Upload Image
+                          Select Image from Library / Upload
                         </button>
                       </div>
                     )}
@@ -537,6 +555,17 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
         isOpen={isPreviewOpen}
         question={previewQuestionObj}
         onClose={() => setIsPreviewOpen(false)}
+      />
+
+      {/* Image Library Picker Modal */}
+      <ImageLibraryModal
+        isOpen={activeImageBlockId !== null}
+        onClose={() => setActiveImageBlockId(null)}
+        onSelectImage={url => {
+          if (activeImageBlockId) {
+            updateImageBlockUrl(activeImageBlockId, url);
+          }
+        }}
       />
     </div>
   );

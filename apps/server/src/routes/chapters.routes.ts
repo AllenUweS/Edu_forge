@@ -53,20 +53,38 @@ chaptersRouter.get('/', async (req: Request, res: Response, next: NextFunction) 
       }
     }
 
-    const { data, error } = await query;
-    if (error) {
-      console.error('Supabase getChapters error:', error);
+    const [chaptersRes, questionsRes] = await Promise.all([
+      query,
+      supabase.from('questions').select('id, chapter, chapter_id')
+    ]);
+
+    if (chaptersRes.error) {
+      console.error('Supabase getChapters error:', chaptersRes.error);
       return res.json({ success: true, data: [] });
     }
 
-    const formatted = (data || []).map((ch: any) => ({
-      id: ch.id,
-      title: ch.title,
-      code: ch.chapter_code,
-      subject: ch.subjects?.name || 'Biology',
-      subjectId: ch.subject_id,
-      count: 0
-    }));
+    const chapters = chaptersRes.data || [];
+    const questions = questionsRes.data || [];
+
+    const formatted = chapters.map((ch: any) => {
+      const chId = String(ch.id || '').toLowerCase();
+      const chTitle = String(ch.title || '').trim().toLowerCase();
+
+      const qCount = questions.filter((q: any) => {
+        const qChId = q.chapter_id ? String(q.chapter_id).toLowerCase() : '';
+        const qChTitle = q.chapter ? String(q.chapter).trim().toLowerCase() : '';
+        return (qChId && qChId === chId) || (qChTitle && (qChTitle === chTitle || qChTitle.includes(chTitle)));
+      }).length;
+
+      return {
+        id: ch.id,
+        title: ch.title,
+        code: ch.chapter_code,
+        subject: ch.subjects?.name || 'Biology',
+        subjectId: ch.subject_id,
+        count: qCount
+      };
+    });
 
     res.json({ success: true, data: formatted });
   } catch (err) {
