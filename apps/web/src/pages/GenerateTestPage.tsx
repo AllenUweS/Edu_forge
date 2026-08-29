@@ -86,11 +86,13 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
   const [hardCount, setHardCount] = useState<number>(10);
 
   // ==========================================
-  // Paper Sections State (e.g. Section A, Section B)
+  // Paper Sections & Target Section Assignment State
   // ==========================================
   const [testSections, setTestSections] = useState<{ id: string; name: string; questionsCount: number }[]>([
     { id: 'sec-1', name: 'Section A — Biology', questionsCount: 50 }
   ]);
+  const [targetSectionId, setTargetSectionId] = useState<string>('sec-1');
+  const [questionSectionMap, setQuestionSectionMap] = useState<Record<string, string>>({});
 
   // ==========================================
   // Paper Settings & Randomization Options
@@ -314,24 +316,44 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
   });
 
   // Toggles question inclusion in the selected question deck
-  const toggleQuestionSelection = (id: string) => {
-    setSelectedQuestionIds(prev =>
-      prev.includes(id) ? prev.filter(qId => qId !== id) : [...prev, id]
-    );
+  const toggleQuestionSelection = (id: string, customSecId?: string) => {
+    const secToUse = customSecId || targetSectionId || testSections[0]?.id || 'sec-1';
+    setSelectedQuestionIds(prev => {
+      if (prev.includes(id)) {
+        const newMap = { ...questionSectionMap };
+        delete newMap[id];
+        setQuestionSectionMap(newMap);
+        return prev.filter(qId => qId !== id);
+      } else {
+        setQuestionSectionMap(prevMap => ({ ...prevMap, [id]: secToUse }));
+        return [...prev, id];
+      }
+    });
   };
 
-  // Selects all currently filtered questions
+  // Selects all currently filtered questions and assigns them to targetSectionId
   const handleSelectAll = () => {
-    setSelectedQuestionIds(filteredQuestions.map(q => q.id));
+    const secToUse = targetSectionId || testSections[0]?.id || 'sec-1';
+    const newIds = filteredQuestions.map(q => q.id);
+    setSelectedQuestionIds(newIds);
+    setQuestionSectionMap(prev => {
+      const updated = { ...prev };
+      newIds.forEach(id => {
+        if (!updated[id]) updated[id] = secToUse;
+      });
+      return updated;
+    });
   };
 
   // Clears all selected questions
   const handleDeselectAll = () => {
     setSelectedQuestionIds([]);
+    setQuestionSectionMap({});
   };
 
   // Automatically selects questions based on configured difficulty counts (Easy / Medium / Hard)
   const handleAutoSelectDistribution = () => {
+    const secToUse = targetSectionId || testSections[0]?.id || 'sec-1';
     const easyQ = questions.filter(q => (q.difficulty || '').toLowerCase() === 'easy').map(q => q.id);
     const medQ = questions.filter(q => (q.difficulty || '').toLowerCase() === 'medium').map(q => q.id);
     const hardQ = questions.filter(q => (q.difficulty || '').toLowerCase() === 'hard').map(q => q.id);
@@ -341,23 +363,38 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
     const chosenHard = hardQ.slice(0, hardCount);
 
     const combined = Array.from(new Set([...chosenEasy, ...chosenMed, ...chosenHard]));
-    setSelectedQuestionIds(combined.length > 0 ? combined : questions.slice(0, 50).map(q => q.id));
+    const finalSelection = combined.length > 0 ? combined : questions.slice(0, 50).map(q => q.id);
+    
+    setSelectedQuestionIds(finalSelection);
+    setQuestionSectionMap(prev => {
+      const updated = { ...prev };
+      finalSelection.forEach(id => {
+        if (!updated[id]) updated[id] = secToUse;
+      });
+      return updated;
+    });
     alert('Questions automatically selected based on your distribution rules!');
   };
 
   // Section Management: Adds a new section (e.g. Section B)
   const handleAddSection = () => {
     const nextChar = String.fromCharCode(65 + testSections.length);
+    const newSecId = `sec-${Date.now()}`;
     setTestSections(prev => [
       ...prev,
-      { id: `sec-${Date.now()}`, name: `Section ${nextChar} — ${selectedSubject}`, questionsCount: 25 }
+      { id: newSecId, name: `Section ${nextChar} — ${selectedSubject}`, questionsCount: 25 }
     ]);
+    setTargetSectionId(newSecId);
   };
 
   // Section Management: Removes a section
   const handleRemoveSection = (id: string) => {
     if (testSections.length <= 1) return;
-    setTestSections(prev => prev.filter(s => s.id !== id));
+    const remaining = testSections.filter(s => s.id !== id);
+    setTestSections(remaining);
+    if (targetSectionId === id) {
+      setTargetSectionId(remaining[0]?.id || 'sec-1');
+    }
   };
 
   // ==========================================
@@ -376,17 +413,25 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
     );
 
     const docSections: DocumentSection[] = testSections.map((sec, idx) => {
-      const sectionQuestions = selectedQuestionsList.length > 0
-        ? selectedQuestionsList
-        : questions.slice(0, sec.questionsCount || 10);
+      // Find questions explicitly assigned to this section
+      const assignedToSec = selectedQuestionsList.filter(
+        q => (questionSectionMap[q.id] || targetSectionId || testSections[0]?.id) === sec.id
+      );
+
+      // Fallback distribution if none explicitly mapped
+      const sectionQuestions = assignedToSec.length > 0
+        ? assignedToSec
+        : (selectedQuestionsList.length > 0
+            ? selectedQuestionsList.filter((_, qIdx) => qIdx % testSections.length === idx)
+            : questions.slice(0, sec.questionsCount || 10));
 
       return {
-        id: `sec-${Date.now()}-${idx + 1}`,
+        id: sec.id || `sec-${Date.now()}-${idx + 1}`,
         title: sec.name || `Section ${String.fromCharCode(65 + idx)} — ${selectedSubject}`,
         instructions: `Attempt all questions. Each question carries ${marksPerQuestion} marks.`,
         marks: (sec.questionsCount || sectionQuestions.length) * marksPerQuestion,
         blocks: sectionQuestions.map((q, qIdx) => ({
-          id: `blk-${Date.now()}-${qIdx}`,
+          id: `blk-${Date.now()}-${idx}-${qIdx}`,
           type: 'question' as const,
           question: q,
           questionId: q.id
@@ -800,9 +845,27 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                 </div>
               </div>
 
-              {/* Filters Row: Subject, Chapter, Difficulty & Search */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {/* 1. Subject Filter */}
+              {/* Filters Row: Target Section, Subject, Chapter, Difficulty & Search */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                {/* 1. Target Test Section Filter */}
+                <div>
+                  <label className="block text-[11px] font-bold uppercase text-teal-800 mb-1 tracking-wide">
+                    Target Test Section
+                  </label>
+                  <select
+                    value={targetSectionId}
+                    onChange={e => setTargetSectionId(e.target.value)}
+                    className="w-full text-xs font-bold p-2.5 border border-teal-300 rounded-xl text-teal-900 bg-teal-50/70 focus:ring-2 focus:ring-teal-600 cursor-pointer shadow-2xs"
+                  >
+                    {testSections.map((sec, idx) => (
+                      <option key={sec.id} value={sec.id}>
+                        {sec.name || `Section ${String.fromCharCode(65 + idx)}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* 2. Subject Filter */}
                 <div>
                   <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1 tracking-wide">
                     Filter by Subject
@@ -835,7 +898,7 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                   </select>
                 </div>
 
-                {/* 2. Chapter Filter */}
+                {/* 3. Chapter Filter */}
                 <div>
                   <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1 tracking-wide">
                     Filter by Chapter
@@ -852,7 +915,7 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                   </select>
                 </div>
 
-                {/* 3. Difficulty Filter */}
+                {/* 4. Difficulty Filter */}
                 <div>
                   <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1 tracking-wide">
                     Filter by Difficulty
@@ -869,7 +932,7 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                   </select>
                 </div>
 
-                {/* 4. Search Question Bank */}
+                {/* 5. Search Question Bank */}
                 <div>
                   <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1 tracking-wide">
                     Search Question Bank
@@ -890,7 +953,7 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
               {/* Scrollable Questions List Table */}
               <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs bg-white">
                 <div className="overflow-x-auto max-h-[500px]">
-                  <table className="w-full text-left border-collapse min-w-[650px]">
+                  <table className="w-full text-left border-collapse min-w-[750px]">
                     <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
                       <tr className="text-[11px] font-extrabold uppercase text-slate-500 tracking-wider">
                         <th className="py-3 px-4 w-12 text-center">Select</th>
@@ -898,13 +961,14 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                         <th className="py-3 px-4">Question Content</th>
                         <th className="py-3 px-4 w-28">Subject</th>
                         <th className="py-3 px-4 w-36">Chapter</th>
+                        <th className="py-3 px-4 w-40">Assigned Section</th>
                         <th className="py-3 px-4 w-24 text-center">Difficulty</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-800">
                       {filteredQuestions.length === 0 ? (
                         <tr>
-                          <td colSpan={6} className="py-12 text-center text-slate-400 font-medium">
+                          <td colSpan={7} className="py-12 text-center text-slate-400 font-medium">
                             No questions found matching your filter criteria.
                           </td>
                         </tr>
@@ -912,6 +976,7 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                         filteredQuestions.map(q => {
                           const isSelected = selectedQuestionIds.includes(q.id);
                           const qCode = formatQuestionCode(q);
+                          const assignedSecId = questionSectionMap[q.id] || targetSectionId || testSections[0]?.id;
 
                           return (
                             <tr
@@ -931,15 +996,35 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                               </td>
                               <td className="py-3 px-4 font-mono font-bold text-slate-700">{qCode}</td>
                               <td className="py-3 px-4 text-slate-900">
-                                <div className="line-clamp-2 max-w-lg">
+                                <div className="line-clamp-2 max-w-md">
                                   <MathTextRenderer text={q.rawText || ''} />
                                 </div>
                               </td>
                               <td className="py-3 px-4 font-semibold text-slate-700">
                                 {q.subject || 'Biology'}
                               </td>
-                              <td className="py-3 px-4 text-slate-600 truncate max-w-[150px]">
+                              <td className="py-3 px-4 text-slate-600 truncate max-w-[140px]">
                                 {q.chapter || 'General'}
+                              </td>
+                              <td className="py-3 px-4" onClick={e => e.stopPropagation()}>
+                                {isSelected ? (
+                                  <select
+                                    value={assignedSecId}
+                                    onChange={e => {
+                                      const newSec = e.target.value;
+                                      setQuestionSectionMap(prev => ({ ...prev, [q.id]: newSec }));
+                                    }}
+                                    className="text-[11px] font-bold py-1 px-2 border border-teal-300 rounded-lg bg-teal-50 text-teal-900 cursor-pointer w-full"
+                                  >
+                                    {testSections.map((sec, sIdx) => (
+                                      <option key={sec.id} value={sec.id}>
+                                        {sec.name || `Section ${String.fromCharCode(65 + sIdx)}`}
+                                      </option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  <span className="text-[11px] text-slate-400 font-medium">—</span>
+                                )}
                               </td>
                               <td className="py-3 px-4 text-center">
                                 <span
@@ -980,55 +1065,70 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
               </div>
 
               <div className="space-y-3">
-                {testSections.map((sec, idx) => (
-                  <div key={sec.id} className="p-4 border border-slate-200 rounded-xl bg-slate-50/50 space-y-3">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1">
-                          Section Name #{idx + 1}
-                        </label>
-                        <input
-                          type="text"
-                          value={sec.name}
-                          onChange={e => {
-                            const updated = [...testSections];
-                            updated[idx].name = e.target.value;
-                            setTestSections(updated);
-                          }}
-                          placeholder="e.g., Section A - Multiple Choice"
-                          className="w-full text-xs font-bold p-2 border border-slate-300 rounded-lg text-slate-900 bg-white"
-                        />
+                {testSections.map((sec, idx) => {
+                  const assignedCount = selectedQuestionIds.filter(
+                    qId => (questionSectionMap[qId] || targetSectionId || testSections[0]?.id) === sec.id
+                  ).length;
+
+                  return (
+                    <div key={sec.id} className="p-4 border border-slate-200 rounded-xl bg-slate-50/50 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-extrabold uppercase text-slate-500">
+                          Section #{idx + 1}
+                        </span>
+                        <span className="text-[11px] font-extrabold text-teal-800 bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded-full">
+                          {assignedCount} Questions Assigned
+                        </span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1">
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
                           <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1">
-                            Target Question Count
+                            Section Name
                           </label>
                           <input
-                            type="number"
-                            value={sec.questionsCount}
+                            type="text"
+                            value={sec.name}
                             onChange={e => {
                               const updated = [...testSections];
-                              updated[idx].questionsCount = Number(e.target.value);
+                              updated[idx].name = e.target.value;
                               setTestSections(updated);
                             }}
+                            placeholder="e.g., Section A - Multiple Choice"
                             className="w-full text-xs font-bold p-2 border border-slate-300 rounded-lg text-slate-900 bg-white"
                           />
                         </div>
-                        {testSections.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveSection(sec.id)}
-                            className="p-2 text-slate-400 hover:text-red-600 rounded-lg transition-colors mt-4 cursor-pointer"
-                            title="Delete section"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        )}
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1">
+                            <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1">
+                              Target Question Count
+                            </label>
+                            <input
+                              type="number"
+                              value={sec.questionsCount}
+                              onChange={e => {
+                                const updated = [...testSections];
+                                updated[idx].questionsCount = Number(e.target.value);
+                                setTestSections(updated);
+                              }}
+                              className="w-full text-xs font-bold p-2 border border-slate-300 rounded-lg text-slate-900 bg-white"
+                            />
+                          </div>
+                          {testSections.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveSection(sec.id)}
+                              className="p-2 text-slate-400 hover:text-red-600 rounded-lg transition-colors mt-4 cursor-pointer"
+                              title="Delete section"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
