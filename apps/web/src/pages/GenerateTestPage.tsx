@@ -73,6 +73,8 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
   // Question Bank Selection & Filter State (Step 2)
   // ==========================================
   const [selectedQuestionIds, setSelectedQuestionIds] = useState<string[]>([]); // Array of selected question UUIDs/codes
+  const [selectedSubjectFilter, setSelectedSubjectFilter] = useState<string>(userSubject !== 'All' ? userSubject : 'all'); // Filter questions by subject
+  const [selectedChapterFilter, setSelectedChapterFilter] = useState<string>('all'); // Filter questions by chapter
   const [searchQuery, setSearchQuery] = useState<string>(''); // Search input query for filtering questions
   const [difficultyFilter, setDifficultyFilter] = useState<string>('All'); // Difficulty filter: All | Easy | Medium | Hard
 
@@ -109,12 +111,15 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
       'Cell Structure and Function',
       'Biological Classification',
       'The Living World',
+      'Animal Kingdom',
       'Plant Kingdom',
       'Human Physiology',
       'Genetics & Inheritance',
       'Molecular Basis of Inheritance'
     ],
     Physics: [
+      'Units and Measurements',
+      'Motion in a Plane',
       'Kinematics & Motion',
       'Laws of Motion',
       'Work, Energy & Power',
@@ -123,6 +128,8 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
       'Thermodynamics & Heat'
     ],
     Chemistry: [
+      'Some Basic Concepts of Chemistry',
+      'Thermodynamics',
       'Atomic Structure & Bonding',
       'Organic Reaction Mechanisms',
       'Chemical Kinetics',
@@ -145,6 +152,11 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
    * static default syllabus chapters and dynamic chapters from Supabase database.
    */
   const getAvailableChaptersForSubject = (subjectName: string) => {
+    if (!subjectName || subjectName === 'all') {
+      const fromBackend = chapters.map(c => c.name || c.title || c.chapter_name).filter(Boolean);
+      const defaults = Object.values(SUBJECT_CHAPTERS_MAP).flat();
+      return Array.from(new Set([...defaults, ...fromBackend]));
+    }
     const defaults = SUBJECT_CHAPTERS_MAP[subjectName] || [
       'General Concepts',
       'Chapter 1: Principles',
@@ -152,7 +164,8 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
     ];
     const fromBackend = chapters
       .filter(c => (c.subject || '').toLowerCase() === subjectName.toLowerCase())
-      .map(c => c.title);
+      .map(c => c.name || c.title || c.chapter_name)
+      .filter(Boolean);
 
     return Array.from(new Set([...defaults, ...fromBackend]));
   };
@@ -239,16 +252,66 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
   // Question Filtering & Selection Helpers
   // ==========================================
 
-  // Filters questions by difficulty and live search query
+  // Filters questions by subject, chapter, difficulty, and live search query
   const filteredQuestions = questions.filter(q => {
+    // 1. Role-based user scoping
+    if (userSubject !== 'All') {
+      const userSubLower = userSubject.toLowerCase();
+      const qSubLower = (q.subject || '').toLowerCase();
+      if (qSubLower && !qSubLower.includes(userSubLower) && !userSubLower.includes(qSubLower)) {
+        return false;
+      }
+    }
+
+    // 2. Subject Filter
+    if (selectedSubjectFilter !== 'all') {
+      const targetSubLower = selectedSubjectFilter.toLowerCase();
+      const qSubLower = (q.subject || '').toLowerCase();
+      const qSubId = ((q as any).subject_id || (q as any).subjectId || '').toLowerCase();
+      if (qSubLower !== targetSubLower && !qSubLower.includes(targetSubLower) && qSubId !== targetSubLower) {
+        return false;
+      }
+    }
+
+    // 3. Chapter Filter
+    if (selectedChapterFilter !== 'all') {
+      const targetCh = selectedChapterFilter.toLowerCase();
+      const qCh = ((q as any).chapter_name || q.chapter || (q as any).chapterTitle || '').toLowerCase();
+      const qChId = ((q as any).chapterId || (q as any).chapter_id || '').toLowerCase();
+      const qCode = ((q as any).code || q.id || '').toUpperCase();
+
+      let matchChapterCode = false;
+      if (selectedChapterFilter.includes('Living World') || selectedChapterFilter.includes('LIV')) {
+        matchChapterCode = qCode.includes('LIV');
+      } else if (selectedChapterFilter.includes('Animal Kingdom') || selectedChapterFilter.includes('ANI')) {
+        matchChapterCode = qCode.includes('ANI');
+      } else if (selectedChapterFilter.includes('Basic Concepts') || selectedChapterFilter.includes('SBC')) {
+        matchChapterCode = qCode.includes('SBC');
+      } else if (selectedChapterFilter.includes('Thermodynamics') || selectedChapterFilter.includes('THE')) {
+        matchChapterCode = qCode.includes('THE');
+      } else if (selectedChapterFilter.includes('Units') || selectedChapterFilter.includes('UAM')) {
+        matchChapterCode = qCode.includes('UAM');
+      } else if (selectedChapterFilter.includes('Motion in a Plane') || selectedChapterFilter.includes('MIP')) {
+        matchChapterCode = qCode.includes('MIP');
+      }
+
+      if (!qCh.includes(targetCh) && !targetCh.includes(qCh) && qChId !== targetCh && !matchChapterCode) {
+        return false;
+      }
+    }
+
+    // 4. Difficulty Filter
     if (difficultyFilter !== 'All' && q.difficulty && q.difficulty.toLowerCase() !== difficultyFilter.toLowerCase()) {
       return false;
     }
+
+    // 5. Search Query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       return (
         (q.rawText && q.rawText.toLowerCase().includes(query)) ||
         (q.id && q.id.toLowerCase().includes(query)) ||
+        ((q as any).code && (q as any).code.toLowerCase().includes(query)) ||
         (q.chapter && q.chapter.toLowerCase().includes(query))
       );
     }
@@ -742,24 +805,56 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                 </div>
               </div>
 
-              {/* Filters Row */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Filters Row: Subject, Chapter, Difficulty & Search */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {/* 1. Subject Filter */}
                 <div>
                   <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1 tracking-wide">
-                    Search Question Bank
+                    Filter by Subject
                   </label>
-                  <div className="relative">
-                    <Search className="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400" />
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={e => setSearchQuery(e.target.value)}
-                      placeholder="Search text, code or topic..."
-                      className="w-full text-xs font-medium pl-9 pr-3 py-2.5 border border-slate-300 rounded-xl text-slate-900 bg-white focus:ring-2 focus:ring-teal-600"
-                    />
-                  </div>
+                  <select
+                    value={selectedSubjectFilter}
+                    onChange={e => {
+                      setSelectedSubjectFilter(e.target.value);
+                      setSelectedChapterFilter('all');
+                    }}
+                    className="w-full text-xs font-semibold p-2.5 border border-slate-300 rounded-xl text-slate-900 bg-white focus:ring-2 focus:ring-teal-600 cursor-pointer"
+                  >
+                    <option value="all">All Subjects</option>
+                    {userSubject === 'All' ? (
+                      <>
+                        <option value="Biology">Biology</option>
+                        <option value="Physics">Physics</option>
+                        <option value="Chemistry">Chemistry</option>
+                        <option value="Mathematics">Mathematics</option>
+                        {subjects.filter(s => !['biology','physics','chemistry','mathematics'].includes(s.name.toLowerCase())).map(s => (
+                          <option key={s.id || s.code} value={s.name}>{s.name}</option>
+                        ))}
+                      </>
+                    ) : (
+                      <option value={userSubject}>{userSubject}</option>
+                    )}
+                  </select>
                 </div>
 
+                {/* 2. Chapter Filter */}
+                <div>
+                  <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1 tracking-wide">
+                    Filter by Chapter
+                  </label>
+                  <select
+                    value={selectedChapterFilter}
+                    onChange={e => setSelectedChapterFilter(e.target.value)}
+                    className="w-full text-xs font-semibold p-2.5 border border-slate-300 rounded-xl text-slate-900 bg-white focus:ring-2 focus:ring-teal-600 cursor-pointer"
+                  >
+                    <option value="all">All Chapters</option>
+                    {getAvailableChaptersForSubject(selectedSubjectFilter).map((chapTitle, idx) => (
+                      <option key={idx} value={chapTitle}>{chapTitle}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* 3. Difficulty Filter */}
                 <div>
                   <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1 tracking-wide">
                     Filter by Difficulty
@@ -774,6 +869,23 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                     <option value="Medium">Medium</option>
                     <option value="Hard">Hard</option>
                   </select>
+                </div>
+
+                {/* 4. Search Question Bank */}
+                <div>
+                  <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1 tracking-wide">
+                    Search Question Bank
+                  </label>
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                      placeholder="Search text, code or topic..."
+                      className="w-full text-xs font-medium pl-9 pr-3 py-2 border border-slate-300 rounded-xl text-slate-900 bg-white focus:ring-2 focus:ring-teal-600"
+                    />
+                  </div>
                 </div>
               </div>
 
