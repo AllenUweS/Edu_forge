@@ -562,8 +562,8 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
               </span>
             </div>
 
-            {/* Row 1: Test Name & Exam Type */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Grid: Test Name, Exam Type & Duration */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
                 <label className="block text-[11px] font-extrabold uppercase text-slate-500 mb-2 font-sans tracking-wide">
                   TEST NAME
@@ -572,6 +572,7 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                   type="text"
                   value={testName}
                   onChange={e => setTestName(e.target.value)}
+                  placeholder="e.g. Unit Test 01 - Full Syllabus"
                   className="w-full text-sm font-bold p-3 border border-slate-200 rounded-xl text-slate-900 bg-white focus:ring-2 focus:ring-teal-500 focus:outline-hidden"
                 />
               </div>
@@ -583,67 +584,13 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                 <select
                   value={examType}
                   onChange={e => setExamType(e.target.value)}
-                  className="w-full text-sm font-bold p-3 border border-slate-200 rounded-xl text-slate-900 bg-white focus:ring-2 focus:ring-teal-500 focus:outline-hidden"
+                  className="w-full text-sm font-bold p-3 border border-slate-200 rounded-xl text-slate-900 bg-white focus:ring-2 focus:ring-teal-500 focus:outline-hidden cursor-pointer"
                 >
                   <option value="NEET">NEET</option>
                   <option value="KCET">KCET</option>
                   <option value="JEE">JEE</option>
                   <option value="Custom">Custom</option>
                 </select>
-              </div>
-            </div>
-
-            {/* Row 2: Subject, Chapter, Total Questions, Duration */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 pt-2">
-              <div>
-                <label className="block text-[11px] font-extrabold uppercase text-slate-500 mb-2 font-sans tracking-wide">
-                  SUBJECT
-                </label>
-                <select
-                  value={selectedSubject}
-                  onChange={e => handleSubjectChange(e.target.value)}
-                  className="w-full text-sm font-bold p-3 border border-slate-200 rounded-xl text-slate-900 bg-white cursor-pointer"
-                >
-                  <option value="Biology">Biology</option>
-                  <option value="Physics">Physics</option>
-                  <option value="Chemistry">Chemistry</option>
-                  <option value="Mathematics">Mathematics</option>
-                  {subjects.map(s => (
-                    <option key={s.id || s.code} value={s.name}>{s.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-extrabold uppercase text-slate-500 mb-2 font-sans tracking-wide">
-                  CHAPTER / TOPIC
-                </label>
-                <select
-                  value={selectedChapter}
-                  onChange={e => setSelectedChapter(e.target.value)}
-                  className="w-full text-sm font-bold p-3 border border-slate-200 rounded-xl text-slate-900 bg-white cursor-pointer"
-                >
-                  {getAvailableChaptersForSubject(selectedSubject).map((chapTitle, idx) => (
-                    <option key={idx} value={chapTitle}>{chapTitle}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-extrabold uppercase text-slate-500 mb-2 font-sans tracking-wide">
-                  TOTAL QUESTIONS
-                </label>
-                <input
-                  type="number"
-                  value={totalSelectedQuestionsCount}
-                  onChange={e => {
-                    const count = parseInt(e.target.value) || 1;
-                    if (questions.length > 0) {
-                      setSelectedQuestionIds(questions.slice(0, Math.min(count, questions.length)).map(q => q.id));
-                    }
-                  }}
-                  className="w-full text-sm font-bold p-3 border border-slate-200 rounded-xl text-slate-900 bg-white font-mono"
-                />
               </div>
 
               <div>
