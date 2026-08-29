@@ -60,14 +60,14 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
   const [examType, setExamType] = useState<string>('NEET');
   const [selectedSubject, setSelectedSubject] = useState<string>(userSubject !== 'All' ? userSubject : 'Biology');
   const [selectedChapter, setSelectedChapter] = useState<string>('Cell Structure and Function');
-  const [durationMinutes, setDurationMinutes] = useState<number>(60);
+  const [durationMinutes, setDurationMinutes] = useState<number | string>(60);
   
   // ==========================================
   // Marking Scheme Configuration State
   // ==========================================
-  const [marksPerQuestion, setMarksPerQuestion] = useState<number>(4); // Marks awarded for correct answer
-  const [negativeMarks, setNegativeMarks] = useState<number>(-1); // Marks deducted for incorrect answer
-  const [unansweredMarks, setUnansweredMarks] = useState<number>(0); // Marks for unanswered questions
+  const [marksPerQuestion, setMarksPerQuestion] = useState<number | string>(4); // Marks awarded for correct answer
+  const [negativeMarks, setNegativeMarks] = useState<number | string>(-1); // Marks deducted for incorrect answer
+  const [unansweredMarks, setUnansweredMarks] = useState<number | string>(0); // Marks for unanswered questions
 
   // ==========================================
   // Question Bank Selection & Filter State (Step 2)
@@ -88,7 +88,7 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
   // ==========================================
   // Paper Sections & Target Section Assignment State
   // ==========================================
-  const [testSections, setTestSections] = useState<{ id: string; name: string; questionsCount: number }[]>([
+  const [testSections, setTestSections] = useState<{ id: string; name: string; questionsCount: number | string }[]>([
     { id: 'sec-1', name: 'Section A — Biology', questionsCount: 50 }
   ]);
   const [targetSectionId, setTargetSectionId] = useState<string>('sec-1');
@@ -400,8 +400,11 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
   // ==========================================
   // Dynamic Score & Document Construction
   // ==========================================
-  const totalSelectedQuestionsCount = selectedQuestionIds.length || 1;
-  const computedTotalMarks = totalSelectedQuestionsCount * marksPerQuestion;
+  const totalSelectedQuestionsCount = selectedQuestionIds.length;
+  const numericMarksPerQ = marksPerQuestion === '' ? 0 : Number(marksPerQuestion);
+  const computedTotalMarks = marksPerQuestion === ''
+    ? ''
+    : ((totalSelectedQuestionsCount || 1) * numericMarksPerQ);
 
   /**
    * Constructs the DocumentModel payload matching the backend schema
@@ -423,13 +426,16 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
         ? assignedToSec
         : (selectedQuestionsList.length > 0
             ? selectedQuestionsList.filter((_, qIdx) => qIdx % testSections.length === idx)
-            : questions.slice(0, sec.questionsCount || 10));
+            : questions.slice(0, Number(sec.questionsCount) || 10));
+
+      const numericMarks = Number(marksPerQuestion) || 0;
+      const secCount = Number(sec.questionsCount) || sectionQuestions.length;
 
       return {
         id: sec.id || `sec-${Date.now()}-${idx + 1}`,
         title: sec.name || `Section ${String.fromCharCode(65 + idx)} — ${selectedSubject}`,
-        instructions: `Attempt all questions. Each question carries ${marksPerQuestion} marks.`,
-        marks: (sec.questionsCount || sectionQuestions.length) * marksPerQuestion,
+        instructions: `Attempt all questions. Each question carries ${numericMarks} marks.`,
+        marks: secCount * numericMarks,
         blocks: sectionQuestions.map((q, qIdx) => ({
           id: `blk-${Date.now()}-${idx}-${qIdx}`,
           type: 'question' as const,
@@ -706,7 +712,7 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                     min={1}
                     max={600}
                     value={durationMinutes}
-                    onChange={e => setDurationMinutes(parseInt(e.target.value) || 0)}
+                    onChange={e => setDurationMinutes(e.target.value === '' ? '' : (parseInt(e.target.value) || ''))}
                     className="w-full text-sm font-bold p-3 pr-16 border border-slate-200 rounded-xl text-slate-900 bg-white font-mono focus:ring-2 focus:ring-teal-600 focus:outline-hidden"
                   />
                   <span className="absolute right-3 text-xs text-slate-500 font-bold pointer-events-none">
@@ -750,7 +756,7 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                 <input
                   type="number"
                   value={marksPerQuestion}
-                  onChange={e => setMarksPerQuestion(Number(e.target.value))}
+                  onChange={e => setMarksPerQuestion(e.target.value === '' ? '' : Number(e.target.value))}
                   className="w-full text-sm font-bold p-3 border border-slate-200 rounded-xl text-slate-900 bg-white font-mono"
                 />
               </div>
@@ -762,7 +768,7 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                 <input
                   type="number"
                   value={negativeMarks}
-                  onChange={e => setNegativeMarks(Number(e.target.value))}
+                  onChange={e => setNegativeMarks(e.target.value === '' ? '' : Number(e.target.value))}
                   className="w-full text-sm font-bold p-3 border border-slate-200 rounded-xl text-slate-900 bg-white font-mono"
                 />
               </div>
@@ -774,7 +780,7 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                 <input
                   type="number"
                   value={unansweredMarks}
-                  onChange={e => setUnansweredMarks(Number(e.target.value))}
+                  onChange={e => setUnansweredMarks(e.target.value === '' ? '' : Number(e.target.value))}
                   className="w-full text-sm font-bold p-3 border border-slate-200 rounded-xl text-slate-900 bg-white font-mono"
                 />
               </div>
@@ -1108,7 +1114,7 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                               value={sec.questionsCount}
                               onChange={e => {
                                 const updated = [...testSections];
-                                updated[idx].questionsCount = Number(e.target.value);
+                                updated[idx].questionsCount = e.target.value === '' ? '' : Number(e.target.value);
                                 setTestSections(updated);
                               }}
                               className="w-full text-xs font-bold p-2 border border-slate-300 rounded-lg text-slate-900 bg-white"
