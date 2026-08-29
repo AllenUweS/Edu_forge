@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api.js';
 import { DocumentModel, Question } from '@eduforge/shared';
-import { Plus, BookOpen, Layers, HelpCircle, FileText, BarChart3, TrendingUp, Award, ArrowRight } from 'lucide-react';
+import { Plus, BookOpen, Layers, HelpCircle, FileText, BarChart3, TrendingUp, Award, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { SubjectItem } from './SubjectsPage.js';
 import { ChapterItem } from './ChaptersPage.js';
 import { formatQuestionCode } from '../utils/questionCode.js';
-
 import { getUserProfile } from '../utils/userProfile.js';
 
 interface DashboardPageProps {
@@ -24,6 +23,8 @@ interface DashboardPageProps {
 export const DashboardPage: React.FC<DashboardPageProps> = ({
   subjectsList = [],
   chaptersList = [],
+  onOpenDocument,
+  onNewPaperWizard,
   onOpenQuestionBuilder,
   onNavigateToQuestionBank,
   onNavigateToReports
@@ -55,12 +56,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       let filteredSubs = subList || [];
       let filteredChs = chList || [];
 
-      if (user.assigned_subject === 'None' || user.role === 'guest') {
-        filteredDocs = [];
-        filteredQs = [];
-        filteredSubs = [];
-        filteredChs = [];
-      } else if (user.assigned_subject !== 'All') {
+      if (user.role === 'faculty' && user.assigned_subject !== 'All') {
         const targetSubLower = user.assigned_subject.toLowerCase();
         filteredDocs = filteredDocs.filter(d => 
           (((d as any).subject || d.metadata?.subject || '') + ' ' + (d.title || '')).toLowerCase().includes(targetSubLower)
@@ -87,52 +83,64 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     }
   };
 
-  // Filtered Subjects & Chapters List
-  const userSubjectsList = (user.assigned_subject === 'None' || user.role === 'guest')
-    ? []
-    : user.assigned_subject !== 'All' 
-      ? subjectsList.filter(s => s.name.toLowerCase() === user.assigned_subject.toLowerCase())
-      : subjectsList;
-
-  const userChaptersList = (user.assigned_subject === 'None' || user.role === 'guest')
-    ? []
-    : user.assigned_subject !== 'All'
-      ? chaptersList.filter(c => (c.subject || '').toLowerCase() === user.assigned_subject.toLowerCase())
-      : chaptersList;
-
-  // Real Counts from active frontend state + API
-  const totalSubjectsCount = userSubjectsList.length > 0 ? userSubjectsList.length : (user.assigned_subject !== 'All' ? 1 : apiSubjects.length);
-  const totalChaptersCount = userChaptersList.length > 0 ? userChaptersList.length : apiChapters.length;
   const totalQuestionsCount = questions.length;
 
-  // Dynamic Question Distribution by Subject (calculated 100% strictly from real question bank records)
+  // Dynamic Question Distribution by Subject (calculated strictly from real question bank records)
   const subjectCountMap: Record<string, number> = {};
   questions.forEach(q => {
-    const rawSub = (q.subject || 'Biology').trim();
+    const rawSub = (q.subject || 'General').trim();
     const formattedSub = rawSub.charAt(0).toUpperCase() + rawSub.slice(1);
     subjectCountMap[formattedSub] = (subjectCountMap[formattedSub] || 0) + 1;
   });
 
-  const allSubjects = ['Biology', 'Physics', 'Chemistry', 'Mathematics'];
-  const subjectColors: Record<string, string> = {
-    Biology: 'bg-emerald-500',
-    Physics: 'bg-[#007a8c]',
-    Chemistry: 'bg-amber-500',
-    Mathematics: 'bg-sky-500'
-  };
+  const defaultColors = [
+    'bg-emerald-500',
+    'bg-[#007a8c]',
+    'bg-amber-500',
+    'bg-indigo-500',
+    'bg-purple-500',
+    'bg-rose-500',
+    'bg-sky-500',
+    'bg-teal-500'
+  ];
 
-  const subjectPerformance = allSubjects.map(subName => {
-    const count = subjectCountMap[subName] || 0;
+  const liveSubjectNames = apiSubjects.length > 0
+    ? apiSubjects.map(s => s.name)
+    : Object.keys(subjectCountMap);
+
+  const subjectPerformance = liveSubjectNames.map((subName, idx) => {
+    const subObj = apiSubjects.find(s => s.name.toLowerCase() === subName.toLowerCase());
+    const count = subObj?.questions !== undefined ? subObj.questions : (subjectCountMap[subName] || 0);
     const percent = totalQuestionsCount > 0 ? Math.round((count / totalQuestionsCount) * 100) : 0;
     return {
       name: subName,
+      code: subObj?.code || subName.substring(0, 3).toUpperCase(),
       count,
       percent,
-      color: subjectColors[subName] || 'bg-teal-600'
+      chaptersCount: subObj?.chapters || apiChapters.filter(c => (c.subject || '').toLowerCase() === subName.toLowerCase()).length,
+      color: defaultColors[idx % defaultColors.length]
     };
   });
 
-  // Real Difficulty Breakdown calculated strictly from real question bank records
+  const chapterPerformance = apiChapters.map(ch => {
+    const chId = String(ch.id || '').toLowerCase();
+    const chTitle = (ch.title || '').toLowerCase();
+    const count = questions.filter(q => {
+      const qChId = String((q as any).chapter_id || (q as any).chapterId || '').toLowerCase();
+      const qChapter = String((q as any).chapter || '').toLowerCase();
+      return qChId === chId || qChapter === chTitle || qChapter.includes(chTitle);
+    }).length;
+    const percent = totalQuestionsCount > 0 ? Math.round((count / totalQuestionsCount) * 100) : 0;
+    return {
+      title: ch.title,
+      code: ch.code || 'CH-01',
+      subject: ch.subject || 'General',
+      count: ch.count || count,
+      percent
+    };
+  });
+
+  // Real Difficulty Breakdown
   let easyCount = 0;
   let mediumCount = 0;
   let hardCount = 0;
@@ -165,203 +173,210 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     }
   ];
 
-  const distributionList = subjectsList.length > 0
-    ? subjectsList.map(s => ({
-        name: s.name,
-        count: subjectCountMap[s.name] || 0
-      }))
-    : (Object.keys(subjectCountMap).length > 0
-        ? Object.entries(subjectCountMap).map(([name, count]) => ({ name, count }))
-        : apiSubjects.map(s => ({ name: s.name, count: subjectCountMap[s.name] || 0 })));
-
   return (
-    <div className="max-w-7xl mx-auto px-8 py-8 space-y-8 font-sans animate-in fade-in slide-in-from-bottom-2 duration-300">
-      {/* Page Header */}
-      <div className="flex items-start justify-between border-b border-slate-200/80 pb-4">
+    <div className="max-w-7xl mx-auto px-8 py-8 space-y-7 font-sans animate-in fade-in slide-in-from-bottom-2 duration-300">
+      {/* Top Banner / Welcome */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-5">
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight font-sans">
-            Dashboard
+            Welcome, {user.name}
           </h1>
           <p className="text-xs text-slate-500 font-medium mt-0.5">
-            Overview of question repository, generated tests, and synced performance analytics.
+            {user.role === 'admin' 
+              ? 'Multi-Subject Central Dashboard · Real dynamic backend statistics' 
+              : `${user.assigned_subject} Department Dashboard · Scoped question authoring & test reports`}
           </p>
         </div>
-        {user.role !== 'guest' && (
+
+        <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={onOpenQuestionBuilder}
-            className="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 shadow-sm hover:shadow-md transition-all active:scale-[0.98] cursor-pointer"
+            className="px-4 py-2 border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs rounded-xl flex items-center gap-2 shadow-2xs transition-all active:scale-[0.98] cursor-pointer"
           >
-            <Plus className="w-4 h-4" /> Create Question
+            <Plus className="w-3.5 h-3.5" />
+            <span>Create Question</span>
           </button>
-        )}
-      </div>
 
-      {/* Guest/Unassigned User Warning Banner */}
-      {(user.assigned_subject === 'None' || user.role === 'guest') && (
-        <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-6 text-amber-900 shadow-sm flex items-start gap-4">
-          <div className="p-3 bg-amber-200/80 text-amber-800 rounded-xl shrink-0 font-bold text-lg">
-            ⚠️
-          </div>
-          <div className="space-y-1">
-            <h3 className="text-sm font-black uppercase tracking-wider text-amber-900">
-              Account Unassigned — Blank Access Mode
-            </h3>
-            <p className="text-xs font-medium text-amber-800 leading-relaxed">
-              Your account (<strong>{user.email}</strong>) has registered successfully. However, you currently have no assigned faculty subject or administrator privileges. All subjects, questions, test papers, attempt records, and admin controls are hidden.
-            </p>
-            <p className="text-xs font-bold text-amber-950 mt-1">
-              👉 Please contact the System Administrator (<code className="bg-amber-200/60 px-1.5 py-0.5 rounded text-amber-900 font-mono">admin@eduforge.com</code>) to assign your faculty role (Physics, Chemistry, Biology, or Mathematics) or upgrade your account.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* 4 Stat Cards Displaying Real Backend Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
-        {/* Card 1: Subjects */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-[#e6f4f6] text-[#007a8c] flex items-center justify-center shrink-0">
-            <BookOpen className="w-5 h-5 stroke-[2.2]" />
-          </div>
-          <div>
-            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">
-              Subjects
-            </div>
-            <div className="text-2xl font-black text-[#007a87] tracking-tight">
-              {loading ? '...' : totalSubjectsCount}
-            </div>
-          </div>
-        </div>
-
-        {/* Card 2: Chapters */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-[#e6f4f6] text-[#007a8c] flex items-center justify-center shrink-0">
-            <Layers className="w-5 h-5 stroke-[2.2]" />
-          </div>
-          <div>
-            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">
-              Chapters
-            </div>
-            <div className="text-2xl font-black text-[#007a87] tracking-tight">
-              {loading ? '...' : totalChaptersCount}
-            </div>
-          </div>
-        </div>
-
-        {/* Card 3: Questions */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-[#e6f4f6] text-[#007a8c] flex items-center justify-center shrink-0">
-            <HelpCircle className="w-5 h-5 stroke-[2.2]" />
-          </div>
-          <div>
-            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">
-              Questions
-            </div>
-            <div className="text-2xl font-black text-[#007a87] tracking-tight">
-              {loading ? '...' : questions.length.toLocaleString()}
-            </div>
-          </div>
-        </div>
-
-        {/* Card 4: Tests */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-[#e6f4f6] text-[#007a8c] flex items-center justify-center shrink-0">
-            <FileText className="w-5 h-5 stroke-[2.2]" />
-          </div>
-          <div>
-            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">
-              Tests
-            </div>
-            <div className="text-2xl font-black text-[#007a87] tracking-tight">
-              {loading ? '...' : documents.length}
-            </div>
-          </div>
+          <button
+            type="button"
+            onClick={onNewPaperWizard}
+            className="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-xl flex items-center gap-2 shadow-sm hover:shadow-md transition-all active:scale-[0.98] cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Generate Test Paper</span>
+          </button>
         </div>
       </div>
 
-      {/* 2-Column Content Section: Recent Questions & Distribution */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Left Card: Real Recent Questions */}
-        <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-2xs hover:shadow-md transition-all duration-300 flex flex-col justify-between space-y-4">
+      {/* 4 Metric Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+        {/* Total Questions */}
+        <div
+          onClick={onNavigateToQuestionBank}
+          className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-2xs hover:shadow-md transition-all duration-300 cursor-pointer space-y-2 group"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">
+              {user.role === 'admin' ? 'Total Questions' : `${user.assigned_subject} Questions`}
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <HelpCircle className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-3xl font-black text-slate-900">
+            {loading ? '...' : totalQuestionsCount.toLocaleString()}
+          </div>
+          <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+            <div className="h-full bg-teal-600 rounded-full" style={{ width: totalQuestionsCount > 0 ? '100%' : '0%' }} />
+          </div>
+        </div>
+
+        {/* Generated Tests */}
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-2xs hover:shadow-md transition-all duration-300 space-y-2 group">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">
+              Generated Tests
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <FileText className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-3xl font-black text-slate-900">
+            {loading ? '...' : documents.length.toLocaleString()}
+          </div>
+          <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+            <div className="h-full bg-indigo-600 rounded-full" style={{ width: documents.length > 0 ? '100%' : '0%' }} />
+          </div>
+        </div>
+
+        {/* Subjects Active */}
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-2xs hover:shadow-md transition-all duration-300 space-y-2 group">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">
+              {user.role === 'admin' ? 'Active Subjects' : 'Department'}
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <BookOpen className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-3xl font-black text-slate-900">
+            {loading ? '...' : user.role === 'admin' ? apiSubjects.length : user.assigned_subject}
+          </div>
+          <p className="text-[11px] text-slate-400 font-medium truncate">
+            {user.role === 'admin' ? apiSubjects.map(s => s.name).join(', ') : `${user.assigned_subject} Faculty Scoped`}
+          </p>
+        </div>
+
+        {/* Active Chapters */}
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-2xs hover:shadow-md transition-all duration-300 space-y-2 group">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">
+              Active Chapters
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Layers className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-3xl font-black text-slate-900">
+            {loading ? '...' : apiChapters.length.toLocaleString()}
+          </div>
+          <p className="text-[11px] text-slate-400 font-medium">
+            Live database sync
+          </p>
+        </div>
+      </div>
+
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left 2 Cols: Recent Test Papers */}
+        <div className="lg:col-span-2 rounded-2xl border border-slate-200/80 bg-white p-6 shadow-2xs hover:shadow-md transition-all duration-300 flex flex-col justify-between space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-              Recent Questions
+              Recent Generated Test Papers
             </h2>
-            <button
-              type="button"
-              onClick={onNavigateToQuestionBank}
-              className="px-3 py-1 border border-teal-700 text-teal-700 hover:bg-teal-50 font-bold text-[11px] rounded-md transition-all cursor-pointer"
-            >
-              View all
-            </button>
+            <span className="text-xs font-semibold text-slate-400">
+              {documents.length} Total Papers
+            </span>
           </div>
 
-          <div className="space-y-3.5 min-h-[140px]">
+          <div className="space-y-3 min-h-[140px]">
             {loading ? (
-              <div className="text-xs text-slate-400 py-6 text-center font-medium">Loading recent questions...</div>
-            ) : questions.length === 0 ? (
+              <div className="text-xs text-slate-400 py-6 text-center font-medium">Loading test papers...</div>
+            ) : documents.length === 0 ? (
               <div className="text-xs text-slate-400 py-6 text-center font-medium">
-                No recent questions found. Click "+ Create Question" to add your first question.
+                No test papers generated yet. Click "Generate Test Paper" to create your first exam.
               </div>
             ) : (
-              questions.slice(0, 5).map((q, idx) => (
+              documents.slice(0, 4).map(doc => (
                 <div
-                  key={q.id || idx}
-                  className="flex items-center gap-2 text-xs font-semibold text-slate-800 py-1 border-b border-slate-50 last:border-0"
+                  key={doc.id}
+                  onClick={() => onOpenDocument(doc.id)}
+                  className="flex items-center justify-between p-3 rounded-xl border border-slate-100 hover:border-teal-200 hover:bg-teal-50/30 transition-all cursor-pointer group"
                 >
-                  <span className="font-mono font-bold text-[#007a87] text-[11px] bg-teal-50 border border-teal-200 px-1.5 py-0.5 rounded shrink-0">
-                    {formatQuestionCode(q)}
+                  <div className="space-y-0.5">
+                    <p className="text-xs font-bold text-slate-900 group-hover:text-teal-800 transition-colors">
+                      {doc.title}
+                    </p>
+                    <p className="text-[11px] text-slate-400 font-medium">
+                      {doc.sections?.length || 0} Sections · {doc.sections?.reduce((acc: number, s: any) => acc + (s.items?.length || 0), 0) || 0} Questions
+                    </p>
+                  </div>
+                  <span className="px-2.5 py-1 bg-slate-100 group-hover:bg-teal-100 text-slate-600 group-hover:text-teal-800 rounded-lg text-[10px] font-bold transition-colors">
+                    Open Editor →
                   </span>
-                  <span className="text-slate-400">·</span>
-                  <span className="line-clamp-1">
-                    {q.rawText ? q.rawText.replace(/<[^>]*>?/gm, ' ').trim() : 'Question statement'}
-                  </span>
-                  {q.isSystem || idx % 2 === 0 ? (
-                    <span className="ml-auto px-2 py-0.5 bg-teal-50 border border-teal-200 text-teal-700 rounded-full text-[10px] font-bold">
-                      Published
-                    </span>
-                  ) : (
-                    <span className="ml-auto px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-600 rounded-full text-[10px] font-bold">
-                      Draft
-                    </span>
-                  )}
                 </div>
               ))
             )}
           </div>
         </div>
 
-        {/* Right Card: Real Question Distribution by Subject */}
+        {/* Right Card: Real Question Distribution */}
         <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-2xs hover:shadow-md transition-all duration-300 flex flex-col justify-between space-y-4">
           <div className="border-b border-slate-100 pb-3">
             <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-              Question Distribution
+              {user.role === 'admin' ? 'Subject Question Distribution' : `${user.assigned_subject} Chapter Distribution`}
             </h2>
           </div>
 
-          <div className="space-y-4 min-h-[140px] text-xs font-semibold">
+          <div className="space-y-3.5 min-h-[140px] text-xs font-semibold">
             {loading ? (
               <div className="text-xs text-slate-400 py-6 text-center font-medium">Loading distribution...</div>
-            ) : distributionList.length === 0 ? (
-              <div className="text-xs text-slate-400 py-6 text-center font-medium">
-                No subject distribution data available yet.
-              </div>
+            ) : user.role === 'admin' ? (
+              subjectPerformance.length === 0 ? (
+                <div className="text-xs text-slate-400 py-6 text-center font-medium">No subjects found.</div>
+              ) : (
+                subjectPerformance.map(item => (
+                  <div key={item.name} className="flex items-center justify-between text-slate-800 border-b border-slate-50 pb-2 last:border-0">
+                    <span className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${item.color}`} />
+                      {item.name}
+                    </span>
+                    <span className="font-extrabold text-[#007a87] font-mono text-xs">{item.count.toLocaleString()} Qs</span>
+                  </div>
+                ))
+              )
             ) : (
-              distributionList.map(item => (
-                <div key={item.name} className="flex items-center justify-between text-slate-800 border-b border-slate-50 pb-2 last:border-0">
-                  <span>{item.name}</span>
-                  <span className="font-extrabold text-[#007a87] font-mono text-sm">{item.count.toLocaleString()}</span>
-                </div>
-              ))
+              chapterPerformance.length === 0 ? (
+                <div className="text-xs text-slate-400 py-6 text-center font-medium">No chapters found for {user.assigned_subject}.</div>
+              ) : (
+                chapterPerformance.map(item => (
+                  <div key={item.title} className="flex items-center justify-between text-slate-800 border-b border-slate-50 pb-2 last:border-0">
+                    <span className="flex items-center gap-2 truncate">
+                      <span className="w-2 h-2 rounded-full bg-teal-600 shrink-0" />
+                      <span className="truncate">{item.title}</span>
+                    </span>
+                    <span className="font-extrabold text-[#007a87] font-mono text-xs shrink-0">{item.count.toLocaleString()} Qs</span>
+                  </div>
+                ))
+              )
             )}
           </div>
         </div>
       </div>
 
-      {/* REPORTS GRAPHICAL ANALYTICS SECTION (SYNCED REAL METRICS WITH REPORTS PAGE) */}
+      {/* REPORTS GRAPHICAL ANALYTICS SECTION (100% SYNCED WITH REPORTS PAGE) */}
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-7 space-y-6">
-        
         {/* Section Header with Redirect Button */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
           <div>
@@ -372,7 +387,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               </h2>
             </div>
             <p className="text-xs text-slate-500 font-medium mt-0.5">
-              Synced real database question share and difficulty balance metrics.
+              Live synchronized real question share and difficulty balance metrics from Question Bank.
             </p>
           </div>
 
@@ -389,29 +404,31 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         </div>
 
         {/* Graphical Analytics Charts Grid */}
-        <div className={user.assigned_subject !== 'All' ? 'grid grid-cols-1 gap-6' : 'grid grid-cols-1 lg:grid-cols-2 gap-6'}>
-          
-          {/* Graph 1: Subject Question Share (Bar Chart - Admin Only) */}
-          {user.assigned_subject === 'All' && (
-            <div className="p-5 border border-slate-200/80 rounded-xl bg-slate-50/50 space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-200/60 pb-2.5">
-                <h3 className="text-xs font-bold text-slate-900 flex items-center gap-2 uppercase tracking-wide">
-                  <BarChart3 className="w-4 h-4 text-teal-700" /> Subject Question Share
-                </h3>
-                <span className="text-[10px] font-extrabold text-teal-700 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded">
-                  Synced Real Data
-                </span>
-              </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Graph 1: Subject / Chapter Share */}
+          <div className="p-5 border border-slate-200/80 rounded-xl bg-slate-50/50 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200/60 pb-2.5">
+              <h3 className="text-xs font-bold text-slate-900 flex items-center gap-2 uppercase tracking-wide">
+                <BarChart3 className="w-4 h-4 text-teal-700" /> {user.role === 'admin' ? 'Subject Question Share' : `${user.assigned_subject} Chapter Share`}
+              </h3>
+              <span className="text-[10px] font-extrabold text-teal-700 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded">
+                Live Dynamic Sync
+              </span>
+            </div>
 
-              <div className="space-y-3.5 pt-1">
-                {loading ? (
-                  <div className="text-xs text-slate-400 py-4 text-center">Loading subject metrics...</div>
-                ) : (
+            <div className="space-y-3.5 pt-1">
+              {loading ? (
+                <div className="text-xs text-slate-400 py-4 text-center">Loading live share metrics...</div>
+              ) : user.role === 'admin' ? (
+                subjectPerformance.length > 0 ? (
                   subjectPerformance.map(s => (
                     <div key={s.name} className="space-y-1.5">
                       <div className="flex justify-between text-xs font-bold text-slate-800">
-                        <span>{s.name}</span>
-                        <span className="font-mono text-teal-800">{s.count} Questions ({s.percent}%)</span>
+                        <span className="flex items-center gap-1.5">
+                          <span className={`w-2 h-2 rounded-full ${s.color}`} />
+                          {s.name} ({s.code})
+                        </span>
+                        <span className="font-mono text-teal-800">{s.count} Qs ({s.percent}%)</span>
                       </div>
                       <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
                         <div
@@ -421,13 +438,37 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                       </div>
                     </div>
                   ))
-                )}
-              </div>
+                ) : (
+                  <div className="text-xs text-slate-400 py-4 text-center">No subjects configured.</div>
+                )
+              ) : (
+                chapterPerformance.length > 0 ? (
+                  chapterPerformance.map(ch => (
+                    <div key={ch.title} className="space-y-1.5">
+                      <div className="flex justify-between text-xs font-bold text-slate-800">
+                        <span className="flex items-center gap-1.5 truncate">
+                          <span className="w-2 h-2 rounded-full bg-teal-600 shrink-0" />
+                          <span className="truncate">{ch.title}</span>
+                        </span>
+                        <span className="font-mono text-teal-800 shrink-0">{ch.count} Qs ({ch.percent}%)</span>
+                      </div>
+                      <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-teal-600 rounded-full transition-all duration-500"
+                          style={{ width: `${ch.percent}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-xs text-slate-400 py-4 text-center">No chapters found for {user.assigned_subject}.</div>
+                )
+              )}
             </div>
-          )}
+          </div>
 
-          {/* Graph 2: Difficulty Level Distribution (Full Width for Faculty) */}
-          <div className="p-5 border border-slate-200/80 rounded-xl bg-slate-50/50 space-y-4 w-full">
+          {/* Graph 2: Difficulty Level Distribution */}
+          <div className="p-5 border border-slate-200/80 rounded-xl bg-slate-50/50 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-200/60 pb-2.5">
               <h3 className="text-xs font-bold text-slate-900 flex items-center gap-2 uppercase tracking-wide">
                 <Award className="w-4 h-4 text-amber-500" /> Question Bank Difficulty Balance
@@ -444,7 +485,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 difficultyBreakdown.map(d => (
                   <div key={d.level} className="space-y-1.5">
                     <div className="flex justify-between text-xs font-bold text-slate-800">
-                      <span>{d.level} Difficulty</span>
+                      <span className="flex items-center gap-1.5">
+                        <span className={`w-2 h-2 rounded-full ${d.color}`} />
+                        {d.level} Difficulty
+                      </span>
                       <span className="font-mono text-slate-900">{d.count} Questions ({d.percent}%)</span>
                     </div>
                     <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
@@ -458,9 +502,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               )}
             </div>
           </div>
-
         </div>
-
       </div>
     </div>
   );
