@@ -71,54 +71,37 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
     generateSolutionPaper: false
   });
 
-  // Dynamic Subject to Chapter / Topic Mapping
+  // Dynamic Subject to Chapter / Topic Mapping aligned with Database
   const SUBJECT_CHAPTERS_MAP: Record<string, string[]> = {
-    Biology: [
-      'Cell Structure and Function',
-      'Biological Classification',
-      'The Living World',
-      'Plant Kingdom',
-      'Human Physiology',
-      'Genetics & Inheritance',
-      'Molecular Basis of Inheritance'
-    ],
     Physics: [
-      'Kinematics & Motion',
-      'Laws of Motion',
-      'Work, Energy & Power',
-      'Electrostatics & Current',
-      'Optics & Wave Optics',
-      'Thermodynamics & Heat'
+      'Units and Measurements',
+      'Motion in a Plane'
     ],
     Chemistry: [
-      'Atomic Structure & Bonding',
-      'Organic Reaction Mechanisms',
-      'Chemical Kinetics',
-      'Periodic Table & Periodicity',
-      'Solutions & Electrochemistry',
-      'Thermodynamics in Chemistry'
+      'Some Basic Concepts of Chemistry',
+      'Thermodynamics'
+    ],
+    Biology: [
+      'The Living World',
+      'Animal Kingdom'
     ],
     Mathematics: [
       'Algebra & Matrices',
       'Calculus & Differentiation',
-      'Trigonometric Functions',
-      'Vectors & 3D Geometry',
-      'Probability & Statistics',
-      'Coordinate Geometry'
+      'Vectors & 3D Geometry'
     ]
   };
 
   const getAvailableChaptersForSubject = (subjectName: string) => {
-    const defaults = SUBJECT_CHAPTERS_MAP[subjectName] || [
-      'General Concepts',
-      'Chapter 1: Principles',
-      'Chapter 2: Core Applications'
-    ];
     const fromBackend = chapters
-      .filter(c => (c.subject || '').toLowerCase() === subjectName.toLowerCase())
+      .filter(c => (c.subject || '').toLowerCase() === subjectName.toLowerCase() || (c.subject_name || '').toLowerCase() === subjectName.toLowerCase())
       .map(c => c.title);
 
-    return Array.from(new Set([...defaults, ...fromBackend]));
+    if (fromBackend.length > 0) {
+      return Array.from(new Set(fromBackend));
+    }
+
+    return SUBJECT_CHAPTERS_MAP[subjectName] || ['General Chapter'];
   };
 
   const handleSubjectChange = (newSub: string) => {
@@ -156,6 +139,9 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
         if (initialDocument.metadata?.subject) {
           setSelectedSubject(initialDocument.metadata.subject);
         }
+        if ((initialDocument.metadata as any)?.chapter) {
+          setSelectedChapter((initialDocument.metadata as any).chapter);
+        }
         if (initialDocument.metadata?.timeAllowedMinutes) {
           setDurationMinutes(Number(initialDocument.metadata.timeAllowedMinutes));
         }
@@ -178,8 +164,12 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
         }
 
         setCurrentStep(2); // Open directly to Step 2: Select Questions
-      } else if (qList && qList.length > 0) {
-        setSelectedQuestionIds([qList[0].id]);
+      } else {
+        const initSub = userSubject !== 'All' ? userSubject : 'Physics';
+        setSelectedSubject(initSub);
+        const subChaps = (chList || []).filter((c: any) => (c.subject || '').toLowerCase() === initSub.toLowerCase());
+        const initChap = subChaps.length > 0 ? subChaps[0].title : (SUBJECT_CHAPTERS_MAP[initSub]?.[0] || 'Motion in a Plane');
+        setSelectedChapter(initChap);
       }
     } catch (err) {
       console.error('Failed to load test generator data:', err);
@@ -188,18 +178,62 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
     }
   };
 
-  // Filter questions based on search and difficulty
+  // Helper matching functions
+  const isQuestionInSubject = (q: Question, targetSubject: string) => {
+    if (!targetSubject || targetSubject === 'All') return true;
+    const sLower = targetSubject.toLowerCase();
+    const qSub = (q.subject || (q as any).subject_name || '').toLowerCase();
+    const qSubId = String((q as any).subject_id || (q as any).subjectId || '').toLowerCase();
+    const code = formatQuestionCode(q).toLowerCase();
+
+    return (
+      qSub === sLower ||
+      qSub.includes(sLower) ||
+      qSubId === sLower ||
+      (sLower === 'physics' && (code.startsWith('phy') || code.includes('phy-'))) ||
+      (sLower === 'chemistry' && (code.startsWith('che') || code.includes('che-'))) ||
+      (sLower === 'biology' && (code.startsWith('bio') || code.includes('bio-'))) ||
+      (sLower === 'mathematics' && (code.startsWith('mat') || code.includes('mat-')))
+    );
+  };
+
+  const isQuestionInChapter = (q: Question, targetChapter: string) => {
+    if (!targetChapter || targetChapter === 'All' || targetChapter === 'All Chapters') return true;
+    const chLower = targetChapter.toLowerCase();
+    const qChapter = String(q.chapter || (q as any).chapter_name || (q as any).topic || '').toLowerCase();
+    const qChId = String((q as any).chapter_id || (q as any).chapterId || '').toLowerCase();
+    const code = formatQuestionCode(q).toLowerCase();
+
+    let codeMatches = false;
+    if (chLower.includes('units and measurements') && (code.includes('uam') || code.includes('01'))) codeMatches = true;
+    if (chLower.includes('motion in a plane') && (code.includes('mip') || code.includes('02'))) codeMatches = true;
+    if (chLower.includes('basic concepts') && (code.includes('sbc') || code.includes('01'))) codeMatches = true;
+    if (chLower.includes('thermodynamics') && (code.includes('the') || code.includes('02'))) codeMatches = true;
+    if (chLower.includes('living world') && (code.includes('liv') || code.includes('01'))) codeMatches = true;
+    if (chLower.includes('animal kingdom') && (code.includes('ani') || code.includes('02'))) codeMatches = true;
+
+    return (
+      (qChapter && (qChapter === chLower || qChapter.includes(chLower) || chLower.includes(qChapter))) ||
+      (qChId && qChId === chLower) ||
+      codeMatches
+    );
+  };
+
+  // Filter questions strictly based on selected subject AND chapter
   const filteredQuestions = questions.filter(q => {
+    if (!isQuestionInSubject(q, selectedSubject)) return false;
+    if (!isQuestionInChapter(q, selectedChapter)) return false;
+
     if (difficultyFilter !== 'All' && q.difficulty && q.difficulty.toLowerCase() !== difficultyFilter.toLowerCase()) {
       return false;
     }
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      return (
-        (q.rawText && q.rawText.toLowerCase().includes(query)) ||
-        (q.id && q.id.toLowerCase().includes(query)) ||
-        (q.chapter && q.chapter.toLowerCase().includes(query))
-      );
+      const code = formatQuestionCode(q).toLowerCase();
+      const rawText = (q.rawText || '').toLowerCase();
+      if (!rawText.includes(query) && !code.includes(query) && !q.id.toLowerCase().includes(query)) {
+        return false;
+      }
     }
     return true;
   });
@@ -219,17 +253,17 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
   };
 
   const handleAutoSelectDistribution = () => {
-    const easyQ = questions.filter(q => (q.difficulty || '').toLowerCase() === 'easy').map(q => q.id);
-    const medQ = questions.filter(q => (q.difficulty || '').toLowerCase() === 'medium').map(q => q.id);
-    const hardQ = questions.filter(q => (q.difficulty || '').toLowerCase() === 'hard').map(q => q.id);
+    const easyQ = filteredQuestions.filter(q => (q.difficulty || '').toLowerCase() === 'easy').map(q => q.id);
+    const medQ = filteredQuestions.filter(q => (q.difficulty || '').toLowerCase() === 'medium').map(q => q.id);
+    const hardQ = filteredQuestions.filter(q => (q.difficulty || '').toLowerCase() === 'hard').map(q => q.id);
 
     const chosenEasy = easyQ.slice(0, easyCount);
     const chosenMed = medQ.slice(0, mediumCount);
     const chosenHard = hardQ.slice(0, hardCount);
 
     const combined = Array.from(new Set([...chosenEasy, ...chosenMed, ...chosenHard]));
-    setSelectedQuestionIds(combined.length > 0 ? combined : questions.slice(0, 50).map(q => q.id));
-    alert('Questions automatically selected based on your distribution rules!');
+    setSelectedQuestionIds(combined.length > 0 ? combined : filteredQuestions.slice(0, 50).map(q => q.id));
+    alert(`Automatically selected ${combined.length || Math.min(filteredQuestions.length, 50)} questions for chapter "${selectedChapter}"!`);
   };
 
   const handleAddSection = () => {
@@ -251,13 +285,19 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
 
   const buildDocumentModel = (): Partial<DocumentModel> => {
     const selectedQuestionsList = questions.filter(q =>
-      selectedQuestionIds.some(id => String(id) === String(q.id))
+      selectedQuestionIds.some(id => String(id) === String(q.id)) &&
+      isQuestionInSubject(q, selectedSubject) &&
+      isQuestionInChapter(q, selectedChapter)
     );
+
+    const fallbackList = filteredQuestions.length > 0
+      ? filteredQuestions
+      : questions.filter(q => isQuestionInSubject(q, selectedSubject) && isQuestionInChapter(q, selectedChapter));
 
     const docSections: DocumentSection[] = testSections.map((sec, idx) => {
       const sectionQuestions = selectedQuestionsList.length > 0
         ? selectedQuestionsList
-        : questions.slice(0, sec.questionsCount || 10);
+        : fallbackList.slice(0, sec.questionsCount || 10);
 
       return {
         id: `sec-${Date.now()}-${idx + 1}`,
@@ -708,6 +748,29 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                   >
                     Auto Select
                   </button>
+                </div>
+              </div>
+
+              {/* Active Subject & Chapter Scope Selector */}
+              <div className="bg-teal-50/90 border border-teal-200 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-bold text-teal-950">Subject:</span>
+                  <span className="px-2.5 py-0.5 bg-teal-700 text-white rounded-md font-mono font-bold text-[11px]">
+                    {selectedSubject}
+                  </span>
+                  <span className="text-teal-950 font-bold ml-1">Chapter:</span>
+                  <select
+                    value={selectedChapter}
+                    onChange={e => setSelectedChapter(e.target.value)}
+                    className="bg-white border border-teal-300 text-teal-900 font-bold px-2.5 py-1 rounded-lg cursor-pointer focus:ring-2 focus:ring-teal-600 text-xs"
+                  >
+                    {getAvailableChaptersForSubject(selectedSubject).map((chapTitle, idx) => (
+                      <option key={idx} value={chapTitle}>{chapTitle}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="text-[11px] font-bold text-teal-800 shrink-0">
+                  {filteredQuestions.length} question(s) in this chapter
                 </div>
               </div>
 
@@ -1225,66 +1288,77 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
 
                   {/* Render Selected User Questions from Bank */}
                   <div className="space-y-6 text-xs font-medium">
-                    {selectedQuestionIds.length === 0 ? (
-                      <div className="p-6 text-center text-slate-400 font-semibold italic border border-dashed border-slate-200 rounded-lg">
-                        No questions selected for this test paper yet. Go to Step 2 (Select Questions) to pick your questions.
-                      </div>
-                    ) : (
-                      questions
-                        .filter(q => selectedQuestionIds.includes(q.id))
-                        .map((q, qIdx) => (
-                          <div key={q.id || qIdx} className="space-y-2 pb-3 border-b border-slate-100 last:border-0">
-                            {/* Question Title & Number */}
-                            <div className="font-bold text-slate-900 text-xs leading-relaxed flex gap-1.5">
-                              <span className="shrink-0">{qIdx + 1}.</span>
-                              <div
-                                dangerouslySetInnerHTML={{
-                                  __html: q.rawText || 'Question Statement'
-                                }}
+                    {(() => {
+                      const activePreviewQuestions = questions.filter(q =>
+                        selectedQuestionIds.includes(q.id) &&
+                        isQuestionInSubject(q, selectedSubject) &&
+                        isQuestionInChapter(q, selectedChapter)
+                      );
+                      const displayList = activePreviewQuestions.length > 0
+                        ? activePreviewQuestions
+                        : filteredQuestions;
+
+                      if (displayList.length === 0) {
+                        return (
+                          <div className="p-6 text-center text-slate-400 font-semibold italic border border-dashed border-slate-200 rounded-lg">
+                            No questions found for chapter "{selectedChapter}". Select questions in Step 2.
+                          </div>
+                        );
+                      }
+
+                      return displayList.map((q, qIdx) => (
+                        <div key={q.id || qIdx} className="space-y-2 pb-3 border-b border-slate-100 last:border-0">
+                          {/* Question Title & Number */}
+                          <div className="font-bold text-slate-900 text-xs leading-relaxed flex gap-1.5">
+                            <span className="shrink-0">{qIdx + 1}.</span>
+                            <div
+                              dangerouslySetInnerHTML={{
+                                __html: q.rawText || 'Question Statement'
+                              }}
+                            />
+                          </div>
+
+                          {/* Render Diagram/Image if present */}
+                          {(q.imageUrl || q.diagramUrl) && (
+                            <div className="my-2 max-h-48 overflow-hidden flex justify-center bg-slate-50 border border-slate-200 rounded-lg p-2">
+                              <img
+                                src={q.imageUrl || q.diagramUrl}
+                                alt="Question Diagram"
+                                className="max-h-44 object-contain rounded"
                               />
                             </div>
+                          )}
 
-                            {/* Render Diagram/Image if present */}
-                            {(q.imageUrl || q.diagramUrl) && (
-                              <div className="my-2 max-h-48 overflow-hidden flex justify-center bg-slate-50 border border-slate-200 rounded-lg p-2">
-                                <img
-                                  src={q.imageUrl || q.diagramUrl}
-                                  alt="Question Diagram"
-                                  className="max-h-44 object-contain rounded"
-                                />
-                              </div>
-                            )}
-
-                            {/* Render Dynamic Options (A, B, C, D) */}
-                            <div className="grid grid-cols-2 gap-2 pl-4 pt-1">
-                              {q.options && q.options.length > 0 ? (
-                                q.options.map((opt, oIdx) => (
+                          {/* Render Dynamic Options (A, B, C, D) */}
+                          <div className="grid grid-cols-2 gap-2 pl-4 pt-1">
+                            {q.options && q.options.length > 0 ? (
+                              q.options.map((opt, oIdx) => (
+                                <div
+                                  key={opt.id || oIdx}
+                                  className="p-2 border border-slate-200 rounded bg-slate-50 text-slate-900 font-medium flex gap-1.5"
+                                >
+                                  <span className="font-bold shrink-0">
+                                    {String.fromCharCode(65 + oIdx)}.
+                                  </span>
                                   <div
-                                    key={opt.id || oIdx}
-                                    className="p-2 border border-slate-200 rounded bg-slate-50 text-slate-900 font-medium flex gap-1.5"
-                                  >
-                                    <span className="font-bold shrink-0">
-                                      {String.fromCharCode(65 + oIdx)}.
-                                    </span>
-                                    <div
-                                      dangerouslySetInnerHTML={{
-                                        __html: opt.rawText || (opt as any).text || (opt as any).label || ''
-                                      }}
-                                    />
-                                  </div>
-                                ))
-                              ) : (
-                                <>
-                                  <div className="p-2 border border-slate-200 rounded bg-slate-50">A. Option A</div>
-                                  <div className="p-2 border border-slate-200 rounded bg-slate-50">B. Option B</div>
-                                  <div className="p-2 border border-slate-200 rounded bg-slate-50">C. Option C</div>
-                                  <div className="p-2 border border-slate-200 rounded bg-slate-50">D. Option D</div>
-                                </>
-                              )}
-                            </div>
+                                    dangerouslySetInnerHTML={{
+                                      __html: opt.rawText || (opt as any).text || (opt as any).label || ''
+                                    }}
+                                  />
+                                </div>
+                              ))
+                            ) : (
+                              <>
+                                <div className="p-2 border border-slate-200 rounded bg-slate-50">A. Option A</div>
+                                <div className="p-2 border border-slate-200 rounded bg-slate-50">B. Option B</div>
+                                <div className="p-2 border border-slate-200 rounded bg-slate-50">C. Option C</div>
+                                <div className="p-2 border border-slate-200 rounded bg-slate-50">D. Option D</div>
+                              </>
+                            )}
                           </div>
-                        ))
-                    )}
+                        </div>
+                      ));
+                    })()}
                   </div>
                 </div>
 
