@@ -1371,46 +1371,7 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
               </div>
             </div>
 
-            {/* Paper Settings Card */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-6 space-y-4">
-              <div className="border-b border-slate-100 pb-3">
-                <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                  Paper Options & Randomization
-                </h2>
-              </div>
 
-              <div className="space-y-3 text-xs font-semibold text-slate-800">
-                <label className="flex items-center gap-2.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={paperSettings.shuffleQuestions}
-                    onChange={e => setPaperSettings(s => ({ ...s, shuffleQuestions: e.target.checked }))}
-                    className="w-4 h-4 text-teal-600 rounded border-slate-300 cursor-pointer"
-                  />
-                  <span>Shuffle Questions Order</span>
-                </label>
-
-                <label className="flex items-center gap-2.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={paperSettings.shuffleOptions}
-                    onChange={e => setPaperSettings(s => ({ ...s, shuffleOptions: e.target.checked }))}
-                    className="w-4 h-4 text-teal-600 rounded border-slate-300 cursor-pointer"
-                  />
-                  <span>Shuffle Multiple Choice Options</span>
-                </label>
-
-                <label className="flex items-center gap-2.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={paperSettings.showQuestionCode}
-                    onChange={e => setPaperSettings(s => ({ ...s, showQuestionCode: e.target.checked }))}
-                    className="w-4 h-4 text-teal-600 rounded border-slate-300 cursor-pointer"
-                  />
-                  <span>Show Question Codes on Paper</span>
-                </label>
-              </div>
-            </div>
 
             {/* STEP 2 BOTTOM NAVIGATION FOOTER */}
             <div className="flex items-center justify-between pt-4 border-t border-slate-200/80">
@@ -1467,7 +1428,7 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                 onClick={handleGeneratePdfStream}
                 className="w-full py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-900 font-bold text-xs rounded-xl transition-all active:scale-95 cursor-pointer shadow-2xs flex items-center justify-center gap-1.5"
               >
-                <Printer className="w-3.5 h-3.5" /> Print / Save as PDF
+                <Download className="w-3.5 h-3.5 text-teal-700" /> Export as PDF
               </button>
 
               <button
@@ -1850,7 +1811,7 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                   onClick={handleGeneratePdfStream}
                   className="px-4 py-2 border border-slate-200 bg-white hover:bg-slate-100 text-slate-800 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
                 >
-                  <Printer className="w-3.5 h-3.5" /> Print / Save as PDF
+                  <Download className="w-3.5 h-3.5 text-teal-700" /> Export as PDF
                 </button>
 
                 <button
