@@ -17,7 +17,11 @@ subjectsRouter.get('/', async (req: Request, res: Response, next: NextFunction) 
       return res.json({ success: true, data: [] });
     }
 
-    const subjects = subsRes.data || [];
+    let subjects = subsRes.data || [];
+    const userSubject = (req.query.userSubject || req.query.subject || req.headers['x-user-subject'] || 'All') as string;
+    if (userSubject && userSubject !== 'All') {
+      subjects = subjects.filter((s: any) => s.name.toLowerCase() === userSubject.toLowerCase());
+    }
     const chapters = chsRes.data || [];
     const questions = qsRes.data || [];
 

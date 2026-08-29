@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, Lock, Mail, ArrowRight, ShieldCheck, UserPlus, LogIn, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, ArrowRight, ShieldCheck, UserPlus, LogIn, AlertCircle, User, BookOpen, Shield } from 'lucide-react';
 import { supabase } from '../lib/supabase.js';
+import { api } from '../services/api.js';
 
 interface LoginPageProps {
   onLoginSuccess: () => void;
@@ -8,8 +9,11 @@ interface LoginPageProps {
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [isSignUp, setIsSignUp] = useState(false);
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState<'faculty' | 'admin'>('faculty');
+  const [assignedSubject, setAssignedSubject] = useState<'Biology' | 'Physics' | 'Chemistry' | 'Mathematics' | 'All'>('Biology');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -20,8 +24,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     setErrorMessage(null);
     setSuccessMessage(null);
 
-    if (!email.trim() || !password.trim()) {
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPassword = password.trim();
+
+    if (!cleanEmail || !cleanPassword) {
       setErrorMessage('Please enter both email and password.');
+      return;
+    }
+
+    if (isSignUp && !name.trim()) {
+      setErrorMessage('Please enter your full name.');
       return;
     }
 
@@ -29,67 +41,82 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
     try {
       if (isSignUp) {
-        // Sign Up with Supabase Auth
+        // 1. Check for duplicate user first
+        try {
+          const checkRes = await fetch('/api/auth/check-user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: cleanEmail })
+          });
+          const checkData = await checkRes.json();
+          if (checkData.exists) {
+            setErrorMessage('An account with this email address already exists. Please sign in instead.');
+            setIsSignUp(false);
+            setIsLoading(false);
+            return;
+          }
+        } catch (checkErr) {
+          // Continue if offline check fails
+        }
+
+        // 2. Sign Up with Supabase Auth
         const { data, error } = await supabase.auth.signUp({
-          email: email.trim(),
-          password: password.trim()
+          email: cleanEmail,
+          password: cleanPassword
         });
 
         if (error) {
+          // If already registered in Supabase
+          if (error.message.toLowerCase().includes('already registered') || error.message.toLowerCase().includes('duplicate') || error.message.toLowerCase().includes('exists')) {
+            setErrorMessage('An account with this email address already exists. Please sign in instead.');
+            setIsSignUp(false);
+            setIsLoading(false);
+            return;
+          }
           throw error;
         }
 
+        // 3. Register user profile with Role and Assigned Subject
+        const selectedRole = role;
+        const selectedSubject = role === 'admin' ? 'All' : assignedSubject;
+        const profilePayload = {
+          email: cleanEmail,
+          name: name.trim(),
+          role: selectedRole,
+          assignedSubject: selectedSubject
+        };
+
+        try {
+          await fetch('/api/auth/signup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(profilePayload)
+          });
+        } catch (pErr) {
+          console.warn('Profile sync warning:', pErr);
+        }
+
+        const userProfile = {
+          email: cleanEmail,
+          name: name.trim(),
+          role: selectedRole,
+          assigned_subject: selectedSubject
+        };
+
+        localStorage.setItem('eduforge_auth', 'true');
+        localStorage.setItem('eduforge_user', JSON.stringify(userProfile));
+
         if (data.session) {
-          const cleanEmail = (data.session.user.email || '').toLowerCase().trim();
-
-          let defaultSub: 'Physics' | 'Chemistry' | 'Biology' | 'Mathematics' | 'All' | 'None' = 'None';
-          let defaultRole: 'admin' | 'faculty' | 'guest' = 'guest';
-          let defaultName = 'User';
-
-          if (cleanEmail === 'admin@eduforge.com' || cleanEmail.startsWith('admin@')) {
-            defaultSub = 'All';
-            defaultRole = 'admin';
-            defaultName = 'System Admin';
-          } else if (cleanEmail.includes('physics')) {
-            defaultSub = 'Physics';
-            defaultRole = 'faculty';
-            defaultName = 'Physics Faculty';
-          } else if (cleanEmail.includes('chemistry')) {
-            defaultSub = 'Chemistry';
-            defaultRole = 'faculty';
-            defaultName = 'Chemistry Faculty';
-          } else if (cleanEmail.includes('biology')) {
-            defaultSub = 'Biology';
-            defaultRole = 'faculty';
-            defaultName = 'Biology Faculty';
-          } else if (cleanEmail.includes('maths') || cleanEmail.includes('math')) {
-            defaultSub = 'Mathematics';
-            defaultRole = 'faculty';
-            defaultName = 'Mathematics Faculty';
-          } else {
-            defaultSub = 'None';
-            defaultRole = 'guest';
-            defaultName = cleanEmail.split('@')[0] || 'Guest User';
-          }
-
-          const userProfile = {
-            email: data.session.user.email,
-            name: defaultName,
-            role: defaultRole,
-            assigned_subject: defaultSub
-          };
-          localStorage.setItem('eduforge_auth', 'true');
-          localStorage.setItem('eduforge_user', JSON.stringify(userProfile));
           onLoginSuccess();
         } else {
-          setSuccessMessage('Registration successful! Please log in with your credentials.');
+          setSuccessMessage('Registration successful! You can now sign in with your credentials.');
           setIsSignUp(false);
         }
       } else {
         // Sign In with Supabase Auth
         const { data, error } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password: password.trim()
+          email: cleanEmail,
+          password: cleanPassword
         });
 
         if (error) {
@@ -97,44 +124,58 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         }
 
         if (data.session) {
-          const cleanEmail = (data.session.user.email || '').toLowerCase().trim();
-
-          let defaultSub: 'Physics' | 'Chemistry' | 'Biology' | 'Mathematics' | 'All' | 'None' = 'None';
-          let defaultRole: 'admin' | 'faculty' | 'guest' = 'guest';
-          let defaultName = 'User';
-
-          if (cleanEmail === 'admin@eduforge.com' || cleanEmail.startsWith('admin@')) {
-            defaultSub = 'All';
-            defaultRole = 'admin';
-            defaultName = 'System Admin';
-          } else if (cleanEmail.includes('physics')) {
-            defaultSub = 'Physics';
-            defaultRole = 'faculty';
-            defaultName = 'Physics Faculty';
-          } else if (cleanEmail.includes('chemistry')) {
-            defaultSub = 'Chemistry';
-            defaultRole = 'faculty';
-            defaultName = 'Chemistry Faculty';
-          } else if (cleanEmail.includes('biology')) {
-            defaultSub = 'Biology';
-            defaultRole = 'faculty';
-            defaultName = 'Biology Faculty';
-          } else if (cleanEmail.includes('maths') || cleanEmail.includes('math')) {
-            defaultSub = 'Mathematics';
-            defaultRole = 'faculty';
-            defaultName = 'Mathematics Faculty';
-          } else {
-            defaultSub = 'None';
-            defaultRole = 'guest';
-            defaultName = cleanEmail.split('@')[0] || 'User';
+          // Fetch synced profile from backend
+          let userProfile: any = null;
+          try {
+            const profRes = await fetch('/api/auth/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: cleanEmail })
+            });
+            const profData = await profRes.json();
+            if (profData.success && profData.data) {
+              userProfile = {
+                email: profData.data.email || cleanEmail,
+                name: profData.data.name || cleanEmail.split('@')[0],
+                role: profData.data.role || (cleanEmail.startsWith('admin') ? 'admin' : 'faculty'),
+                assigned_subject: profData.data.assigned_subject || (cleanEmail.startsWith('admin') ? 'All' : 'Biology')
+              };
+            }
+          } catch (fetchErr) {
+            console.warn('Profile fetch warning:', fetchErr);
           }
 
-          const userProfile = {
-            email: data.session.user.email,
-            name: defaultName,
-            role: defaultRole,
-            assigned_subject: defaultSub
-          };
+          if (!userProfile) {
+            let defaultSub: 'Physics' | 'Chemistry' | 'Biology' | 'Mathematics' | 'All' = 'Biology';
+            let defaultRole: 'admin' | 'faculty' = 'faculty';
+            let defaultName = cleanEmail.split('@')[0];
+
+            if (cleanEmail === 'admin@eduforge.com' || cleanEmail.startsWith('admin@')) {
+              defaultSub = 'All';
+              defaultRole = 'admin';
+              defaultName = 'System Admin';
+            } else if (cleanEmail.includes('physics')) {
+              defaultSub = 'Physics';
+              defaultName = 'Physics Faculty';
+            } else if (cleanEmail.includes('chemistry')) {
+              defaultSub = 'Chemistry';
+              defaultName = 'Chemistry Faculty';
+            } else if (cleanEmail.includes('biology')) {
+              defaultSub = 'Biology';
+              defaultName = 'Biology Faculty';
+            } else if (cleanEmail.includes('math')) {
+              defaultSub = 'Mathematics';
+              defaultName = 'Mathematics Faculty';
+            }
+
+            userProfile = {
+              email: cleanEmail,
+              name: defaultName,
+              role: defaultRole,
+              assigned_subject: defaultSub
+            };
+          }
+
           localStorage.setItem('eduforge_auth', 'true');
           localStorage.setItem('eduforge_user', JSON.stringify(userProfile));
           onLoginSuccess();
@@ -165,11 +206,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
       <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-xs z-10" />
 
       {/* Centered Auth Card */}
-      <div className="relative z-20 max-w-md w-full mx-4 p-8 rounded-3xl bg-white/95 backdrop-blur-md shadow-2xl border border-white/40 space-y-6 animate-in fade-in zoom-in-95 duration-300">
+      <div className="relative z-20 max-w-md w-full mx-4 p-8 rounded-3xl bg-white/95 backdrop-blur-md shadow-2xl border border-white/40 space-y-5 animate-in fade-in zoom-in-95 duration-300 max-h-[95vh] overflow-y-auto">
         {/* Brand Header */}
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-teal-700 to-teal-500 text-white shadow-lg shadow-teal-700/30 mb-1">
-            <span className="font-black text-2xl tracking-tighter">E</span>
+        <div className="text-center space-y-1">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-tr from-teal-700 to-teal-500 text-white shadow-lg shadow-teal-700/30 mb-1">
+            <span className="font-black text-xl tracking-tighter">E</span>
           </div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight font-sans">
             EduForge
@@ -224,9 +265,30 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         )}
 
         {/* Auth Form */}
-        <form onSubmit={handleSubmit} className="space-y-4 text-xs font-semibold text-slate-800">
+        <form onSubmit={handleSubmit} className="space-y-3.5 text-xs font-semibold text-slate-800">
+          {/* Full Name for Signup */}
+          {isSignUp && (
+            <div>
+              <label className="block text-[11px] font-extrabold uppercase text-slate-500 mb-1 tracking-wide">
+                Full Name
+              </label>
+              <div className="relative">
+                <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                <input
+                  type="text"
+                  required
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  placeholder="Dr. John Smith"
+                  className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-slate-900 bg-white focus:outline-hidden focus:ring-2 focus:ring-teal-600 font-medium"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Email Address */}
           <div>
-            <label className="block text-[11px] font-extrabold uppercase text-slate-500 mb-1.5 tracking-wide">
+            <label className="block text-[11px] font-extrabold uppercase text-slate-500 mb-1 tracking-wide">
               Email Address
             </label>
             <div className="relative">
@@ -236,14 +298,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 required
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="admin@eduforge.com"
+                placeholder="faculty@eduforge.com"
                 className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-slate-900 bg-white focus:outline-hidden focus:ring-2 focus:ring-teal-600 font-medium"
               />
             </div>
           </div>
 
+          {/* Password */}
           <div>
-            <label className="block text-[11px] font-extrabold uppercase text-slate-500 mb-1.5 tracking-wide">
+            <label className="block text-[11px] font-extrabold uppercase text-slate-500 mb-1 tracking-wide">
               Password
             </label>
             <div className="relative">
@@ -267,9 +330,67 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             </div>
           </div>
 
+          {/* Signup Specific Role & Subject Selectors */}
+          {isSignUp && (
+            <>
+              {/* Role Selection */}
+              <div>
+                <label className="block text-[11px] font-extrabold uppercase text-slate-500 mb-1 tracking-wide">
+                  Account Role
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setRole('faculty')}
+                    className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      role === 'faculty'
+                        ? 'bg-teal-50 border-teal-600 text-teal-900 shadow-2xs'
+                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    <BookOpen className="w-3.5 h-3.5" /> Faculty
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRole('admin')}
+                    className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      role === 'admin'
+                        ? 'bg-teal-50 border-teal-600 text-teal-900 shadow-2xs'
+                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    <Shield className="w-3.5 h-3.5" /> Admin
+                  </button>
+                </div>
+              </div>
+
+              {/* Assigned Subject Selection (Only for Faculty) */}
+              {role === 'faculty' && (
+                <div>
+                  <label className="block text-[11px] font-extrabold uppercase text-slate-500 mb-1 tracking-wide">
+                    Assigned Subject Scope
+                  </label>
+                  <select
+                    value={assignedSubject}
+                    onChange={e => setAssignedSubject(e.target.value as any)}
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-slate-900 bg-white focus:outline-hidden focus:ring-2 focus:ring-teal-600 font-bold"
+                  >
+                    <option value="Biology">🌿 Biology</option>
+                    <option value="Physics">⚡ Physics</option>
+                    <option value="Chemistry">🧪 Chemistry</option>
+                    <option value="Mathematics">📐 Mathematics</option>
+                  </select>
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    * You will be scoped to access questions, chapters, and assets for this subject only.
+                  </p>
+                </div>
+              )}
+            </>
+          )}
+
           <div className="flex items-center justify-between pt-1">
             <span className="text-[11px] text-slate-500 font-medium flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5 text-teal-600" /> Supabase Cloud Authentication
+              <ShieldCheck className="w-3.5 h-3.5 text-teal-600" /> Supabase Secured Authentication
             </span>
           </div>
 
@@ -283,7 +404,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
               <span>Connecting to Supabase...</span>
             ) : (
               <>
-                <span>{isSignUp ? 'Create Supabase Account' : 'Sign In with Supabase'}</span>
+                <span>{isSignUp ? 'Register Account' : 'Sign In'}</span>
                 <ArrowRight className="w-4 h-4" />
               </>
             )}
@@ -293,7 +414,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         {/* Footer info */}
         <div className="text-center pt-2 border-t border-slate-200/60">
           <p className="text-[11px] text-slate-400 font-medium">
-            EduForge Suite v1.0 · Secured by Supabase Auth
+            EduForge Suite v1.0 · Multi-Subject Role Scoped
           </p>
         </div>
       </div>

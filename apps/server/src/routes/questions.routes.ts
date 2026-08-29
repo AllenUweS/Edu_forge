@@ -27,7 +27,7 @@ questionsRouter.get('/', async (req: Request, res: Response, next: NextFunction)
       return res.json({ success: true, data: [] });
     }
 
-    const formattedList = (data || []).map((q: any) => {
+    let formattedList = (data || []).map((q: any) => {
       const options = (q.question_options || []).map((opt: any) => {
         let textVal = opt.raw_text || '';
         if (!textVal && Array.isArray(opt.content)) {
@@ -63,6 +63,11 @@ questionsRouter.get('/', async (req: Request, res: Response, next: NextFunction)
         updatedAt: q.updated_at
       };
     });
+
+    const userSubject = (req.query.userSubject || req.query.subject || req.headers['x-user-subject'] || 'All') as string;
+    if (userSubject && userSubject !== 'All') {
+      formattedList = formattedList.filter((q: any) => (q.subject || '').toLowerCase() === userSubject.toLowerCase());
+    }
 
     res.json({ success: true, data: formattedList });
   } catch (err) {

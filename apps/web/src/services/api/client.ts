@@ -1,3 +1,5 @@
+import { getUserProfile } from '../../utils/userProfile.js';
+
 const getApiBaseUrl = (): string => {
   if (typeof window !== 'undefined') {
     if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
@@ -24,10 +26,20 @@ export async function fetchApi<T>(endpoint: string, options?: RequestInit): Prom
 
   const url = endpoint.startsWith('http') ? endpoint : `${base}${cleanEndpoint}`;
 
+  const user = getUserProfile();
+  const authHeaders: Record<string, string> = {};
+  if (user && user.assigned_subject) {
+    authHeaders['x-user-subject'] = user.assigned_subject;
+  }
+  if (user && user.role) {
+    authHeaders['x-user-role'] = user.role;
+  }
+
   const res = await fetch(url, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      ...authHeaders,
       ...(options?.headers || {})
     }
   });

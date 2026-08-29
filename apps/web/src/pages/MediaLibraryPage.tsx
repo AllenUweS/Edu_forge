@@ -1,17 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Plus, X, Upload, Edit3, Trash2, Image as ImageIcon, Check } from 'lucide-react';
 import { api } from '../services/api.js';
+import { getUserProfile } from '../utils/userProfile.js';
 
 interface MediaAsset {
   id: string;
   name: string;
   label: string;
   url: string;
+  storagePath?: string;
   usesCount: number;
 }
 
 export const MediaLibraryPage: React.FC = () => {
   const [assets, setAssets] = useState<MediaAsset[]>([]);
+  const user = getUserProfile();
 
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -27,9 +30,19 @@ export const MediaLibraryPage: React.FC = () => {
   const loadMediaFromDb = async () => {
     try {
       const mediaItems = await api.getMedia();
-      setAssets(mediaItems || []);
+      let list = mediaItems || [];
+      if (user.role === 'faculty' && user.assigned_subject && user.assigned_subject !== 'All') {
+        const subLower = user.assigned_subject.toLowerCase();
+        list = list.filter((a: any) => 
+          (a.name || '').toLowerCase().includes(subLower) || 
+          (a.url || '').toLowerCase().includes(subLower) ||
+          (a.storagePath || '').toLowerCase().includes(subLower) ||
+          (a.filename || '').toLowerCase().includes(subLower)
+        );
+      }
+      setAssets(list);
     } catch (err) {
-      console.error('Failed to load media from MySQL:', err);
+      console.error('Failed to load media:', err);
     }
   };
 

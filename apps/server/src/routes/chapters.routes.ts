@@ -63,7 +63,11 @@ chaptersRouter.get('/', async (req: Request, res: Response, next: NextFunction) 
       return res.json({ success: true, data: [] });
     }
 
-    const chapters = chaptersRes.data || [];
+    let chapters = chaptersRes.data || [];
+    const userSubject = (req.query.userSubject || req.query.subject || req.headers['x-user-subject'] || 'All') as string;
+    if (userSubject && userSubject !== 'All') {
+      chapters = chapters.filter((c: any) => (c.subjects?.name || '').toLowerCase() === userSubject.toLowerCase());
+    }
     const questions = questionsRes.data || [];
 
     const formatted = chapters.map((ch: any) => {

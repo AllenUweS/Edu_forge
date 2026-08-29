@@ -53,7 +53,13 @@ questionBankRouter.get('/', async (req: Request, res: Response, next: NextFuncti
       updatedAt: q.updated_at
     }));
 
-    res.json({ success: true, data: formatted });
+    let filtered = formatted;
+    const userSubject = (req.query.userSubject || req.query.subject || req.headers['x-user-subject'] || 'All') as string;
+    if (userSubject && userSubject !== 'All') {
+      filtered = filtered.filter((q: any) => (q.subject || '').toLowerCase() === userSubject.toLowerCase());
+    }
+
+    res.json({ success: true, data: filtered });
   } catch (err) {
     next(err);
   }

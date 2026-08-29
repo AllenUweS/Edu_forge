@@ -12,7 +12,17 @@ export function getUserProfile(): UserProfile {
       const u = JSON.parse(saved);
       const email = (u.email || '').toLowerCase().trim();
 
-      if (email === 'admin@eduforge.com') {
+      // If user profile has explicitly saved role & assigned_subject, respect it directly!
+      if (u.role && u.assigned_subject) {
+        return {
+          email: u.email || email,
+          name: u.name || (email.split('@')[0] || 'Faculty Member'),
+          role: u.role,
+          assigned_subject: u.assigned_subject
+        };
+      }
+
+      if (email === 'admin@eduforge.com' || email.startsWith('admin@')) {
         return {
           email: u.email || 'admin@eduforge.com',
           name: u.name || 'System Admin',
@@ -57,42 +67,19 @@ export function getUserProfile(): UserProfile {
         };
       }
 
-      // Check if custom assigned_subject exists and is not 'All'/'None'
-      if (u.assigned_subject && u.assigned_subject !== 'None' && u.assigned_subject !== 'All') {
-        const sub = u.assigned_subject;
-        const role = u.role === 'admin' ? 'admin' : 'faculty';
-        return {
-          email: u.email || '',
-          name: u.name || `${sub} Faculty`,
-          role,
-          assigned_subject: sub
-        };
-      }
-
-      // Explicit Check: if user is admin role with custom meta
-      if (u.role === 'admin' && u.assigned_subject === 'All') {
-        return {
-          email: u.email || '',
-          name: u.name || 'Administrator',
-          role: 'admin',
-          assigned_subject: 'All'
-        };
-      }
-
-      // UNKNOWN / NEW REGISTERED RANDOM USER
       return {
-        email: u.email || 'newuser@eduforge.com',
-        name: u.name || (email.split('@')[0] ? email.split('@')[0] : 'New Registered User'),
-        role: 'guest',
-        assigned_subject: 'None'
+        email: u.email || email,
+        name: u.name || (email.split('@')[0] || 'Faculty Member'),
+        role: 'faculty',
+        assigned_subject: 'Biology'
       };
     }
   } catch {}
 
   return {
-    email: 'guest@eduforge.com',
-    name: 'Guest User',
-    role: 'guest',
-    assigned_subject: 'None'
+    email: 'admin@eduforge.com',
+    name: 'Administrator',
+    role: 'admin',
+    assigned_subject: 'All'
   };
 }

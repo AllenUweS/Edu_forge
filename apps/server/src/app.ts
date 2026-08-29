@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { errorHandler } from './middleware/errorHandler.js';
+import { authRouter } from './routes/auth.routes.js';
 import { questionsRouter } from './routes/questions.routes.js';
 import { questionBankRouter } from './routes/questionBank.routes.js';
 import { subjectsRouter } from './routes/subjects.routes.js';
@@ -35,6 +36,11 @@ app.get('/health', (req, res) => {
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// Auth Endpoints
+app.use('/auth', authRouter);
+app.use('/api/auth', authRouter);
+app.use('/api/api/auth', authRouter);
 
 // REST API Endpoints (Support multiple base paths for cPanel Passenger compatibility)
 app.use('/questions', questionsRouter);
