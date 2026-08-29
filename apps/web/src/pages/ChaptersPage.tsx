@@ -39,18 +39,19 @@ export const ChaptersPage: React.FC<ChaptersPageProps> = ({
     { name: 'Mathematics', code: 'MAT' }
   ];
 
-  const rawAvailableSubjects = subjectsList !== undefined ? subjectsList : defaultSubjects;
-  const availableSubjects = user.assigned_subject !== 'All'
-    ? rawAvailableSubjects.filter(s => s.name.toLowerCase() === user.assigned_subject.toLowerCase())
-    : rawAvailableSubjects;
-
   const [chapters, setChapters] = useState<ChapterItem[]>(chaptersList || []);
+  const [dbSubjects, setDbSubjects] = useState<SubjectItem[]>([]);
+  const [selectedSubjectFilter, setSelectedSubjectFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   const loadBackendChapters = async () => {
     try {
-      const data = await api.getChapters();
-      if (data && Array.isArray(data)) {
-        const mapped: ChapterItem[] = data.map((ch: any, idx: number) => ({
+      const [chData, subData] = await Promise.all([
+        api.getChapters(),
+        api.getSubjects()
+      ]);
+      if (chData && Array.isArray(chData)) {
+        const mapped: ChapterItem[] = chData.map((ch: any, idx: number) => ({
           num: String(idx + 1).padStart(2, '0'),
           id: String(ch.id || `CH-${idx + 1}`),
           code: ch.code || ch.chapter_code || `CH-${String(idx + 1).padStart(2, '0')}`,
@@ -60,8 +61,11 @@ export const ChaptersPage: React.FC<ChaptersPageProps> = ({
         }));
         setChapters(mapped);
       }
+      if (subData && Array.isArray(subData)) {
+        setDbSubjects(subData);
+      }
     } catch (e) {
-      console.error('Failed to load chapters:', e);
+      console.error('Failed to load chapters/subjects:', e);
     }
   };
 
@@ -75,9 +79,42 @@ export const ChaptersPage: React.FC<ChaptersPageProps> = ({
     }
   }, [chaptersList]);
 
-  const displayChapters = user.assigned_subject !== 'All'
-    ? chapters.filter(c => (c.subject || '').toLowerCase() === user.assigned_subject.toLowerCase())
-    : chapters;
+  const rawAvailableSubjects = (subjectsList && subjectsList.length > 0)
+    ? subjectsList
+    : (dbSubjects.length > 0 ? dbSubjects : defaultSubjects);
+
+  const availableSubjects = user.assigned_subject !== 'All'
+    ? rawAvailableSubjects.filter(s => s.name.toLowerCase() === user.assigned_subject.toLowerCase())
+    : rawAvailableSubjects;
+
+  const displayChapters = chapters.filter(c => {
+    // 1. Role-based user scoping
+    if (user.assigned_subject !== 'All') {
+      if ((c.subject || '').toLowerCase() !== user.assigned_subject.toLowerCase()) {
+        return false;
+      }
+    }
+
+    // 2. Subject Filter
+    if (selectedSubjectFilter !== 'all') {
+      if ((c.subject || '').toLowerCase() !== selectedSubjectFilter.toLowerCase()) {
+        return false;
+      }
+    }
+
+    // 3. Search Query
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const matchTitle = (c.title || '').toLowerCase().includes(q);
+      const matchCode = (c.code || c.id || '').toLowerCase().includes(q);
+      const matchSubject = (c.subject || '').toLowerCase().includes(q);
+      if (!matchTitle && !matchCode && !matchSubject) {
+        return false;
+      }
+    }
+
+    return true;
+  });
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -177,7 +214,9 @@ export const ChaptersPage: React.FC<ChaptersPageProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Chapters</h1>
-          <p className="text-xs text-slate-500 font-medium mt-0.5">Subject → Chapter → Questions ({displayChapters.length} active)</p>
+          <p className="text-xs text-slate-500 font-medium mt-0.5">
+            Subject → Chapter → Questions ({displayChapters.length} of {chapters.length} active)
+          </p>
         </div>
         <button
           type="button"
@@ -188,13 +227,56 @@ export const ChaptersPage: React.FC<ChaptersPageProps> = ({
         </button>
       </div>
 
+      {/* Search & Subject Filter Bar */}
+      <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200/80 shadow-2xs">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* Search Box */}
+          <div className="relative sm:col-span-2">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search chapters by title, code, or subject..."
+              className="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-teal-600 focus:bg-white transition-all"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Subject Filter Dropdown */}
+          <div>
+            <select
+              value={selectedSubjectFilter}
+              onChange={e => setSelectedSubjectFilter(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-teal-600 focus:bg-white transition-all cursor-pointer"
+            >
+              <option value="all">📚 All Subjects ({rawAvailableSubjects.length})</option>
+              {rawAvailableSubjects.map(sub => (
+                <option key={sub.name} value={sub.name}>
+                  {sub.name} ({sub.code || sub.name.substring(0, 3)})
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
       {/* Wireframe Panel Table */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-x-auto">
-        <table className="w-full text-left text-xs min-w-[540px]">
+        <table className="w-full text-left text-xs min-w-[600px]">
           <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold">
             <tr>
               <th className="px-5 py-3">#</th>
               <th className="px-5 py-3">Chapter</th>
+              <th className="px-5 py-3">Subject</th>
               <th className="px-5 py-3">Code</th>
               <th className="px-5 py-3">Questions</th>
               <th className="px-5 py-3 text-right">Action</th>
@@ -203,8 +285,10 @@ export const ChaptersPage: React.FC<ChaptersPageProps> = ({
           <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
             {displayChapters.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-5 py-10 text-center text-slate-400 font-medium">
-                  No chapters created yet. Click "+ Add Chapter" to add your first chapter.
+                <td colSpan={6} className="px-5 py-10 text-center text-slate-400 font-medium">
+                  {searchQuery || selectedSubjectFilter !== 'all'
+                    ? 'No chapters match your search/filter criteria.'
+                    : 'No chapters created yet. Click "+ Add Chapter" to add your first chapter.'}
                 </td>
               </tr>
             ) : (
@@ -212,6 +296,11 @@ export const ChaptersPage: React.FC<ChaptersPageProps> = ({
                 <tr key={ch.id || idx} className="hover:bg-slate-50/80 transition-colors">
                   <td className="px-5 py-3.5 font-mono text-slate-500">{ch.num || String(idx + 1).padStart(2, '0')}</td>
                   <td className="px-5 py-3.5 font-bold text-slate-900">{ch.title}</td>
+                  <td className="px-5 py-3.5 font-medium">
+                    <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-teal-50 text-teal-800 border border-teal-200">
+                      {ch.subject}
+                    </span>
+                  </td>
                   <td className="px-5 py-3.5 font-mono text-slate-600">{ch.code || ch.id}</td>
                   <td className="px-5 py-3.5 font-bold text-slate-900">{ch.count || 0}</td>
                   <td className="px-5 py-3.5 text-right">
