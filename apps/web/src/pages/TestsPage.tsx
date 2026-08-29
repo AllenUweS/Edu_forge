@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Eye, Copy, Edit3, X, Save, Printer, FileText } from 'lucide-react';
+import { Plus, Trash2, Eye, Copy, Edit3, X, Save, Printer, FileText, Download } from 'lucide-react';
 import { DocumentModel } from '@eduforge/shared';
 import { api } from '../services/api.js';
 import { MathTextRenderer } from '../equation/MathTextRenderer.js';
@@ -161,6 +161,47 @@ export const TestsPage: React.FC<TestsPageProps> = ({
   const handleOpenPreviewModal = (d: DocumentModel) => {
     setPreviewDoc(d);
     setIsPreviewModalOpen(true);
+  };
+
+  /**
+   * Generates a clean, multi-page PDF export without modal scrollbar clipping.
+   */
+  const handleGeneratePdfStream = () => {
+    try {
+      const sourceEl = document.querySelector('.printable-paper-sheet');
+      if (!sourceEl) {
+        window.print();
+        return;
+      }
+
+      const existingRoot = document.getElementById('print-paper-export-root');
+      if (existingRoot) {
+        existingRoot.remove();
+      }
+
+      const cloneContainer = document.createElement('div');
+      cloneContainer.id = 'print-paper-export-root';
+      const clonedEl = sourceEl.cloneNode(true) as HTMLElement;
+      clonedEl.style.margin = '0 auto';
+      clonedEl.style.boxShadow = 'none';
+      clonedEl.style.border = 'none';
+      clonedEl.style.maxWidth = '100%';
+      clonedEl.style.width = '100%';
+
+      cloneContainer.appendChild(clonedEl);
+      document.body.appendChild(cloneContainer);
+
+      setTimeout(() => {
+        window.print();
+        setTimeout(() => {
+          const rootToRemove = document.getElementById('print-paper-export-root');
+          if (rootToRemove) rootToRemove.remove();
+        }, 1000);
+      }, 300);
+    } catch (err) {
+      console.error('PDF export error:', err);
+      window.print();
+    }
   };
 
   const handleSaveEditModal = async (e: React.FormEvent) => {
@@ -452,7 +493,7 @@ export const TestsPage: React.FC<TestsPageProps> = ({
             </div>
 
             {/* Test Paper Body Preview */}
-            <div className="p-8 overflow-y-auto flex-1 space-y-6 bg-slate-50 font-sans text-xs text-slate-800">
+            <div className="p-8 overflow-y-auto flex-1 space-y-6 bg-slate-50 font-sans text-xs text-slate-800 printable-paper-sheet">
               {/* Paper Title Banner */}
               <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-2xs text-center space-y-2">
                 <h1 className="text-xl font-black text-slate-900 tracking-tight uppercase">{previewDoc.title}</h1>
@@ -523,10 +564,10 @@ export const TestsPage: React.FC<TestsPageProps> = ({
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => window.print()}
-                  className="px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-800 font-bold rounded-lg transition-colors cursor-pointer text-xs flex items-center gap-1.5"
+                  onClick={handleGeneratePdfStream}
+                  className="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white font-bold rounded-lg transition-all active:scale-95 cursor-pointer text-xs flex items-center gap-1.5 shadow-sm"
                 >
-                  <Printer className="w-4 h-4" /> Print / Save PDF
+                  <Download className="w-4 h-4" /> Export as PDF
                 </button>
                 <button
                   type="button"
