@@ -26,29 +26,71 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
   const user = getUserProfile();
   const userSubject = user.assigned_subject;
 
+  // Database Subjects & Chapters
+  const [dbSubjects, setDbSubjects] = useState<any[]>([]);
+  const [dbChapters, setDbChapters] = useState<any[]>([]);
+
+  // Load backend subjects & chapters
+  React.useEffect(() => {
+    api.getSubjects().then(subs => {
+      if (subs && Array.isArray(subs)) setDbSubjects(subs);
+    }).catch(console.error);
+
+    api.getChapters().then(chs => {
+      if (chs && Array.isArray(chs)) setDbChapters(chs);
+    }).catch(console.error);
+  }, []);
+
+  const allowedSubjects = React.useMemo(() => {
+    if (userSubject === 'None') return [];
+    if (userSubject === 'All') {
+      if (dbSubjects.length > 0) return dbSubjects;
+      return [
+        { name: 'Biology', code: 'BIO' },
+        { name: 'Physics', code: 'PHY' },
+        { name: 'Chemistry', code: 'CHE' },
+        { name: 'Mathematics', code: 'MAT' }
+      ];
+    }
+    const match = dbSubjects.find(s => s.name.toLowerCase() === userSubject.toLowerCase());
+    return match ? [match] : [{ name: userSubject, code: userSubject.substring(0, 3).toUpperCase() }];
+  }, [dbSubjects, userSubject]);
+
   // Metadata state
   const [subject, setSubject] = useState(
     initialQuestion?.subject || (userSubject !== 'All' ? userSubject : 'Biology')
   );
-  const [chapter, setChapter] = useState(initialQuestion?.chapter || 'The Living World');
+  const [chapter, setChapter] = useState(initialQuestion?.chapter || '');
+  const [isCustomChapter, setIsCustomChapter] = useState(false);
   const [difficulty, setDifficulty] = useState<QuestionDifficulty>(initialQuestion?.difficulty || 'Medium');
   const [marks, setMarks] = useState<number>(initialQuestion?.marks || 4);
   const [negativeMarks, setNegativeMarks] = useState<number>(initialQuestion?.negativeMarks || 1);
-  const [dbChapters, setDbChapters] = useState<any[]>([]);
 
+  // Available chapters for the selected subject
+  const availableChapters = React.useMemo(() => {
+    if (!subject) return [];
+    const selectedSub = dbSubjects.find(s => s.name.toLowerCase() === subject.toLowerCase());
+    const selectedSubId = selectedSub?.id ? String(selectedSub.id).toLowerCase() : '';
+
+    return dbChapters.filter((c: any) => {
+      const cSubId = c.subjectId || c.subject_id ? String(c.subjectId || c.subject_id).toLowerCase() : '';
+      const cSubName = c.subject ? String(c.subject).toLowerCase() : '';
+      return (selectedSubId && cSubId === selectedSubId) || (cSubName && cSubName === subject.toLowerCase());
+    });
+  }, [dbChapters, dbSubjects, subject]);
+
+  // Automatically select first chapter when subject changes if not custom
   React.useEffect(() => {
-    api.getChapters().then(chs => {
-      if (chs && Array.isArray(chs)) {
-        setDbChapters(chs);
-        if (!initialQuestion?.chapter && chs.length > 0) {
-          const matching = chs.filter((c: any) => (c.subject || '').toLowerCase() === subject.toLowerCase());
-          if (matching.length > 0) {
-            setChapter(matching[0].title);
-          }
-        }
+    if (availableChapters.length > 0) {
+      const exists = availableChapters.some(c => c.title.toLowerCase() === (chapter || '').toLowerCase());
+      if (!exists && !initialQuestion?.chapter) {
+        setChapter(availableChapters[0].title);
+        setIsCustomChapter(false);
       }
-    }).catch(console.error);
-  }, [subject]);
+    } else if (!chapter && !initialQuestion?.chapter) {
+      setIsCustomChapter(true);
+    }
+  }, [subject, availableChapters]);
 
   // Content Blocks
   const [blocks, setBlocks] = useState<ContentBlock[]>([
@@ -330,35 +372,70 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
                 </label>
                 <select
                   value={subject}
-                  onChange={e => setSubject(e.target.value)}
-                  className="w-full p-2 border border-slate-300 rounded-lg text-slate-900 bg-white font-medium focus:outline-hidden focus:ring-2 focus:ring-slate-900"
+                  onChange={e => {
+                    setSubject(e.target.value);
+                    setIsCustomChapter(false);
+                  }}
+                  disabled={userSubject !== 'All'}
+                  className="w-full p-2 border border-slate-300 rounded-lg text-slate-900 bg-white font-medium focus:outline-hidden focus:ring-2 focus:ring-slate-900 disabled:bg-slate-100 disabled:cursor-not-allowed"
                 >
-                  <option value="Biology">Biology</option>
-                  <option value="Physics">Physics</option>
-                  <option value="Chemistry">Chemistry</option>
-                  <option value="Mathematics">Mathematics</option>
+                  {allowedSubjects.map(s => (
+                    <option key={s.id || s.code || s.name} value={s.name}>
+                      {s.name} ({s.code || s.name.substring(0, 3).toUpperCase()})
+                    </option>
+                  ))}
                 </select>
               </div>
 
               <div>
-                <label className="block font-bold text-[11px] text-slate-500 uppercase mb-1">
-                  Chapter
-                </label>
-                <input
-                  type="text"
-                  list="create-chapter-list"
-                  placeholder="Select or type chapter..."
-                  value={chapter}
-                  onChange={e => setChapter(e.target.value)}
-                  className="w-full p-2 border border-slate-300 rounded-lg text-slate-900 bg-white font-medium focus:outline-hidden focus:ring-2 focus:ring-slate-900"
-                />
-                <datalist id="create-chapter-list">
-                  {dbChapters
-                    .filter((c: any) => !subject || (c.subject || '').toLowerCase() === subject.toLowerCase())
-                    .map((c: any) => (
-                      <option key={c.id || c.title} value={c.title} />
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-bold text-[11px] text-slate-500 uppercase">
+                    Chapter
+                  </label>
+                  {availableChapters.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomChapter(!isCustomChapter);
+                        if (!isCustomChapter) setChapter('');
+                        else if (availableChapters.length > 0) setChapter(availableChapters[0].title);
+                      }}
+                      className="text-[10px] text-teal-700 font-bold hover:underline cursor-pointer"
+                    >
+                      {isCustomChapter ? 'Select existing' : '+ Add new'}
+                    </button>
+                  )}
+                </div>
+
+                {availableChapters.length > 0 && !isCustomChapter ? (
+                  <select
+                    value={chapter}
+                    onChange={e => {
+                      if (e.target.value === '__NEW__') {
+                        setIsCustomChapter(true);
+                        setChapter('');
+                      } else {
+                        setChapter(e.target.value);
+                      }
+                    }}
+                    className="w-full p-2 border border-slate-300 rounded-lg text-slate-900 bg-white font-medium focus:outline-hidden focus:ring-2 focus:ring-slate-900"
+                  >
+                    {availableChapters.map((c: any) => (
+                      <option key={c.id || c.title} value={c.title}>
+                        {c.title} {c.code ? `(${c.code})` : ''}
+                      </option>
                     ))}
-                </datalist>
+                    <option value="__NEW__">+ Add new chapter...</option>
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    placeholder="Type chapter name..."
+                    value={chapter}
+                    onChange={e => setChapter(e.target.value)}
+                    className="w-full p-2 border border-slate-300 rounded-lg text-slate-900 bg-white font-medium focus:outline-hidden focus:ring-2 focus:ring-slate-900"
+                  />
+                )}
               </div>
 
               <div>
