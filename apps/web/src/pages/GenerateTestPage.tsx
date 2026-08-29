@@ -8,102 +8,158 @@ import {
 import { formatQuestionCode } from '../utils/questionCode.js';
 import { MathTextRenderer } from '../equation/MathTextRenderer.js';
 import { OptionLayoutRenderer } from '../questions/OptionLayoutRenderer.js';
-
 import { getUserProfile } from '../utils/userProfile.js';
 
+/**
+ * Props for GenerateTestPage component:
+ * - initialDocument: Optional existing test paper document passed in for editing.
+ * - onOpenDocument: Callback to navigate directly to the interactive test editor.
+ * - onNavigateToTests: Callback to transition the user to the Tests listing page after publishing.
+ */
 interface GenerateTestPageProps {
   initialDocument?: DocumentModel | null;
   onOpenDocument?: (docId: string) => void;
   onNavigateToTests?: () => void;
 }
 
+/**
+ * GenerateTestPage Component
+ * 
+ * Provides a 4-step interactive wizard for creating, configuring, and publishing test papers:
+ * 1. Configure: Test metadata, exam type (NEET/JEE/KCET), subject, chapter, duration, and marking scheme.
+ * 2. Select Questions: Manual or automated question selection from the question bank with live filters.
+ * 3. Preview: Real-time printable preview matching academic exam formatting.
+ * 4. Publish: Saves the test paper document to Supabase and lists it in the Tests section.
+ */
 export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
   initialDocument,
   onOpenDocument,
   onNavigateToTests
 }) => {
+  // Current logged in user profile (for subject permission gating)
   const user = getUserProfile();
-  // Live Backend Data
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [subjects, setSubjects] = useState<any[]>([]);
-  const [chapters, setChapters] = useState<any[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
 
-  // Step state (1: Configure, 2: Select Questions, 3: Preview, 4: Publish)
+  // ==========================================
+  // Backend & Metadata State
+  // ==========================================
+  const [questions, setQuestions] = useState<Question[]>([]); // Questions fetched from Question Bank
+  const [subjects, setSubjects] = useState<any[]>([]); // Subjects fetched from backend
+  const [chapters, setChapters] = useState<any[]>([]); // Chapters fetched from backend
+  const [loading, setLoading] = useState<boolean>(true); // Loading indicator during API fetch
+
+  // Wizard active step (1: Configure, 2: Select Questions, 3: Preview, 4: Publish)
   const [currentStep, setCurrentStep] = useState<number>(1);
 
-  // User Subject Restriction
+  // User Subject scope (e.g., 'Biology', 'Physics', 'Chemistry', or 'All' for admin)
   const userSubject = user.assigned_subject;
 
-  // Form State
+  // ==========================================
+  // Form Configuration State (Step 1)
+  // ==========================================
   const [testName, setTestName] = useState<string>('EduForge Practice Test');
   const [examType, setExamType] = useState<string>('NEET');
   const [selectedSubject, setSelectedSubject] = useState<string>(userSubject !== 'All' ? userSubject : 'Biology');
   const [selectedChapter, setSelectedChapter] = useState<string>('Cell Structure and Function');
   const [durationMinutes, setDurationMinutes] = useState<number>(60);
   
-  // Marking Scheme State
-  const [marksPerQuestion, setMarksPerQuestion] = useState<number>(4);
-  const [negativeMarks, setNegativeMarks] = useState<number>(-1);
-  const [unansweredMarks, setUnansweredMarks] = useState<number>(0);
+  // ==========================================
+  // Marking Scheme Configuration State
+  // ==========================================
+  const [marksPerQuestion, setMarksPerQuestion] = useState<number>(4); // Marks awarded for correct answer
+  const [negativeMarks, setNegativeMarks] = useState<number>(-1); // Marks deducted for incorrect answer
+  const [unansweredMarks, setUnansweredMarks] = useState<number>(0); // Marks for unanswered questions
 
-  // Question Selection State
-  const [selectedQuestionIds, setSelectedQuestionIds] = useState<string[]>([]);
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [difficultyFilter, setDifficultyFilter] = useState<string>('All');
+  // ==========================================
+  // Question Bank Selection & Filter State (Step 2)
+  // ==========================================
+  const [selectedQuestionIds, setSelectedQuestionIds] = useState<string[]>([]); // Array of selected question UUIDs/codes
+  const [searchQuery, setSearchQuery] = useState<string>(''); // Search input query for filtering questions
+  const [difficultyFilter, setDifficultyFilter] = useState<string>('All'); // Difficulty filter: All | Easy | Medium | Hard
 
-  // Distribution State
+  // ==========================================
+  // Auto-Distribution Count Rules
+  // ==========================================
   const [easyCount, setEasyCount] = useState<number>(15);
   const [mediumCount, setMediumCount] = useState<number>(25);
   const [hardCount, setHardCount] = useState<number>(10);
 
-  // Sections State
+  // ==========================================
+  // Paper Sections State (e.g. Section A, Section B)
+  // ==========================================
   const [testSections, setTestSections] = useState<{ id: string; name: string; questionsCount: number }[]>([
     { id: 'sec-1', name: 'Section A — Biology', questionsCount: 50 }
   ]);
 
-  // Paper Settings Checkboxes
+  // ==========================================
+  // Paper Settings & Randomization Options
+  // ==========================================
   const [paperSettings, setPaperSettings] = useState({
-    shuffleQuestions: true,
-    shuffleOptions: true,
-    showQuestionCode: false,
-    generateAnswerKey: true,
-    generateSolutionPaper: false
+    shuffleQuestions: true, // Shuffle questions order
+    shuffleOptions: true, // Shuffle options A, B, C, D order
+    showQuestionCode: false, // Display question code on paper
+    generateAnswerKey: true, // Generate answer key sheet
+    generateSolutionPaper: false // Generate step-by-step solutions
   });
 
-  // Dynamic Subject to Chapter / Topic Mapping aligned with Database
+  // ==========================================
+  // Subject to Chapters / Topics Mapping
+  // ==========================================
   const SUBJECT_CHAPTERS_MAP: Record<string, string[]> = {
+    Biology: [
+      'Cell Structure and Function',
+      'Biological Classification',
+      'The Living World',
+      'Plant Kingdom',
+      'Human Physiology',
+      'Genetics & Inheritance',
+      'Molecular Basis of Inheritance'
+    ],
     Physics: [
-      'Units and Measurements',
-      'Motion in a Plane'
+      'Kinematics & Motion',
+      'Laws of Motion',
+      'Work, Energy & Power',
+      'Electrostatics & Current',
+      'Optics & Wave Optics',
+      'Thermodynamics & Heat'
     ],
     Chemistry: [
-      'Some Basic Concepts of Chemistry',
-      'Thermodynamics'
-    ],
-    Biology: [
-      'The Living World',
-      'Animal Kingdom'
+      'Atomic Structure & Bonding',
+      'Organic Reaction Mechanisms',
+      'Chemical Kinetics',
+      'Periodic Table & Periodicity',
+      'Solutions & Electrochemistry',
+      'Thermodynamics in Chemistry'
     ],
     Mathematics: [
       'Algebra & Matrices',
       'Calculus & Differentiation',
-      'Vectors & 3D Geometry'
+      'Trigonometric Functions',
+      'Vectors & 3D Geometry',
+      'Probability & Statistics',
+      'Coordinate Geometry'
     ]
   };
 
+  /**
+   * Returns a merged list of chapters for a given subject combining both
+   * static default syllabus chapters and dynamic chapters from Supabase database.
+   */
   const getAvailableChaptersForSubject = (subjectName: string) => {
+    const defaults = SUBJECT_CHAPTERS_MAP[subjectName] || [
+      'General Concepts',
+      'Chapter 1: Principles',
+      'Chapter 2: Core Applications'
+    ];
     const fromBackend = chapters
-      .filter(c => (c.subject || '').toLowerCase() === subjectName.toLowerCase() || (c.subject_name || '').toLowerCase() === subjectName.toLowerCase())
+      .filter(c => (c.subject || '').toLowerCase() === subjectName.toLowerCase())
       .map(c => c.title);
 
-    if (fromBackend.length > 0) {
-      return Array.from(new Set(fromBackend));
-    }
-
-    return SUBJECT_CHAPTERS_MAP[subjectName] || ['General Chapter'];
+    return Array.from(new Set([...defaults, ...fromBackend]));
   };
 
+  /**
+   * Handles Subject change from dropdown, updating default chapter and initial section name.
+   */
   const handleSubjectChange = (newSub: string) => {
     setSelectedSubject(newSub);
     const availableChapters = getAvailableChaptersForSubject(newSub);
@@ -115,13 +171,20 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
     ]);
   };
 
-  // Modal Preview State
+  // Full Screen Preview Modal State
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState<boolean>(false);
 
+  // ==========================================
+  // Lifecycle Data Fetching
+  // ==========================================
   useEffect(() => {
     loadBackendData();
   }, [initialDocument]);
 
+  /**
+   * Fetches questions, subjects, and chapters from the Supabase backend.
+   * If an initialDocument is provided (editing mode), populates the fields accordingly.
+   */
   const loadBackendData = async () => {
     try {
       setLoading(true);
@@ -134,13 +197,11 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
       setSubjects(subList || []);
       setChapters(chList || []);
 
+      // If editing an existing document, populate document fields
       if (initialDocument) {
         setTestName(initialDocument.title || '');
         if (initialDocument.metadata?.subject) {
           setSelectedSubject(initialDocument.metadata.subject);
-        }
-        if ((initialDocument.metadata as any)?.chapter) {
-          setSelectedChapter((initialDocument.metadata as any).chapter);
         }
         if (initialDocument.metadata?.timeAllowedMinutes) {
           setDurationMinutes(Number(initialDocument.metadata.timeAllowedMinutes));
@@ -164,12 +225,8 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
         }
 
         setCurrentStep(2); // Open directly to Step 2: Select Questions
-      } else {
-        const initSub = userSubject !== 'All' ? userSubject : 'Physics';
-        setSelectedSubject(initSub);
-        const subChaps = (chList || []).filter((c: any) => (c.subject || '').toLowerCase() === initSub.toLowerCase());
-        const initChap = subChaps.length > 0 ? subChaps[0].title : (SUBJECT_CHAPTERS_MAP[initSub]?.[0] || 'Motion in a Plane');
-        setSelectedChapter(initChap);
+      } else if (qList && qList.length > 0) {
+        setSelectedQuestionIds([qList[0].id]);
       }
     } catch (err) {
       console.error('Failed to load test generator data:', err);
@@ -178,94 +235,59 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
     }
   };
 
-  // Helper matching functions
-  const isQuestionInSubject = (q: Question, targetSubject: string) => {
-    if (!targetSubject || targetSubject === 'All') return true;
-    const sLower = targetSubject.toLowerCase();
-    const qSub = (q.subject || (q as any).subject_name || '').toLowerCase();
-    const qSubId = String((q as any).subject_id || (q as any).subjectId || '').toLowerCase();
-    const code = formatQuestionCode(q).toLowerCase();
+  // ==========================================
+  // Question Filtering & Selection Helpers
+  // ==========================================
 
-    return (
-      qSub === sLower ||
-      qSub.includes(sLower) ||
-      qSubId === sLower ||
-      (sLower === 'physics' && (code.startsWith('phy') || code.includes('phy-'))) ||
-      (sLower === 'chemistry' && (code.startsWith('che') || code.includes('che-'))) ||
-      (sLower === 'biology' && (code.startsWith('bio') || code.includes('bio-'))) ||
-      (sLower === 'mathematics' && (code.startsWith('mat') || code.includes('mat-')))
-    );
-  };
-
-  const isQuestionInChapter = (q: Question, targetChapter: string) => {
-    if (!targetChapter || targetChapter === 'All' || targetChapter === 'All Chapters') return true;
-    const chLower = targetChapter.toLowerCase();
-    const qChapter = String(q.chapter || (q as any).chapter_name || (q as any).topic || '').toLowerCase();
-    const qChId = String((q as any).chapter_id || (q as any).chapterId || '').toLowerCase();
-    const code = formatQuestionCode(q).toLowerCase();
-
-    let codeMatches = false;
-    if (chLower.includes('units and measurements') && (code.includes('uam') || code.includes('01'))) codeMatches = true;
-    if (chLower.includes('motion in a plane') && (code.includes('mip') || code.includes('02'))) codeMatches = true;
-    if (chLower.includes('basic concepts') && (code.includes('sbc') || code.includes('01'))) codeMatches = true;
-    if (chLower.includes('thermodynamics') && (code.includes('the') || code.includes('02'))) codeMatches = true;
-    if (chLower.includes('living world') && (code.includes('liv') || code.includes('01'))) codeMatches = true;
-    if (chLower.includes('animal kingdom') && (code.includes('ani') || code.includes('02'))) codeMatches = true;
-
-    return (
-      (qChapter && (qChapter === chLower || qChapter.includes(chLower) || chLower.includes(qChapter))) ||
-      (qChId && qChId === chLower) ||
-      codeMatches
-    );
-  };
-
-  // Filter questions strictly based on selected subject AND chapter
+  // Filters questions by difficulty and live search query
   const filteredQuestions = questions.filter(q => {
-    if (!isQuestionInSubject(q, selectedSubject)) return false;
-    if (!isQuestionInChapter(q, selectedChapter)) return false;
-
     if (difficultyFilter !== 'All' && q.difficulty && q.difficulty.toLowerCase() !== difficultyFilter.toLowerCase()) {
       return false;
     }
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      const code = formatQuestionCode(q).toLowerCase();
-      const rawText = (q.rawText || '').toLowerCase();
-      if (!rawText.includes(query) && !code.includes(query) && !q.id.toLowerCase().includes(query)) {
-        return false;
-      }
+      return (
+        (q.rawText && q.rawText.toLowerCase().includes(query)) ||
+        (q.id && q.id.toLowerCase().includes(query)) ||
+        (q.chapter && q.chapter.toLowerCase().includes(query))
+      );
     }
     return true;
   });
 
+  // Toggles question inclusion in the selected question deck
   const toggleQuestionSelection = (id: string) => {
     setSelectedQuestionIds(prev =>
       prev.includes(id) ? prev.filter(qId => qId !== id) : [...prev, id]
     );
   };
 
+  // Selects all currently filtered questions
   const handleSelectAll = () => {
     setSelectedQuestionIds(filteredQuestions.map(q => q.id));
   };
 
+  // Clears all selected questions
   const handleDeselectAll = () => {
     setSelectedQuestionIds([]);
   };
 
+  // Automatically selects questions based on configured difficulty counts (Easy / Medium / Hard)
   const handleAutoSelectDistribution = () => {
-    const easyQ = filteredQuestions.filter(q => (q.difficulty || '').toLowerCase() === 'easy').map(q => q.id);
-    const medQ = filteredQuestions.filter(q => (q.difficulty || '').toLowerCase() === 'medium').map(q => q.id);
-    const hardQ = filteredQuestions.filter(q => (q.difficulty || '').toLowerCase() === 'hard').map(q => q.id);
+    const easyQ = questions.filter(q => (q.difficulty || '').toLowerCase() === 'easy').map(q => q.id);
+    const medQ = questions.filter(q => (q.difficulty || '').toLowerCase() === 'medium').map(q => q.id);
+    const hardQ = questions.filter(q => (q.difficulty || '').toLowerCase() === 'hard').map(q => q.id);
 
     const chosenEasy = easyQ.slice(0, easyCount);
     const chosenMed = medQ.slice(0, mediumCount);
     const chosenHard = hardQ.slice(0, hardCount);
 
     const combined = Array.from(new Set([...chosenEasy, ...chosenMed, ...chosenHard]));
-    setSelectedQuestionIds(combined.length > 0 ? combined : filteredQuestions.slice(0, 50).map(q => q.id));
-    alert(`Automatically selected ${combined.length || Math.min(filteredQuestions.length, 50)} questions for chapter "${selectedChapter}"!`);
+    setSelectedQuestionIds(combined.length > 0 ? combined : questions.slice(0, 50).map(q => q.id));
+    alert('Questions automatically selected based on your distribution rules!');
   };
 
+  // Section Management: Adds a new section (e.g. Section B)
   const handleAddSection = () => {
     const nextChar = String.fromCharCode(65 + testSections.length);
     setTestSections(prev => [
@@ -274,30 +296,31 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
     ]);
   };
 
+  // Section Management: Removes a section
   const handleRemoveSection = (id: string) => {
     if (testSections.length <= 1) return;
     setTestSections(prev => prev.filter(s => s.id !== id));
   };
 
-  // Calculations
+  // ==========================================
+  // Dynamic Score & Document Construction
+  // ==========================================
   const totalSelectedQuestionsCount = selectedQuestionIds.length || 1;
   const computedTotalMarks = totalSelectedQuestionsCount * marksPerQuestion;
 
+  /**
+   * Constructs the DocumentModel payload matching the backend schema
+   * with complete metadata, sections, and structured question blocks.
+   */
   const buildDocumentModel = (): Partial<DocumentModel> => {
     const selectedQuestionsList = questions.filter(q =>
-      selectedQuestionIds.some(id => String(id) === String(q.id)) &&
-      isQuestionInSubject(q, selectedSubject) &&
-      isQuestionInChapter(q, selectedChapter)
+      selectedQuestionIds.some(id => String(id) === String(q.id))
     );
-
-    const fallbackList = filteredQuestions.length > 0
-      ? filteredQuestions
-      : questions.filter(q => isQuestionInSubject(q, selectedSubject) && isQuestionInChapter(q, selectedChapter));
 
     const docSections: DocumentSection[] = testSections.map((sec, idx) => {
       const sectionQuestions = selectedQuestionsList.length > 0
         ? selectedQuestionsList
-        : fallbackList.slice(0, sec.questionsCount || 10);
+        : questions.slice(0, sec.questionsCount || 10);
 
       return {
         id: `sec-${Date.now()}-${idx + 1}`,
@@ -338,6 +361,9 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
     };
   };
 
+  /**
+   * Saves the current test paper configuration as a draft to the Supabase database.
+   */
   const handleSaveDraft = async () => {
     try {
       const docModel = buildDocumentModel();
@@ -354,6 +380,9 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
     }
   };
 
+  /**
+   * Publishes the test paper, resets the form, and redirects the user to the Tests section.
+   */
   const handlePublishTest = async () => {
     try {
       const docModel = buildDocumentModel();
@@ -375,6 +404,9 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
     }
   };
 
+  /**
+   * Resets all form fields back to default state.
+   */
   const resetFormToBlank = () => {
     setTestName('');
     setExamType('NEET');
@@ -401,6 +433,9 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
     setCurrentStep(1);
   };
 
+  /**
+   * Triggers the browser print dialog to print or save the test paper as PDF.
+   */
   const handleGeneratePdfStream = () => {
     window.print();
   };
@@ -408,7 +443,9 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4 sm:py-8 space-y-4 sm:space-y-6 font-sans animate-in fade-in slide-in-from-bottom-2 duration-300">
       
-      {/* Page Header */}
+      {/* ========================================== */}
+      {/* PAGE HEADER & TOP ACTION BUTTONS           */}
+      {/* ========================================== */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-slate-200/80 pb-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight font-sans">
@@ -439,7 +476,9 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
         </div>
       </div>
 
-      {/* Step Indicator Navigation */}
+      {/* ========================================== */}
+      {/* STEP INDICATOR NAVIGATION (1 to 4)         */}
+      {/* ========================================== */}
       <div className="flex items-center gap-4 py-2 border-b border-slate-100 text-xs font-semibold">
         <div
           onClick={() => setCurrentStep(1)}
@@ -507,7 +546,9 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
         </div>
       </div>
 
-      {/* STEP 1: CONFIGURE ONLY (Matching Attached Screenshot Exactly) */}
+      {/* ========================================== */}
+      {/* STEP 1: CONFIGURE TEST METADATA & MARKING  */}
+      {/* ========================================== */}
       {currentStep === 1 && (
         <div className="space-y-6 max-w-6xl mx-auto">
           {/* CARD 1: TEST INFORMATION */}
@@ -622,6 +663,7 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                     Min
                   </span>
                 </div>
+                {/* Quick preset duration buttons */}
                 <div className="flex items-center gap-1.5 mt-2">
                   {[30, 60, 90, 120, 180].map(mins => (
                     <button
@@ -714,7 +756,9 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
         </div>
       )}
 
-      {/* STEP 2: SELECT QUESTIONS (Clean 2-Column Balanced Alignment) */}
+      {/* ========================================== */}
+      {/* STEP 2: SELECT QUESTIONS FROM QUESTION BANK*/}
+      {/* ========================================== */}
       {currentStep === 2 && (
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 items-start">
 
@@ -748,29 +792,6 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                   >
                     Auto Select
                   </button>
-                </div>
-              </div>
-
-              {/* Active Subject & Chapter Scope Selector */}
-              <div className="bg-teal-50/90 border border-teal-200 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-bold text-teal-950">Subject:</span>
-                  <span className="px-2.5 py-0.5 bg-teal-700 text-white rounded-md font-mono font-bold text-[11px]">
-                    {selectedSubject}
-                  </span>
-                  <span className="text-teal-950 font-bold ml-1">Chapter:</span>
-                  <select
-                    value={selectedChapter}
-                    onChange={e => setSelectedChapter(e.target.value)}
-                    className="bg-white border border-teal-300 text-teal-900 font-bold px-2.5 py-1 rounded-lg cursor-pointer focus:ring-2 focus:ring-teal-600 text-xs"
-                  >
-                    {getAvailableChaptersForSubject(selectedSubject).map((chapTitle, idx) => (
-                      <option key={idx} value={chapTitle}>{chapTitle}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="text-[11px] font-bold text-teal-800 shrink-0">
-                  {filteredQuestions.length} question(s) in this chapter
                 </div>
               </div>
 
@@ -1081,7 +1102,9 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
 
           </div>
 
-          {/* RIGHT ASIDE: Sticky Summary & Final Output Action Deck */}
+          {/* ========================================== */}
+          {/* RIGHT ASIDE: STICKY SUMMARY & ACTION DECK */}
+          {/* ========================================== */}
           <div className="sticky top-20 space-y-6">
 
             {/* Test Summary Card */}
@@ -1226,7 +1249,9 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
         </div>
       )}
 
-      {/* FULL PREVIEW MODAL */}
+      {/* ========================================== */}
+      {/* STEP 3 & MODAL: FULL PRINTABLE TEST PREVIEW*/}
+      {/* ========================================== */}
       {isPreviewModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
@@ -1262,14 +1287,14 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                   </p>
                 </div>
 
-                {/* Paper Meta */}
+                {/* Paper Meta (Duration, Marks, Total Qs) */}
                 <div className="flex items-center justify-between text-xs font-bold text-slate-900 border-b border-slate-200 pb-2">
                   <span>Time: {durationMinutes} Minutes</span>
                   <span>Maximum Marks: {computedTotalMarks}</span>
                   <span>Questions: {totalSelectedQuestionsCount}</span>
                 </div>
 
-                {/* Instructions Box */}
+                {/* Exam Instructions Box */}
                 <div className="p-4 border border-slate-200 rounded-lg bg-slate-50/60 text-xs space-y-1">
                   <span className="font-bold text-slate-900">Instructions:</span>
                   <ol className="list-decimal list-inside space-y-1 text-slate-700 font-medium pt-1">
@@ -1288,84 +1313,73 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
 
                   {/* Render Selected User Questions from Bank */}
                   <div className="space-y-6 text-xs font-medium">
-                    {(() => {
-                      const activePreviewQuestions = questions.filter(q =>
-                        selectedQuestionIds.includes(q.id) &&
-                        isQuestionInSubject(q, selectedSubject) &&
-                        isQuestionInChapter(q, selectedChapter)
-                      );
-                      const displayList = activePreviewQuestions.length > 0
-                        ? activePreviewQuestions
-                        : filteredQuestions;
-
-                      if (displayList.length === 0) {
-                        return (
-                          <div className="p-6 text-center text-slate-400 font-semibold italic border border-dashed border-slate-200 rounded-lg">
-                            No questions found for chapter "{selectedChapter}". Select questions in Step 2.
-                          </div>
-                        );
-                      }
-
-                      return displayList.map((q, qIdx) => (
-                        <div key={q.id || qIdx} className="space-y-2 pb-3 border-b border-slate-100 last:border-0">
-                          {/* Question Title & Number */}
-                          <div className="font-bold text-slate-900 text-xs leading-relaxed flex gap-1.5">
-                            <span className="shrink-0">{qIdx + 1}.</span>
-                            <div
-                              dangerouslySetInnerHTML={{
-                                __html: q.rawText || 'Question Statement'
-                              }}
-                            />
-                          </div>
-
-                          {/* Render Diagram/Image if present */}
-                          {(q.imageUrl || q.diagramUrl) && (
-                            <div className="my-2 max-h-48 overflow-hidden flex justify-center bg-slate-50 border border-slate-200 rounded-lg p-2">
-                              <img
-                                src={q.imageUrl || q.diagramUrl}
-                                alt="Question Diagram"
-                                className="max-h-44 object-contain rounded"
+                    {selectedQuestionIds.length === 0 ? (
+                      <div className="p-6 text-center text-slate-400 font-semibold italic border border-dashed border-slate-200 rounded-lg">
+                        No questions selected for this test paper yet. Go to Step 2 (Select Questions) to pick your questions.
+                      </div>
+                    ) : (
+                      questions
+                        .filter(q => selectedQuestionIds.includes(q.id))
+                        .map((q, qIdx) => (
+                          <div key={q.id || qIdx} className="space-y-2 pb-3 border-b border-slate-100 last:border-0">
+                            {/* Question Title & Number */}
+                            <div className="font-bold text-slate-900 text-xs leading-relaxed flex gap-1.5">
+                              <span className="shrink-0">{qIdx + 1}.</span>
+                              <div
+                                dangerouslySetInnerHTML={{
+                                  __html: q.rawText || 'Question Statement'
+                                }}
                               />
                             </div>
-                          )}
 
-                          {/* Render Dynamic Options (A, B, C, D) */}
-                          <div className="grid grid-cols-2 gap-2 pl-4 pt-1">
-                            {q.options && q.options.length > 0 ? (
-                              q.options.map((opt, oIdx) => (
-                                <div
-                                  key={opt.id || oIdx}
-                                  className="p-2 border border-slate-200 rounded bg-slate-50 text-slate-900 font-medium flex gap-1.5"
-                                >
-                                  <span className="font-bold shrink-0">
-                                    {String.fromCharCode(65 + oIdx)}.
-                                  </span>
-                                  <div
-                                    dangerouslySetInnerHTML={{
-                                      __html: opt.rawText || (opt as any).text || (opt as any).label || ''
-                                    }}
-                                  />
-                                </div>
-                              ))
-                            ) : (
-                              <>
-                                <div className="p-2 border border-slate-200 rounded bg-slate-50">A. Option A</div>
-                                <div className="p-2 border border-slate-200 rounded bg-slate-50">B. Option B</div>
-                                <div className="p-2 border border-slate-200 rounded bg-slate-50">C. Option C</div>
-                                <div className="p-2 border border-slate-200 rounded bg-slate-50">D. Option D</div>
-                              </>
+                            {/* Render Diagram/Image if present */}
+                            {(q.imageUrl || q.diagramUrl) && (
+                              <div className="my-2 max-h-48 overflow-hidden flex justify-center bg-slate-50 border border-slate-200 rounded-lg p-2">
+                                <img
+                                  src={q.imageUrl || q.diagramUrl}
+                                  alt="Question Diagram"
+                                  className="max-h-44 object-contain rounded"
+                                />
+                              </div>
                             )}
+
+                            {/* Render Dynamic Options (A, B, C, D) */}
+                            <div className="grid grid-cols-2 gap-2 pl-4 pt-1">
+                              {q.options && q.options.length > 0 ? (
+                                q.options.map((opt, oIdx) => (
+                                  <div
+                                    key={opt.id || oIdx}
+                                    className="p-2 border border-slate-200 rounded bg-slate-50 text-slate-900 font-medium flex gap-1.5"
+                                  >
+                                    <span className="font-bold shrink-0">
+                                      {String.fromCharCode(65 + oIdx)}.
+                                    </span>
+                                    <div
+                                      dangerouslySetInnerHTML={{
+                                        __html: opt.rawText || (opt as any).text || (opt as any).label || ''
+                                      }}
+                                    />
+                                  </div>
+                                ))
+                              ) : (
+                                <>
+                                  <div className="p-2 border border-slate-200 rounded bg-slate-50">A. Option A</div>
+                                  <div className="p-2 border border-slate-200 rounded bg-slate-50">B. Option B</div>
+                                  <div className="p-2 border border-slate-200 rounded bg-slate-50">C. Option C</div>
+                                  <div className="p-2 border border-slate-200 rounded bg-slate-50">D. Option D</div>
+                                </>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      ));
-                    })()}
+                        ))
+                    )}
                   </div>
                 </div>
 
               </div>
             </div>
 
-            {/* Modal Footer */}
+            {/* Modal Footer Controls */}
             <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between bg-slate-50">
               <button
                 type="button"
