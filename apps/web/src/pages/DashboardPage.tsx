@@ -83,16 +83,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     }
   };
 
-  const totalQuestionsCount = questions.length;
-
-  // Dynamic Question Distribution by Subject (calculated strictly from real question bank records)
-  const subjectCountMap: Record<string, number> = {};
-  questions.forEach(q => {
-    const rawSub = (q.subject || 'General').trim();
-    const formattedSub = rawSub.charAt(0).toUpperCase() + rawSub.slice(1);
-    subjectCountMap[formattedSub] = (subjectCountMap[formattedSub] || 0) + 1;
-  });
-
+  // Dynamic Subject Colors Palette
   const defaultColors = [
     'bg-emerald-500',
     'bg-[#007a8c]',
@@ -104,25 +95,79 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     'bg-teal-500'
   ];
 
-  const liveSubjectNames = apiSubjects.length > 0
-    ? apiSubjects.map(s => s.name)
-    : Object.keys(subjectCountMap);
+  // Unify all distinct subjects across apiSubjects, apiChapters, and questions
+  const allSubjectsMap = new Map<string, { id?: string; code?: string; name: string }>();
 
-  const subjectPerformance = liveSubjectNames.map((subName, idx) => {
-    const subObj = apiSubjects.find(s => s.name.toLowerCase() === subName.toLowerCase());
-    
-    // Count exact chapters and questions belonging to this subject from stored DB records
-    const chaptersCount = apiChapters.filter(c => (c.subject || '').trim().toLowerCase() === subName.trim().toLowerCase()).length;
-    const count = questions.filter(q => (q.subject || '').trim().toLowerCase() === subName.trim().toLowerCase()).length;
-    
-    const percent = totalQuestionsCount > 0 ? Math.round((count / totalQuestionsCount) * 100) : 0;
-    
+  apiSubjects.forEach(s => {
+    if (s?.name) {
+      allSubjectsMap.set(s.name.trim().toLowerCase(), {
+        id: s.id,
+        code: s.code || s.name.substring(0, 3).toUpperCase(),
+        name: s.name.trim()
+      });
+    }
+  });
+
+  apiChapters.forEach(c => {
+    const subName = (c.subject || c.subject_name || '').trim();
+    if (subName && !allSubjectsMap.has(subName.toLowerCase())) {
+      allSubjectsMap.set(subName.toLowerCase(), {
+        name: subName,
+        code: subName.substring(0, 3).toUpperCase()
+      });
+    }
+  });
+
+  questions.forEach(q => {
+    const subName = (q.subject || (q as any).subject_name || '').trim();
+    if (subName && !allSubjectsMap.has(subName.toLowerCase())) {
+      allSubjectsMap.set(subName.toLowerCase(), {
+        name: subName,
+        code: subName.substring(0, 3).toUpperCase()
+      });
+    }
+  });
+
+  const unifiedSubjectsList = Array.from(allSubjectsMap.values());
+  const totalQuestionsCount = questions.length;
+  const totalChaptersCount = apiChapters.length;
+
+  // Compute Real Question Counts, Chapters Count & Subject Share dynamically
+  const subjectPerformance = unifiedSubjectsList.map((sub, idx) => {
+    const subName = sub.name;
+    const subNameLower = subName.toLowerCase();
+    const subId = sub.id;
+
+    // Filter chapters belonging to this subject
+    const subjectChapters = apiChapters.filter(c => {
+      const cSub = (c.subject || c.subject_name || '').trim().toLowerCase();
+      const cSubId = c.subject_id || c.subjectId;
+      return (cSub && cSub === subNameLower) || (subId && cSubId === subId);
+    });
+    const chaptersCount = subjectChapters.length;
+
+    // Filter questions belonging to this subject
+    const subjectQuestions = questions.filter(q => {
+      const qSub = (q.subject || (q as any).subject_name || '').trim().toLowerCase();
+      const qSubId = (q as any).subject_id || (q as any).subjectId;
+      return (qSub && qSub === subNameLower) || (subId && qSubId === subId);
+    });
+    const count = subjectQuestions.length;
+
+    // Dynamic Share percentage
+    let percent = 0;
+    if (totalQuestionsCount > 0) {
+      percent = Math.round((count / totalQuestionsCount) * 100);
+    } else if (totalChaptersCount > 0) {
+      percent = Math.round((chaptersCount / totalChaptersCount) * 100);
+    }
+
     return {
       name: subName,
-      code: subObj?.code || subName.substring(0, 3).toUpperCase(),
+      code: sub.code || subName.substring(0, 3).toUpperCase(),
       count,
-      percent,
       chaptersCount,
+      percent,
       color: defaultColors[idx % defaultColors.length]
     };
   });
@@ -130,17 +175,26 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   const chapterPerformance = apiChapters.map(ch => {
     const chId = String(ch.id || '').toLowerCase();
     const chTitle = (ch.title || '').toLowerCase();
+    const chSubLower = (ch.subject || ch.subject_name || '').trim().toLowerCase();
+
     const count = questions.filter(q => {
       const qChId = String((q as any).chapter_id || (q as any).chapterId || '').toLowerCase();
-      const qChapter = String((q as any).chapter || '').toLowerCase();
-      return qChId === chId || qChapter === chTitle || qChapter.includes(chTitle);
+      const qChapter = String((q as any).chapter || (q as any).chapter_name || '').toLowerCase();
+      return (qChId && qChId === chId) || (qChapter && (qChapter === chTitle || qChapter.includes(chTitle)));
     }).length;
-    const percent = totalQuestionsCount > 0 ? Math.round((count / totalQuestionsCount) * 100) : 0;
+
+    const subjectQuestionsCount = questions.filter(q => {
+      const qSub = (q.subject || (q as any).subject_name || '').trim().toLowerCase();
+      return qSub && chSubLower && qSub === chSubLower;
+    }).length || totalQuestionsCount;
+
+    const percent = subjectQuestionsCount > 0 ? Math.round((count / subjectQuestionsCount) * 100) : 0;
+
     return {
       title: ch.title,
-      code: ch.code || 'CH-01',
+      code: ch.code || ch.chapter_code || 'CH-01',
       subject: ch.subject || 'General',
-      count: ch.count || count,
+      count,
       percent
     };
   });
