@@ -12,12 +12,29 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'faculty' | 'admin'>('faculty');
-  const [assignedSubject, setAssignedSubject] = useState<'Biology' | 'Physics' | 'Chemistry' | 'Mathematics' | 'All'>('Biology');
+  const [role] = useState<'faculty'>('faculty');
+  const [assignedSubject, setAssignedSubject] = useState<string>('Biology');
+  const [dbSubjects, setDbSubjects] = useState<any[]>([]);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Load only the admin-created subjects from the database for signup assignment
+  React.useEffect(() => {
+    const fetchSubjects = async () => {
+      try {
+        const subs = await api.getSubjects();
+        if (subs && Array.isArray(subs) && subs.length > 0) {
+          setDbSubjects(subs);
+          setAssignedSubject(subs[0].name);
+        }
+      } catch (e) {
+        console.error('Failed loading subjects on login page:', e);
+      }
+    };
+    fetchSubjects();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,9 +93,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           throw error;
         }
 
-        // 3. Register user profile with Role and Assigned Subject
-        const selectedRole = role;
-        const selectedSubject = role === 'admin' ? 'All' : assignedSubject;
+        // 3. Register user profile with Faculty Role and Assigned Subject from Admin DB
+        const selectedRole = 'faculty';
+        const selectedSubject = assignedSubject || (dbSubjects[0]?.name) || 'Biology';
         const profilePayload = {
           email: cleanEmail,
           name: name.trim(),
@@ -333,58 +350,46 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           {/* Signup Specific Role & Subject Selectors */}
           {isSignUp && (
             <>
-              {/* Role Selection */}
+              {/* Account Role Block (Faculty Only) */}
               <div>
                 <label className="block text-[11px] font-extrabold uppercase text-slate-500 mb-1 tracking-wide">
                   Account Role
                 </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setRole('faculty')}
-                    className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                      role === 'faculty'
-                        ? 'bg-teal-50 border-teal-600 text-teal-900 shadow-2xs'
-                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                    }`}
-                  >
-                    <BookOpen className="w-3.5 h-3.5" /> Faculty
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRole('admin')}
-                    className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                      role === 'admin'
-                        ? 'bg-teal-50 border-teal-600 text-teal-900 shadow-2xs'
-                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                    }`}
-                  >
-                    <Shield className="w-3.5 h-3.5" /> Admin
-                  </button>
+                <div className="w-full py-2.5 px-3 rounded-xl border border-teal-600 bg-teal-50/80 text-teal-900 text-xs font-extrabold flex items-center justify-center gap-2 shadow-2xs">
+                  <BookOpen className="w-4 h-4 text-teal-700" />
+                  <span>Faculty</span>
                 </div>
               </div>
 
-              {/* Assigned Subject Selection (Only for Faculty) */}
-              {role === 'faculty' && (
-                <div>
-                  <label className="block text-[11px] font-extrabold uppercase text-slate-500 mb-1 tracking-wide">
-                    Assigned Subject Scope
-                  </label>
-                  <select
-                    value={assignedSubject}
-                    onChange={e => setAssignedSubject(e.target.value as any)}
-                    className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-slate-900 bg-white focus:outline-hidden focus:ring-2 focus:ring-teal-600 font-bold"
-                  >
-                    <option value="Biology">🌿 Biology</option>
-                    <option value="Physics">⚡ Physics</option>
-                    <option value="Chemistry">🧪 Chemistry</option>
-                    <option value="Mathematics">📐 Mathematics</option>
-                  </select>
-                  <p className="text-[10px] text-slate-500 mt-1">
-                    * You will be scoped to access questions, chapters, and assets for this subject only.
-                  </p>
-                </div>
-              )}
+              {/* Assigned Subject Selection (Only Subjects Created by Admin in Subjects Section) */}
+              <div>
+                <label className="block text-[11px] font-extrabold uppercase text-slate-500 mb-1 tracking-wide">
+                  Assigned Subject Scope
+                </label>
+                <select
+                  value={assignedSubject}
+                  onChange={e => setAssignedSubject(e.target.value)}
+                  className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-slate-900 bg-white focus:outline-hidden focus:ring-2 focus:ring-teal-600 font-bold cursor-pointer text-xs"
+                >
+                  {dbSubjects.length === 0 ? (
+                    <>
+                      <option value="Biology">🌿 Biology</option>
+                      <option value="Physics">⚡ Physics</option>
+                      <option value="Chemistry">🧪 Chemistry</option>
+                      <option value="Mathematics">📐 Mathematics</option>
+                    </>
+                  ) : (
+                    dbSubjects.map(s => (
+                      <option key={s.id || s.code || s.name} value={s.name}>
+                        {s.name} ({s.code || s.name.substring(0, 3)})
+                      </option>
+                    ))
+                  )}
+                </select>
+                <p className="text-[10px] text-slate-500 mt-1">
+                  * You will be scoped to access questions, chapters, and assets for this subject only.
+                </p>
+              </div>
             </>
           )}
 
