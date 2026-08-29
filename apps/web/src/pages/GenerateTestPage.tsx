@@ -1086,14 +1086,13 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                         <th className="py-3 px-4">Question Content</th>
                         <th className="py-3 px-4 w-28">Subject</th>
                         <th className="py-3 px-4 w-36">Chapter</th>
-                        <th className="py-3 px-4 w-40">Assigned Section</th>
                         <th className="py-3 px-4 w-24 text-center">Difficulty</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-800">
                       {filteredQuestions.length === 0 ? (
                         <tr>
-                          <td colSpan={7} className="py-12 text-center text-slate-400 font-medium">
+                          <td colSpan={6} className="py-12 text-center text-slate-400 font-medium">
                             No questions found matching your filter criteria.
                           </td>
                         </tr>
@@ -1101,7 +1100,6 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                         filteredQuestions.map(q => {
                           const isSelected = selectedQuestionIds.includes(q.id);
                           const qCode = formatQuestionCode(q);
-                          const assignedSecId = questionSectionMap[q.id] || targetSectionId || testSections[0]?.id;
 
                           return (
                             <tr
@@ -1130,26 +1128,6 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                               </td>
                               <td className="py-3 px-4 text-slate-600 truncate max-w-[140px]">
                                 {q.chapter || 'General'}
-                              </td>
-                              <td className="py-3 px-4" onClick={e => e.stopPropagation()}>
-                                {isSelected ? (
-                                  <select
-                                    value={assignedSecId}
-                                    onChange={e => {
-                                      const newSec = e.target.value;
-                                      setQuestionSectionMap(prev => ({ ...prev, [q.id]: newSec }));
-                                    }}
-                                    className="text-[11px] font-bold py-1 px-2 border border-teal-300 rounded-lg bg-teal-50 text-teal-900 cursor-pointer w-full"
-                                  >
-                                    {testSections.map((sec, sIdx) => (
-                                      <option key={sec.id} value={sec.id}>
-                                        {sec.name || `Section ${String.fromCharCode(65 + sIdx)}`}
-                                      </option>
-                                    ))}
-                                  </select>
-                                ) : (
-                                  <span className="text-[11px] text-slate-400 font-medium">—</span>
-                                )}
                               </td>
                               <td className="py-3 px-4 text-center">
                                 <span
