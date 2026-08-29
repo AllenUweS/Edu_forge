@@ -3,7 +3,7 @@ import { api } from '../services/api.js';
 import { Question, DocumentModel, DocumentSection } from '@eduforge/shared';
 import {
   Plus, Check, X, Printer, Download, Eye, FileText,
-  HelpCircle, Shuffle, Award, Search, ArrowRight, ArrowLeft, Layers
+  HelpCircle, Shuffle, Award, Search, ArrowRight, ArrowLeft, Layers, CheckCircle2
 } from 'lucide-react';
 import { formatQuestionCode } from '../utils/questionCode.js';
 import { MathTextRenderer } from '../equation/MathTextRenderer.js';
@@ -250,8 +250,9 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
     ]);
   };
 
-  // Full Screen Preview Modal State
+  // Full Screen Preview Modal State & Answer Key Mode
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState<boolean>(false);
+  const [isAnswerKeyMode, setIsAnswerKeyMode] = useState<boolean>(false);
 
   // ==========================================
   // Lifecycle Data Fetching
@@ -660,6 +661,7 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
           <button
             type="button"
             onClick={() => {
+              setIsAnswerKeyMode(false);
               setCurrentStep(3);
               setIsPreviewModalOpen(true);
             }}
@@ -1391,6 +1393,7 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
               <button
                 type="button"
                 onClick={() => {
+                  setIsAnswerKeyMode(false);
                   setCurrentStep(3);
                   setIsPreviewModalOpen(true);
                 }}
@@ -1418,6 +1421,7 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
               <button
                 type="button"
                 onClick={() => {
+                  setIsAnswerKeyMode(false);
                   setCurrentStep(3);
                   setIsPreviewModalOpen(true);
                 }}
@@ -1429,17 +1433,20 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
               <button
                 type="button"
                 onClick={handleGeneratePdfStream}
-                className="w-full py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-900 font-bold text-xs rounded-xl transition-all active:scale-95 cursor-pointer shadow-2xs"
+                className="w-full py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-900 font-bold text-xs rounded-xl transition-all active:scale-95 cursor-pointer shadow-2xs flex items-center justify-center gap-1.5"
               >
-                Generate PDF
+                <Printer className="w-3.5 h-3.5" /> Print / Save as PDF
               </button>
 
               <button
                 type="button"
-                onClick={() => alert('Answer key generated successfully!')}
-                className="w-full py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-900 font-bold text-xs rounded-xl transition-all active:scale-95 cursor-pointer shadow-2xs"
+                onClick={() => {
+                  setIsAnswerKeyMode(true);
+                  setIsPreviewModalOpen(true);
+                }}
+                className="w-full py-2.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 font-bold text-xs rounded-xl transition-all active:scale-95 cursor-pointer shadow-2xs flex items-center justify-center gap-1.5"
               >
-                Generate Answer Key
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Generate Answer Key
               </button>
 
               <button
@@ -1463,23 +1470,85 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             
-            {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
-              <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">
-                Test Paper Preview
-              </h3>
-              <button
-                type="button"
-                onClick={() => setIsPreviewModalOpen(false)}
-                className="p-1 text-slate-500 hover:text-slate-900 rounded-lg"
-              >
-                <X className="w-5 h-5" />
-              </button>
+            {/* Modal Header with View Mode Toggle */}
+            <div className="px-6 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50">
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">
+                  {isAnswerKeyMode ? '✓ Answer Key & Detailed Solutions' : 'Test Paper Preview'}
+                </h3>
+                <span className="text-[10px] font-bold text-teal-800 bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded-full">
+                  {testSections.length} Sections • {selectedQuestionIds.length} Qs
+                </span>
+              </div>
+
+              {/* View Mode Toggle Switch */}
+              <div className="flex items-center gap-1.5 bg-slate-200/80 p-1 rounded-xl shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setIsAnswerKeyMode(false)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    !isAnswerKeyMode ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  📄 Question Paper
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsAnswerKeyMode(true)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    isAnswerKeyMode ? 'bg-emerald-700 text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  ✓ Answer Key
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsPreviewModalOpen(false)}
+                  className="p-1 text-slate-500 hover:text-slate-900 rounded-lg ml-1 cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* Modal Body: Printable Document Paper */}
-            <div className="p-8 overflow-y-auto flex-1 bg-slate-100">
-              <div className="printable-paper-sheet max-w-[780px] mx-auto bg-white p-8 border border-slate-200 rounded-xl shadow-md text-slate-900 space-y-6">
+            <div className="p-4 sm:p-8 overflow-y-auto flex-1 bg-slate-100">
+              {/* Print Media Styles */}
+              <style>{`
+                @media print {
+                  body * {
+                    visibility: hidden !important;
+                  }
+                  .printable-paper-sheet, .printable-paper-sheet * {
+                    visibility: visible !important;
+                  }
+                  .printable-paper-sheet {
+                    position: absolute !important;
+                    left: 0 !important;
+                    top: 0 !important;
+                    width: 100% !important;
+                    max-width: 100% !important;
+                    margin: 0 !important;
+                    padding: 15mm !important;
+                    border: none !important;
+                    box-shadow: none !important;
+                    background: #fff !important;
+                  }
+                  .no-print {
+                    display: none !important;
+                  }
+                  .question-item-block {
+                    break-inside: avoid !important;
+                    page-break-inside: avoid !important;
+                  }
+                  .section-header-block {
+                    break-after: avoid !important;
+                    page-break-after: avoid !important;
+                  }
+                }
+              `}</style>
+
+              <div className="printable-paper-sheet max-w-[780px] mx-auto bg-white p-6 sm:p-10 border border-slate-200 rounded-xl shadow-md text-slate-900 space-y-6">
                 
                 {/* Paper Header */}
                 <div className="text-center border-b-2 border-slate-900 pb-4 space-y-1">
@@ -1487,10 +1556,10 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                     {examType} {selectedSubject.toUpperCase()}
                   </h1>
                   <h2 className="text-sm font-bold text-slate-700 uppercase">
-                    {selectedChapter.toUpperCase()} TEST
+                    {selectedChapter ? `${selectedChapter.toUpperCase()} TEST` : 'QUESTION PAPER'}
                   </h2>
-                  <p className="text-xs font-semibold text-slate-500">
-                    Multiple Choice Questions
+                  <p className="text-xs font-bold text-emerald-800 uppercase tracking-wide">
+                    {isAnswerKeyMode ? '✓ OFFICIAL ANSWER KEY & DETAILED SOLUTIONS' : 'MULTIPLE CHOICE QUESTIONS'}
                   </p>
                 </div>
 
@@ -1498,90 +1567,198 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                 <div className="flex items-center justify-between text-xs font-bold text-slate-900 border-b border-slate-200 pb-2">
                   <span>Time: {durationMinutes} Minutes</span>
                   <span>Maximum Marks: {computedTotalMarks}</span>
-                  <span>Questions: {totalSelectedQuestionsCount}</span>
+                  <span>Total Questions: {selectedQuestionIds.length}</span>
                 </div>
 
                 {/* Exam Instructions Box */}
                 <div className="p-4 border border-slate-200 rounded-lg bg-slate-50/60 text-xs space-y-1">
-                  <span className="font-bold text-slate-900">Instructions:</span>
+                  <span className="font-bold text-slate-900">Instructions & Marking Scheme:</span>
                   <ol className="list-decimal list-inside space-y-1 text-slate-700 font-medium pt-1">
-                    <li>There are {totalSelectedQuestionsCount} multiple-choice questions.</li>
+                    <li>There are {selectedQuestionIds.length} multiple-choice questions distributed across {testSections.length} section(s).</li>
                     <li>Each question carries {marksPerQuestion} marks.</li>
                     <li>One mark ({negativeMarks}) will be deducted for an incorrect answer.</li>
-                    <li>Select only one answer for each question.</li>
+                    <li>{isAnswerKeyMode ? 'Correct answer for each question is marked with a green checkmark (✓).' : 'Select only one answer for each question.'}</li>
                   </ol>
                 </div>
 
-                {/* Dynamic Section A Questions */}
-                <div className="space-y-4 pt-2">
-                  <h3 className="text-sm font-extrabold text-slate-900 border-b border-slate-200 pb-1">
-                    Section A — {selectedSubject}
-                  </h3>
-
-                  {/* Render Selected User Questions from Bank */}
-                  <div className="space-y-6 text-xs font-medium">
-                    {selectedQuestionIds.length === 0 ? (
-                      <div className="p-6 text-center text-slate-400 font-semibold italic border border-dashed border-slate-200 rounded-lg">
-                        No questions selected for this test paper yet. Go to Step 2 (Select Questions) to pick your questions.
-                      </div>
-                    ) : (
-                      questions
+                {/* DYNAMIC ALL SECTIONS RENDERING */}
+                <div className="space-y-8 pt-2">
+                  {selectedQuestionIds.length === 0 ? (
+                    <div className="p-8 text-center text-slate-400 font-semibold italic border border-dashed border-slate-200 rounded-lg">
+                      No questions selected for this test paper yet. Go to Step 2 (Select Questions) to pick your questions.
+                    </div>
+                  ) : (
+                    testSections.map((sec, secIdx) => {
+                      // Filter selected questions assigned to this section
+                      const sectionQuestions = questions
                         .filter(q => selectedQuestionIds.includes(q.id))
-                        .map((q, qIdx) => (
-                          <div key={q.id || qIdx} className="space-y-2 pb-3 border-b border-slate-100 last:border-0">
-                            {/* Question Title & Number */}
-                            <div className="font-bold text-slate-900 text-xs leading-relaxed flex gap-1.5">
-                              <span className="shrink-0">{qIdx + 1}.</span>
-                              <div
-                                dangerouslySetInnerHTML={{
-                                  __html: q.rawText || 'Question Statement'
-                                }}
-                              />
+                        .filter(q => {
+                          const assignedSecId = questionSectionMap[q.id];
+                          if (assignedSecId) return assignedSecId === sec.id;
+                          const qIndex = selectedQuestionIds.indexOf(q.id);
+                          const fallbackSecId = testSections[qIndex % testSections.length]?.id;
+                          return fallbackSecId === sec.id;
+                        });
+
+                      if (sectionQuestions.length === 0 && selectedQuestionIds.length > 0) return null;
+
+                      return (
+                        <div key={sec.id} className="space-y-4 pt-4 border-t border-slate-300 first:border-t-0 first:pt-0">
+                          {/* Section Banner Header */}
+                          <div className="section-header-block bg-slate-100 p-3 rounded-lg border border-slate-300 flex items-center justify-between">
+                            <div>
+                              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                                {sec.name || `Section ${String.fromCharCode(65 + secIdx)}`}
+                              </h3>
+                              <p className="text-[10px] text-slate-500 font-semibold mt-0.5">
+                                {sec.questionsCount ? `Target: ${sec.questionsCount} Qs` : ''} • ({sectionQuestions.length} Questions assigned)
+                              </p>
                             </div>
+                            <span className="text-[10px] font-extrabold text-teal-900 bg-teal-50 border border-teal-200 px-3 py-1 rounded-full uppercase">
+                              Section #{secIdx + 1}
+                            </span>
+                          </div>
 
-                            {/* Render Diagram/Image if present */}
-                            {(q.imageUrl || q.diagramUrl) && (
-                              <div className="my-2 max-h-48 overflow-hidden flex justify-center bg-slate-50 border border-slate-200 rounded-lg p-2">
-                                <img
-                                  src={q.imageUrl || q.diagramUrl}
-                                  alt="Question Diagram"
-                                  className="max-h-44 object-contain rounded"
-                                />
-                              </div>
-                            )}
+                          {/* Section Questions */}
+                          <div className="space-y-6">
+                            {sectionQuestions.map((q, qIdx) => {
+                              const globalQNum = selectedQuestionIds.indexOf(q.id) + 1;
+                              const targetOptKey = (((q as any).correct_option || (q as any).correctOption || 'a')).toString().toLowerCase().trim();
 
-                            {/* Render Dynamic Options (A, B, C, D) */}
-                            <div className="grid grid-cols-2 gap-2 pl-4 pt-1">
-                              {q.options && q.options.length > 0 ? (
-                                q.options.map((opt, oIdx) => (
-                                  <div
-                                    key={opt.id || oIdx}
-                                    className="p-2 border border-slate-200 rounded bg-slate-50 text-slate-900 font-medium flex gap-1.5"
-                                  >
-                                    <span className="font-bold shrink-0">
-                                      {String.fromCharCode(65 + oIdx)}.
+                              return (
+                                <div key={q.id || qIdx} className="question-item-block p-4 border border-slate-200 rounded-xl bg-white space-y-3 shadow-2xs">
+                                  {/* Question Title & Number */}
+                                  <div className="font-bold text-slate-900 text-xs leading-relaxed flex gap-2">
+                                    <span className="shrink-0 font-extrabold text-teal-900 bg-teal-50 border border-teal-200/80 px-2 py-0.5 rounded">
+                                      Q{globalQNum > 0 ? globalQNum : qIdx + 1}.
                                     </span>
                                     <div
+                                      className="flex-1 pt-0.5"
                                       dangerouslySetInnerHTML={{
-                                        __html: opt.rawText || (opt as any).text || (opt as any).label || ''
+                                        __html: q.rawText || q.content || 'Question Statement'
                                       }}
                                     />
                                   </div>
-                                ))
-                              ) : (
-                                <>
-                                  <div className="p-2 border border-slate-200 rounded bg-slate-50">A. Option A</div>
-                                  <div className="p-2 border border-slate-200 rounded bg-slate-50">B. Option B</div>
-                                  <div className="p-2 border border-slate-200 rounded bg-slate-50">C. Option C</div>
-                                  <div className="p-2 border border-slate-200 rounded bg-slate-50">D. Option D</div>
-                                </>
-                              )}
+
+                                  {/* Render Diagram / Image if present */}
+                                  {(q.imageUrl || q.diagramUrl) && (
+                                    <div className="my-2 max-h-48 overflow-hidden flex justify-center bg-slate-50 border border-slate-200 rounded-lg p-2">
+                                      <img
+                                        src={q.imageUrl || q.diagramUrl}
+                                        alt="Question Diagram"
+                                        className="max-h-44 object-contain rounded"
+                                      />
+                                    </div>
+                                  )}
+
+                                  {/* Multiple Choice Options (A, B, C, D) */}
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                                    {q.options && q.options.length > 0 ? (
+                                      q.options.map((opt, oIdx) => {
+                                        const optKey = (((opt as any).option_key || (opt as any).optionKey || String.fromCharCode(97 + oIdx))).toString().toLowerCase().trim();
+                                        const letterKey = String.fromCharCode(97 + oIdx);
+                                        const isCorrect = isAnswerKeyMode && (optKey === targetOptKey || letterKey === targetOptKey);
+
+                                        return (
+                                          <div
+                                            key={opt.id || oIdx}
+                                            className={`p-2.5 border rounded-lg text-xs font-medium flex items-center justify-between transition-all ${
+                                              isCorrect
+                                                ? 'border-2 border-emerald-600 bg-emerald-50/90 text-emerald-950 font-bold shadow-xs'
+                                                : 'border-slate-200 bg-slate-50/70 text-slate-900'
+                                            }`}
+                                          >
+                                            <div className="flex items-center gap-2 min-w-0">
+                                              <span className={`font-black shrink-0 px-2 py-0.5 rounded text-[11px] ${
+                                                isCorrect ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-800'
+                                              }`}>
+                                                {String.fromCharCode(65 + oIdx)}
+                                              </span>
+                                              <div
+                                                className="truncate"
+                                                dangerouslySetInnerHTML={{
+                                                  __html: opt.rawText || (opt as any).text || (opt as any).label || ''
+                                                }}
+                                              />
+                                            </div>
+
+                                            {/* GREEN TICK MARK FOR ANSWER KEY MODE */}
+                                            {isCorrect && (
+                                              <span className="shrink-0 flex items-center gap-1 text-[11px] font-black text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full ml-2">
+                                                <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
+                                                Correct Answer
+                                              </span>
+                                            )}
+                                          </div>
+                                        );
+                                      })
+                                    ) : (
+                                      ['a', 'b', 'c', 'd'].map((letter, oIdx) => {
+                                        const isCorrect = isAnswerKeyMode && letter === targetOptKey;
+                                        return (
+                                          <div
+                                            key={letter}
+                                            className={`p-2.5 border rounded-lg text-xs font-medium flex items-center justify-between ${
+                                              isCorrect
+                                                ? 'border-2 border-emerald-600 bg-emerald-50/90 text-emerald-950 font-bold shadow-xs'
+                                                : 'border-slate-200 bg-slate-50/70 text-slate-900'
+                                            }`}
+                                          >
+                                            <div className="flex items-center gap-2">
+                                              <span className={`font-black shrink-0 px-2 py-0.5 rounded text-[11px] ${
+                                                isCorrect ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-800'
+                                              }`}>
+                                                {letter.toUpperCase()}
+                                              </span>
+                                              <span>Option {letter.toUpperCase()}</span>
+                                            </div>
+                                            {isCorrect && (
+                                              <span className="shrink-0 flex items-center gap-1 text-[11px] font-black text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full">
+                                                <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
+                                                Correct Answer
+                                              </span>
+                                            )}
+                                          </div>
+                                        );
+                                      })
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                {/* MASTER ANSWER KEY GRID TABLE (Only in Answer Key mode) */}
+                {isAnswerKeyMode && selectedQuestionIds.length > 0 && (
+                  <div className="mt-8 pt-6 border-t-2 border-emerald-600 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                      <h3 className="text-sm font-black text-slate-900 uppercase tracking-wide">
+                        Master Answer Key Table ({selectedQuestionIds.length} Questions)
+                      </h3>
+                    </div>
+
+                    <div className="grid grid-cols-5 sm:grid-cols-10 gap-2 text-center text-xs font-bold font-mono">
+                      {selectedQuestionIds.map((qId, idx) => {
+                        const qObj = questions.find(q => q.id === qId);
+                        const correctOpt = ((((qObj as any)?.correct_option || (qObj as any)?.correctOption || 'A'))).toString().toUpperCase();
+                        return (
+                          <div key={qId} className="p-2 border border-emerald-300 bg-emerald-50 rounded-lg shadow-2xs">
+                            <div className="text-[10px] text-slate-500">Q{idx + 1}</div>
+                            <div className="text-sm font-black text-emerald-900 flex items-center justify-center gap-0.5">
+                              {correctOpt} <Check className="w-3 h-3 text-emerald-600 stroke-[3]" />
                             </div>
                           </div>
-                        ))
-                    )}
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                )}
 
               </div>
             </div>
@@ -1591,7 +1768,7 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
               <button
                 type="button"
                 onClick={() => setIsPreviewModalOpen(false)}
-                className="px-4 py-2 border border-slate-200 bg-white hover:bg-slate-100 text-slate-800 text-xs font-bold rounded-lg transition-all"
+                className="px-4 py-2 border border-slate-200 bg-white hover:bg-slate-100 text-slate-800 text-xs font-bold rounded-lg transition-all cursor-pointer"
               >
                 Back to Builder
               </button>
@@ -1600,9 +1777,9 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                 <button
                   type="button"
                   onClick={handleGeneratePdfStream}
-                  className="px-4 py-2 border border-slate-200 bg-white hover:bg-slate-100 text-slate-800 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all"
+                  className="px-4 py-2 border border-slate-200 bg-white hover:bg-slate-100 text-slate-800 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
                 >
-                  <Printer className="w-3.5 h-3.5" /> Print
+                  <Printer className="w-3.5 h-3.5" /> Print / Save as PDF
                 </button>
 
                 <button
@@ -1611,7 +1788,7 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                     setIsPreviewModalOpen(false);
                     handlePublishTest();
                   }}
-                  className="px-5 py-2 bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold rounded-lg shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
+                  className="px-5 py-2 bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold rounded-lg shadow-sm hover:shadow-md transition-all active:scale-[0.98] cursor-pointer"
                 >
                   Publish Test
                 </button>
