@@ -651,6 +651,7 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
       {/* Image Library Picker Modal */}
       <ImageLibraryModal
         isOpen={activeImageBlockId !== null}
+        subject={subject}
         onClose={() => setActiveImageBlockId(null)}
         onSelectImage={url => {
           if (activeImageBlockId) {

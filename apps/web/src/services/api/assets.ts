@@ -1,4 +1,5 @@
 import { fetchApi } from './client.js';
+import { getUserProfile } from '../../utils/userProfile.js';
 
 const getApiBaseUrl = (): string => {
   if (typeof window !== 'undefined') {
@@ -16,15 +17,20 @@ const getApiBaseUrl = (): string => {
 const API_BASE_URL = getApiBaseUrl();
 
 export const assetsApi = {
-  async getMedia(): Promise<any[]> {
+  async getMedia(subject?: string): Promise<any[]> {
     try {
-      const rawList = await fetchApi<any[]>('/api/assets');
+      const user = getUserProfile();
+      const targetSub = subject || (user.role === 'faculty' ? user.assigned_subject : undefined);
+      const queryParam = targetSub && targetSub !== 'All' ? `?subject=${encodeURIComponent(targetSub)}` : '';
+      
+      const rawList = await fetchApi<any[]>(`/api/assets${queryParam}`);
       if (!Array.isArray(rawList)) return [];
       return rawList.map(a => ({
         id: a.id,
         name: a.name || a.filename || 'Untitled Asset',
         label: a.label || (a.mimeType ? a.mimeType.split('/')[1]?.toUpperCase() : 'FIGURE') || 'FIGURE',
         url: a.url || a.public_url || a.publicUrl || '',
+        storagePath: a.storagePath || a.storage_path,
         usesCount: a.usesCount || a.uses_count || 0
       }));
     } catch {
@@ -32,14 +38,21 @@ export const assetsApi = {
     }
   },
 
-  async uploadAsset(file: File): Promise<{ id: string; url: string; originalName: string }> {
+  async uploadAsset(file: File, subject?: string): Promise<{ id: string; url: string; originalName: string }> {
     try {
+      const user = getUserProfile();
+      const effectiveSubject = subject || (user.role === 'faculty' ? user.assigned_subject : 'General');
+
       const formData = new FormData();
       formData.append('file', file);
+      formData.append('subject', effectiveSubject);
 
       const endpoint = API_BASE_URL.endsWith('/api') ? `${API_BASE_URL}/assets` : `${API_BASE_URL}/api/assets`;
       const res = await fetch(endpoint, {
         method: 'POST',
+        headers: {
+          'x-user-subject': effectiveSubject
+        },
         body: formData
       });
 
@@ -70,8 +83,8 @@ export const assetsApi = {
     }
   },
 
-  async uploadImage(file: File): Promise<{ id: string; url: string; originalName: string }> {
-    return this.uploadAsset(file);
+  async uploadImage(file: File, subject?: string): Promise<{ id: string; url: string; originalName: string }> {
+    return this.uploadAsset(file, subject);
   },
 
   async deleteMedia(id: string): Promise<void> {

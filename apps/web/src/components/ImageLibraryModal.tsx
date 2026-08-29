@@ -14,12 +14,14 @@ interface ImageLibraryModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectImage: (url: string) => void;
+  subject?: string;
 }
 
 export const ImageLibraryModal: React.FC<ImageLibraryModalProps> = ({
   isOpen,
   onClose,
-  onSelectImage
+  onSelectImage,
+  subject
 }) => {
   const [activeTab, setActiveTab] = useState<'library' | 'upload'>('library');
   const [assets, setAssets] = useState<MediaAsset[]>([]);
@@ -36,7 +38,7 @@ export const ImageLibraryModal: React.FC<ImageLibraryModalProps> = ({
   const fetchMedia = async () => {
     setLoading(true);
     try {
-      const items = await api.getMedia();
+      const items = await api.getMedia(subject);
       setAssets(items || []);
     } catch (err) {
       console.error('Failed to load media assets:', err);
@@ -95,7 +97,7 @@ export const ImageLibraryModal: React.FC<ImageLibraryModalProps> = ({
     try {
       let finalUrl = '';
       try {
-        const res = await api.uploadAsset(previewFile.file);
+        const res = await api.uploadAsset(previewFile.file, subject);
         finalUrl = res.url;
       } catch {
         finalUrl = previewFile.url;

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, X, Upload, Edit3, Trash2, Image as ImageIcon, Check } from 'lucide-react';
+import { Plus, X, Upload, Edit3, Trash2, Image as ImageIcon, Check, Folder, Search } from 'lucide-react';
 import { api } from '../services/api.js';
 import { getUserProfile } from '../utils/userProfile.js';
 
@@ -14,6 +14,9 @@ interface MediaAsset {
 
 export const MediaLibraryPage: React.FC = () => {
   const [assets, setAssets] = useState<MediaAsset[]>([]);
+  const [subjects, setSubjects] = useState<any[]>([]);
+  const [selectedFolder, setSelectedFolder] = useState<string>('All');
+  const [searchQuery, setSearchQuery] = useState('');
   const user = getUserProfile();
 
   const [isUploadOpen, setIsUploadOpen] = useState(false);
@@ -22,14 +25,25 @@ export const MediaLibraryPage: React.FC = () => {
   const [editName, setEditName] = useState('');
   const [editLabel, setEditLabel] = useState('');
 
+  // Upload modal subject target
+  const [uploadSubject, setUploadSubject] = useState<string>(
+    user.role === 'faculty' && user.assigned_subject !== 'All' ? user.assigned_subject : 'Biology'
+  );
+
   // Selected file state for upload modal
   const [selectedFiles, setSelectedFiles] = useState<{ file: File; url: string }[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const loadMediaFromDb = async () => {
+  const loadData = async () => {
     try {
-      const mediaItems = await api.getMedia();
+      const [mediaItems, subList] = await Promise.all([
+        api.getMedia(),
+        api.getSubjects()
+      ]);
+
+      setSubjects(subList || []);
+
       let list = mediaItems || [];
       if (user.role === 'faculty' && user.assigned_subject && user.assigned_subject !== 'All') {
         const subLower = user.assigned_subject.toLowerCase();
@@ -39,15 +53,16 @@ export const MediaLibraryPage: React.FC = () => {
           (a.storagePath || '').toLowerCase().includes(subLower) ||
           (a.filename || '').toLowerCase().includes(subLower)
         );
+        setSelectedFolder(user.assigned_subject);
       }
       setAssets(list);
     } catch (err) {
-      console.error('Failed to load media:', err);
+      console.error('Failed to load media assets:', err);
     }
   };
 
   useEffect(() => {
-    loadMediaFromDb();
+    loadData();
   }, []);
 
   const handleOpenEdit = (asset: MediaAsset) => {
@@ -61,7 +76,7 @@ export const MediaLibraryPage: React.FC = () => {
     if (confirm('Are you sure you want to delete this media asset?')) {
       setAssets(prev => prev.filter(a => a.id !== id));
       await api.deleteMedia(id);
-      loadMediaFromDb();
+      loadData();
     }
   };
 
@@ -81,7 +96,6 @@ export const MediaLibraryPage: React.FC = () => {
     setIsEditOpen(false);
   };
 
-  // Real File Selection Handler
   const handleFileSelect = (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
@@ -96,7 +110,6 @@ export const MediaLibraryPage: React.FC = () => {
     setSelectedFiles(prev => [...prev, ...newSelected]);
   };
 
-  // Drag & Drop handlers
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -108,7 +121,7 @@ export const MediaLibraryPage: React.FC = () => {
     e.stopPropagation();
   };
 
-  // Perform upload to backend / MySQL database
+  // Perform upload dumped according to selected subject folder in Supabase bucket
   const handleUploadSubmit = async () => {
     if (selectedFiles.length === 0) {
       alert('Please select at least one image file to upload.');
@@ -117,97 +130,178 @@ export const MediaLibraryPage: React.FC = () => {
 
     setIsUploading(true);
     try {
+      const targetSub = user.role === 'faculty' && user.assigned_subject !== 'All' 
+        ? user.assigned_subject 
+        : uploadSubject;
+
       for (const item of selectedFiles) {
-        await api.uploadAsset(item.file);
+        await api.uploadAsset(item.file, targetSub);
       }
       setSelectedFiles([]);
       setIsUploadOpen(false);
-      await loadMediaFromDb();
+      await loadData();
     } catch (err) {
-      console.error('Failed to upload image to MySQL:', err);
+      console.error('Failed to upload image:', err);
     } finally {
       setIsUploading(false);
     }
   };
 
+  // Filter assets by selected folder and search query
+  const filteredAssets = assets.filter(a => {
+    const q = searchQuery.toLowerCase().trim();
+    if (q) {
+      const matchesSearch = (a.name || '').toLowerCase().includes(q) ||
+                            (a.label || '').toLowerCase().includes(q) ||
+                            (a.storagePath || '').toLowerCase().includes(q);
+      if (!matchesSearch) return false;
+    }
+
+    if (user.role === 'admin' && selectedFolder !== 'All') {
+      const subLower = selectedFolder.toLowerCase();
+      const pathLower = (a.storagePath || '').toLowerCase();
+      const nameLower = (a.name || '').toLowerCase();
+      const urlLower = (a.url || '').toLowerCase();
+      return pathLower.startsWith(subLower + '/') ||
+             pathLower.includes(subLower) ||
+             nameLower.includes(subLower) ||
+             urlLower.includes(subLower) ||
+             (subLower === 'biology' && (nameLower.includes('bio') || pathLower.includes('bio'))) ||
+             (subLower === 'physics' && (nameLower.includes('phy') || pathLower.includes('phy'))) ||
+             (subLower === 'chemistry' && (nameLower.includes('che') || pathLower.includes('che')));
+    }
+
+    return true;
+  });
+
   return (
     <div className="max-w-7xl mx-auto px-8 py-8 space-y-6 font-sans animate-in fade-in slide-in-from-bottom-2 duration-300">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-200/80 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-4">
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight font-sans">
-            Media Library
+            Media & Asset Library
           </h1>
           <p className="text-xs text-slate-500 font-medium mt-0.5">
-            Reusable question images, diagrams, and figures.
+            Subject-scoped question diagrams, physical figures, apparatus images, and tabular columns.
           </p>
         </div>
         <button
           type="button"
           onClick={() => {
             setSelectedFiles([]);
+            setUploadSubject(user.role === 'faculty' && user.assigned_subject !== 'All' ? user.assigned_subject : 'Biology');
             setIsUploadOpen(true);
           }}
-          className="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 shadow-sm hover:shadow-md transition-all active:scale-[0.98] cursor-pointer"
+          className="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold rounded-xl flex items-center gap-2 shadow-sm hover:shadow-md transition-all active:scale-[0.98] cursor-pointer"
         >
-          <Plus className="w-3.5 h-3.5" /> + Upload Image
+          <Upload className="w-3.5 h-3.5" /> Upload Subject Images
         </button>
       </div>
 
-      {/* Grid of Media Assets */}
-      {assets.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-12 text-center text-slate-400 text-xs font-semibold shadow-2xs">
-          No media images uploaded yet. Click "+ Upload Image" to add your figures and diagrams.
+      {/* Subject Folder Filter Tabs (for Admin) or Scoped View (for Faculty) */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-2.5 rounded-2xl border border-slate-200 shadow-2xs">
+        <div className="flex items-center gap-1.5 overflow-x-auto">
+          {user.role === 'admin' && (
+            <button
+              type="button"
+              onClick={() => setSelectedFolder('All')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                selectedFolder === 'All'
+                  ? 'bg-teal-700 text-white shadow-xs'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              <Folder className="w-3.5 h-3.5" /> All Subjects
+            </button>
+          )}
+
+          {(user.role === 'admin' ? subjects : subjects.filter(s => s.name.toLowerCase() === user.assigned_subject.toLowerCase())).map(sub => (
+            <button
+              key={sub.id || sub.name}
+              type="button"
+              onClick={() => setSelectedFolder(sub.name)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                selectedFolder === sub.name
+                  ? 'bg-teal-700 text-white shadow-xs'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              <Folder className="w-3.5 h-3.5" /> {sub.name}
+            </button>
+          ))}
+        </div>
+
+        {/* Search Filter */}
+        <div className="relative w-64">
+          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Search images or diagrams..."
+            className="w-full pl-8 pr-3 py-1.5 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 bg-slate-50 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-teal-600"
+          />
+        </div>
+      </div>
+
+      {/* Grid of Images */}
+      {filteredAssets.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-12 text-center space-y-3">
+          <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 mx-auto flex items-center justify-center">
+            <ImageIcon className="w-6 h-6" />
+          </div>
+          <h3 className="text-sm font-bold text-slate-700">No media assets in this folder</h3>
+          <p className="text-xs text-slate-500 max-w-sm mx-auto">
+            Upload images for this subject to automatically dump them into the dedicated subject folder in Supabase Storage.
+          </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {assets.map(asset => (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          {filteredAssets.map(asset => (
             <div
               key={asset.id}
-              className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 overflow-hidden flex flex-col justify-between"
+              className="group bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs hover:shadow-md transition-all flex flex-col justify-between"
             >
-              <div className="h-48 m-3 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-center overflow-hidden relative group">
-                {asset.url ? (
-                  <img
-                    src={asset.url}
-                    alt={asset.name || 'Media Asset'}
-                    className="max-h-full max-w-full object-contain p-2 transition-transform duration-200 group-hover:scale-105"
-                  />
-                ) : (
-                  <div className="flex flex-col items-center justify-center text-slate-400 gap-1.5 p-4 text-center">
-                    <ImageIcon className="w-10 h-10 text-slate-300" />
-                    <span className="text-[11px] font-bold text-slate-500">Image Asset</span>
-                  </div>
-                )}
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide absolute bottom-2 left-2 bg-white/90 backdrop-blur-xs px-2 py-0.5 rounded border border-slate-200">
-                  {asset.label || 'FIGURE'}
+              {/* Image Preview */}
+              <div className="h-40 bg-slate-50 relative overflow-hidden flex items-center justify-center p-2">
+                <img
+                  src={asset.url}
+                  alt={asset.name}
+                  className="max-h-full max-w-full object-contain rounded-lg group-hover:scale-105 transition-transform duration-300"
+                />
+                <span className="absolute top-2 left-2 px-2 py-0.5 bg-slate-900/75 backdrop-blur-xs text-white text-[9px] font-extrabold uppercase rounded-md">
+                  {asset.label}
                 </span>
               </div>
-              <div className="px-5 pb-4 pt-1 text-xs flex items-center justify-between">
-                <div>
-                  <b className="text-slate-900 block font-bold truncate max-w-[180px]">
+
+              {/* Asset Meta & Actions */}
+              <div className="p-3 border-t border-slate-100 flex items-center justify-between gap-2 bg-white">
+                <div className="truncate">
+                  <p className="text-xs font-bold text-slate-900 truncate" title={asset.name}>
                     {asset.name}
-                  </b>
-                  <span className="text-slate-500 text-[11px] font-medium">
-                    Used {asset.usesCount} times
-                  </span>
+                  </p>
+                  <p className="text-[10px] text-slate-400 font-mono truncate">
+                    {asset.storagePath || 'bucket/question-assets'}
+                  </p>
                 </div>
-                <div className="flex items-center gap-1">
+
+                <div className="flex items-center gap-1 shrink-0">
                   <button
                     type="button"
                     onClick={() => handleOpenEdit(asset)}
-                    className="p-1.5 text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
-                    title="Edit Asset Details"
+                    className="p-1.5 text-slate-400 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-colors cursor-pointer"
+                    title="Edit Name"
                   >
-                    <Edit3 className="w-4 h-4" />
+                    <Edit3 className="w-3.5 h-3.5" />
                   </button>
                   <button
                     type="button"
                     onClick={() => handleDelete(asset.id)}
-                    className="p-1.5 text-slate-400 hover:text-red-600 transition-colors cursor-pointer"
+                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                     title="Delete Asset"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
@@ -216,12 +310,12 @@ export const MediaLibraryPage: React.FC = () => {
         </div>
       )}
 
-      {/* Upload Media Modal */}
+      {/* Upload Modal with Subject Dump Folder Selection */}
       {isUploadOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full p-6 space-y-5 animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 font-bold text-sm text-slate-900">
-              <span>Upload Image</span>
+              <span>Upload Subject Images & Diagrams</span>
               <button
                 type="button"
                 onClick={() => setIsUploadOpen(false)}
@@ -231,24 +325,54 @@ export const MediaLibraryPage: React.FC = () => {
               </button>
             </div>
 
-            {/* Hidden File Input */}
+            {/* Target Subject Bucket Folder */}
+            <div>
+              <label className="block text-[11px] font-extrabold uppercase text-slate-500 mb-1 tracking-wide">
+                Target Subject Dump Folder
+              </label>
+              <select
+                disabled={user.role === 'faculty' && user.assigned_subject !== 'All'}
+                value={uploadSubject}
+                onChange={e => setUploadSubject(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-xl text-slate-900 bg-white focus:outline-hidden focus:ring-2 focus:ring-teal-600 font-bold text-xs"
+              >
+                {subjects.length > 0 ? (
+                  subjects.map(s => (
+                    <option key={s.id || s.name} value={s.name}>
+                      📁 {s.name} (/question-assets/{s.name.toLowerCase()}/)
+                    </option>
+                  ))
+                ) : (
+                  <>
+                    <option value="Biology">📁 Biology (/question-assets/biology/)</option>
+                    <option value="Physics">📁 Physics (/question-assets/physics/)</option>
+                    <option value="Chemistry">📁 Chemistry (/question-assets/chemistry/)</option>
+                    <option value="Mathematics">📁 Mathematics (/question-assets/mathematics/)</option>
+                  </>
+                )}
+              </select>
+              <p className="text-[10px] text-slate-500 mt-1">
+                * All uploaded files will be stored in Supabase Storage under this specific subject folder.
+              </p>
+            </div>
+
+            {/* Drag & Drop Area */}
             <input
               type="file"
               ref={fileInputRef}
-              accept="image/*"
-              multiple
               onChange={e => handleFileSelect(e.target.files)}
+              multiple
+              accept="image/*"
               className="hidden"
             />
 
-            {/* Interactive Drag & Drop Box */}
             <div
-              onClick={() => fileInputRef.current?.click()}
               onDrop={handleDrop}
               onDragOver={handleDragOver}
-              className="py-10 px-6 border-2 border-dashed border-teal-300 hover:border-teal-500 rounded-2xl bg-teal-50/40 hover:bg-teal-50 flex flex-col items-center justify-center text-center space-y-3 cursor-pointer transition-all active:scale-[0.99]"
+              onClick={() => fileInputRef.current?.click()}
+              className="border-2 border-dashed border-slate-300 hover:border-teal-600 bg-slate-50/50 hover:bg-teal-50/20 rounded-2xl p-6 text-center space-y-2 cursor-pointer transition-all flex flex-col items-center justify-center"
             >
-              <Upload className="w-9 h-9 text-teal-600" />
+              <Upload className="w-8 h-8 text-teal-600" />
               <div>
                 <span className="text-xs font-bold text-slate-800 uppercase tracking-wide block">
                   DRAG & DROP IMAGE HERE
@@ -308,10 +432,10 @@ export const MediaLibraryPage: React.FC = () => {
                 className="px-5 py-2 bg-teal-700 hover:bg-teal-800 disabled:opacity-50 text-white font-bold rounded-lg shadow-sm hover:shadow-md transition-all active:scale-[0.98] cursor-pointer flex items-center gap-1.5"
               >
                 {isUploading ? (
-                  <span>Uploading...</span>
+                  <span>Uploading to {uploadSubject}...</span>
                 ) : (
                   <>
-                    <Check className="w-3.5 h-3.5" /> Upload to Media Library
+                    <Check className="w-3.5 h-3.5" /> Upload to {uploadSubject}
                   </>
                 )}
               </button>

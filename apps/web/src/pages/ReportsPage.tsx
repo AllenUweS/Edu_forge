@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Download, BarChart3, TrendingUp, Award } from 'lucide-react';
+import { Download, BarChart3, TrendingUp, Award, Layers, BookOpen, CheckCircle2 } from 'lucide-react';
 import { api } from '../services/api.js';
 import { Question, DocumentModel } from '@eduforge/shared';
-
 import { getUserProfile } from '../utils/userProfile.js';
 
 export const ReportsPage: React.FC = () => {
@@ -11,6 +10,7 @@ export const ReportsPage: React.FC = () => {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [documents, setDocuments] = useState<DocumentModel[]>([]);
   const [apiSubjects, setApiSubjects] = useState<any[]>([]);
+  const [chapters, setChapters] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -20,17 +20,19 @@ export const ReportsPage: React.FC = () => {
   const loadReportsData = async () => {
     try {
       setLoading(true);
-      const [docs, qList, subList] = await Promise.all([
+      const [docs, qList, subList, chList] = await Promise.all([
         api.getDocuments(),
         api.getQuestions(),
-        api.getSubjects()
+        api.getSubjects(),
+        api.getChapters()
       ]);
 
       let filteredDocs = docs || [];
       let filteredQs = qList || [];
       let filteredSubs = subList || [];
+      let filteredChs = chList || [];
 
-      if (user.assigned_subject !== 'All') {
+      if (user.role === 'faculty' && user.assigned_subject !== 'All') {
         const targetSubLower = user.assigned_subject.toLowerCase();
         filteredDocs = filteredDocs.filter(d => 
           (((d as any).subject || d.metadata?.subject || '') + ' ' + (d.title || '')).toLowerCase().includes(targetSubLower)
@@ -41,11 +43,15 @@ export const ReportsPage: React.FC = () => {
         filteredSubs = filteredSubs.filter(s => 
           (s.name || '').toLowerCase().includes(targetSubLower)
         );
+        filteredChs = filteredChs.filter(c => 
+          (c.subject || '').toLowerCase().includes(targetSubLower)
+        );
       }
 
       setDocuments(filteredDocs);
       setQuestions(filteredQs);
       setApiSubjects(filteredSubs);
+      setChapters(filteredChs);
     } catch (err) {
       console.error('Failed to load reports data:', err);
     } finally {
@@ -53,32 +59,63 @@ export const ReportsPage: React.FC = () => {
     }
   };
 
-  // Compute Real Question Counts & Subject Distribution
+  // Compute Real Question Counts & Subject Distribution dynamically from database
   const subjectCountMap: Record<string, number> = {};
-  let totalQuestionsCount = questions.length;
+  const totalQuestionsCount = questions.length;
 
   questions.forEach(q => {
-    const rawSub = (q.subject || 'Biology').trim();
+    const rawSub = (q.subject || 'General').trim();
     const formattedSub = rawSub.charAt(0).toUpperCase() + rawSub.slice(1);
     subjectCountMap[formattedSub] = (subjectCountMap[formattedSub] || 0) + 1;
   });
 
-  const allSubjects = ['Biology', 'Physics', 'Chemistry', 'Mathematics'];
-  const subjectColors: Record<string, string> = {
-    Biology: 'bg-emerald-500',
-    Physics: 'bg-[#007a8c]',
-    Chemistry: 'bg-amber-500',
-    Mathematics: 'bg-sky-500'
-  };
+  // Dynamic Subject Colors Palette
+  const defaultColors = [
+    'bg-emerald-500',
+    'bg-[#007a8c]',
+    'bg-amber-500',
+    'bg-indigo-500',
+    'bg-purple-500',
+    'bg-rose-500',
+    'bg-sky-500',
+    'bg-teal-500'
+  ];
 
-  const subjectPerformance = allSubjects.map(subName => {
-    const count = subjectCountMap[subName] || 0;
+  // Map over active live subjects from the database
+  const liveSubjectNames = apiSubjects.length > 0
+    ? apiSubjects.map(s => s.name)
+    : Object.keys(subjectCountMap);
+
+  const subjectPerformance = liveSubjectNames.map((subName, idx) => {
+    const subObj = apiSubjects.find(s => s.name.toLowerCase() === subName.toLowerCase());
+    const count = subObj?.questions !== undefined ? subObj.questions : (subjectCountMap[subName] || 0);
     const percent = totalQuestionsCount > 0 ? Math.round((count / totalQuestionsCount) * 100) : 0;
     return {
       name: subName,
+      code: subObj?.code || subName.substring(0, 3).toUpperCase(),
       count,
       percent,
-      color: subjectColors[subName] || 'bg-teal-600'
+      chaptersCount: subObj?.chapters || chapters.filter(c => (c.subject || '').toLowerCase() === subName.toLowerCase()).length,
+      color: defaultColors[idx % defaultColors.length]
+    };
+  });
+
+  // Compute Chapter Breakdown for active scope
+  const chapterPerformance = chapters.map(ch => {
+    const chId = String(ch.id || '').toLowerCase();
+    const chTitle = (ch.title || '').toLowerCase();
+    const count = questions.filter(q => {
+      const qChId = String((q as any).chapter_id || (q as any).chapterId || '').toLowerCase();
+      const qChapter = String((q as any).chapter || '').toLowerCase();
+      return qChId === chId || qChapter === chTitle || qChapter.includes(chTitle);
+    }).length;
+    const percent = totalQuestionsCount > 0 ? Math.round((count / totalQuestionsCount) * 100) : 0;
+    return {
+      title: ch.title,
+      code: ch.code || 'CH-01',
+      subject: ch.subject || 'General',
+      count: ch.count || count,
+      percent
     };
   });
 
@@ -120,95 +157,95 @@ export const ReportsPage: React.FC = () => {
       <!DOCTYPE html>
       <html>
         <head>
-          <title>EduForge — Performance & Analytics Report</title>
+          <meta charset="utf-8">
+          <title>EduForge Analytics & Subject Performance Report</title>
           <style>
-            body { font-family: system-ui, -apple-system, sans-serif; margin: 40px; color: #0f172a; }
-            .header { border-bottom: 2px solid #0f172a; padding-bottom: 16px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; }
-            .title { font-size: 24px; font-weight: bold; }
-            .subtitle { font-size: 12px; color: #64748b; }
-            .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
-            .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; }
-            .card-title { font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase; }
-            .card-value { font-size: 28px; font-weight: bold; margin-top: 4px; color: #0f172a; }
-            table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-            th, td { border: 1px solid #e2e8f0; padding: 10px 12px; text-align: left; font-size: 12px; }
-            th { background: #f1f5f9; font-weight: bold; }
-            .footer { margin-top: 40px; font-size: 10px; color: #94a3b8; text-align: center; }
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; color: #1e293b; }
+            h1 { font-size: 24px; font-weight: 800; color: #005d66; margin-bottom: 4px; }
+            p { font-size: 13px; color: #64748b; margin-top: 0; }
+            .header-info { display: flex; justify-content: space-between; border-bottom: 2px solid #e2e8f0; padding-bottom: 16px; margin-bottom: 24px; }
+            .badge { display: inline-block; padding: 4px 10px; font-size: 11px; font-weight: bold; background: #e6f4f5; color: #005d66; border-radius: 6px; }
+            .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 30px; }
+            .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; }
+            .card-title { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 6px; }
+            .card-val { font-size: 26px; font-weight: 900; color: #0f172a; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 13px; }
+            th, td { border: 1px solid #e2e8f0; padding: 10px 14px; text-align: left; }
+            th { background: #f1f5f9; font-weight: 700; color: #334155; }
+            .footer { margin-top: 40px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 16px; }
           </style>
         </head>
         <body>
-          <div class="header">
+          <div class="header-info">
             <div>
-              <div class="title">EduForge Performance & Analytics Report</div>
-              <div class="subtitle">Generated on ${new Date().toLocaleDateString()} · ${selectedRange}</div>
+              <h1>EduForge Analytics & Subject Performance Report</h1>
+              <p>Generated for: ${user.name} (${user.role === 'admin' ? 'Administrator' : `${user.assigned_subject} Faculty`}) · Generated on: ${new Date().toLocaleDateString()}</p>
             </div>
-            <div style="font-weight: bold; font-size: 14px;">EduForge MCQ Suite</div>
+            <div>
+              <span class="badge">Live Dynamic Backend Sync</span>
+            </div>
           </div>
 
           <div class="grid">
             <div class="card">
               <div class="card-title">Total Questions</div>
-              <div class="card-value">${totalQuestionsCount}</div>
+              <div class="card-val">${totalQuestionsCount}</div>
             </div>
             <div class="card">
               <div class="card-title">Generated Papers</div>
-              <div class="card-value">${documents.length}</div>
+              <div class="card-val">${documents.length}</div>
             </div>
             <div class="card">
-              <div class="card-title">Subjects</div>
-              <div class="card-value">${apiSubjects.length || 4}</div>
+              <div class="card-title">Active Subjects</div>
+              <div class="card-val">${apiSubjects.length}</div>
             </div>
             <div class="card">
-              <div class="card-title">Status</div>
-              <div class="card-value">Active</div>
+              <div class="card-title">Total Chapters</div>
+              <div class="card-val">${chapters.length}</div>
             </div>
           </div>
 
-          <h3>Subject-wise Distribution</h3>
+          <h3 style="font-size: 16px; font-weight: 800; color: #0f172a; margin-top: 24px;">Subject Distribution Breakdown</h3>
           <table>
             <thead>
               <tr>
-                <th>Subject</th>
+                <th>Subject Name</th>
+                <th>Subject Code</th>
                 <th>Question Count</th>
+                <th>Chapters</th>
                 <th>Distribution Share</th>
               </tr>
             </thead>
             <tbody>
-              ${subjectPerformance
-                .map(
-                  s => `
+              ${subjectPerformance.map(s => `
                 <tr>
                   <td><b>${s.name}</b></td>
+                  <td>${s.code}</td>
                   <td>${s.count.toLocaleString()}</td>
+                  <td>${s.chaptersCount}</td>
                   <td>${s.percent}%</td>
                 </tr>
-              `
-                )
-                .join('')}
+              `).join('')}
             </tbody>
           </table>
 
-          <h3>Difficulty Level Distribution</h3>
+          <h3 style="font-size: 16px; font-weight: 800; color: #0f172a; margin-top: 32px;">Difficulty Breakdown</h3>
           <table>
             <thead>
               <tr>
-                <th>Difficulty</th>
-                <th>Questions Count</th>
+                <th>Difficulty Tier</th>
+                <th>Total Questions</th>
                 <th>Percentage</th>
               </tr>
             </thead>
             <tbody>
-              ${difficultyBreakdown
-                .map(
-                  d => `
+              ${difficultyBreakdown.map(d => `
                 <tr>
                   <td><b>${d.level}</b></td>
                   <td>${d.count.toLocaleString()}</td>
                   <td>${d.percent}%</td>
                 </tr>
-              `
-                )
-                .join('')}
+              `).join('')}
             </tbody>
           </table>
 
@@ -240,7 +277,7 @@ export const ReportsPage: React.FC = () => {
             Analytics & Reports
           </h1>
           <p className="text-xs text-slate-500 font-medium mt-0.5">
-            Real backend statistics, question bank distribution, and test paper analytics.
+            Real dynamic backend statistics, live subject metrics, and test paper analytics.
           </p>
         </div>
 
@@ -300,58 +337,67 @@ export const ReportsPage: React.FC = () => {
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">Subjects</span>
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">Active Subjects</span>
             <span className="px-2 py-0.5 bg-teal-50 text-teal-700 rounded-full text-[10px] font-bold">
-              Active
+              Synced
             </span>
           </div>
           <div className="text-3xl font-black text-slate-900">
-            {loading ? '...' : (apiSubjects.length || 4)}
+            {loading ? '...' : apiSubjects.length}
           </div>
-          <p className="text-[11px] text-slate-400 font-medium">Biology, Physics, Chem, Math</p>
+          <p className="text-[11px] text-slate-400 font-medium truncate">
+            {apiSubjects.map(s => s.name).join(', ') || 'No active subjects'}
+          </p>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">System Health</span>
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">Active Chapters</span>
             <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-bold">
-              Optimal
+              Synced
             </span>
           </div>
-          <div className="text-3xl font-black text-slate-900">100%</div>
+          <div className="text-3xl font-black text-slate-900">
+            {loading ? '...' : chapters.length}
+          </div>
           <p className="text-[11px] text-slate-400 font-medium">Synced with backend DB</p>
         </div>
       </div>
 
       {/* GRAPHICAL REPRESENTATION CHARTS */}
-      <div className={user.assigned_subject !== 'All' ? 'grid grid-cols-1 gap-6' : 'grid grid-cols-1 lg:grid-cols-2 gap-6'}>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
-        {/* Chart 1: Real Subject Distribution Share (Admin Only) */}
-        {user.assigned_subject === 'All' && (
-          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div>
-                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4 text-teal-700" /> Subject Question Share
-                </h3>
-                <p className="text-[11px] text-slate-500 font-medium">Real distribution share calculated from Question Bank</p>
-              </div>
-              <span className="text-[10px] font-bold text-teal-700 bg-teal-50 border border-teal-200 px-2.5 py-1 rounded-md">
-                Synced Real Data
-              </span>
+        {/* Chart 1: Dynamic Subject / Chapter Distribution Share */}
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-6 space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div>
+              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 text-teal-700" /> {user.role === 'admin' ? 'Subject Question Share' : `${user.assigned_subject} Chapter Share`}
+              </h3>
+              <p className="text-[11px] text-slate-500 font-medium">
+                Live distribution share calculated from Question Bank
+              </p>
             </div>
+            <span className="text-[10px] font-bold text-teal-700 bg-teal-50 border border-teal-200 px-2.5 py-1 rounded-md">
+              Live Sync
+            </span>
+          </div>
 
-            <div className="space-y-4 pt-2">
-              {loading ? (
-                <div className="text-xs text-slate-400 py-6 text-center">Loading subject metrics...</div>
-              ) : (
+          <div className="space-y-4 pt-2">
+            {loading ? (
+              <div className="text-xs text-slate-400 py-6 text-center">Loading subject metrics...</div>
+            ) : user.role === 'admin' ? (
+              subjectPerformance.length > 0 ? (
                 subjectPerformance.map(s => (
                   <div key={s.name} className="space-y-1.5">
                     <div className="flex justify-between text-xs font-bold text-slate-800">
-                      <span>{s.name}</span>
-                      <span className="font-mono text-teal-800">{s.count} Questions ({s.percent}%)</span>
+                      <span className="flex items-center gap-2">
+                        <span className={`w-2.5 h-2.5 rounded-full ${s.color}`} />
+                        {s.name} ({s.code})
+                      </span>
+                      <span>{s.count} Qs ({s.percent}%)</span>
                     </div>
-                    <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
                       <div
                         className={`h-full ${s.color} rounded-full transition-all duration-500`}
                         style={{ width: `${s.percent}%` }}
@@ -359,36 +405,63 @@ export const ReportsPage: React.FC = () => {
                     </div>
                   </div>
                 ))
-              )}
-            </div>
+              ) : (
+                <div className="text-xs text-slate-400 py-4 text-center">No subjects created yet.</div>
+              )
+            ) : (
+              chapterPerformance.length > 0 ? (
+                chapterPerformance.map(ch => (
+                  <div key={ch.title} className="space-y-1.5">
+                    <div className="flex justify-between text-xs font-bold text-slate-800">
+                      <span className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-teal-600" />
+                        {ch.title}
+                      </span>
+                      <span>{ch.count} Qs ({ch.percent}%)</span>
+                    </div>
+                    <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-teal-600 rounded-full transition-all duration-500"
+                        style={{ width: `${ch.percent}%` }}
+                      />
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-xs text-slate-400 py-4 text-center">No chapters found for {user.assigned_subject}.</div>
+              )
+            )}
           </div>
-        )}
+        </div>
 
-        {/* Chart 2: Difficulty Distribution Graph (Extends Horizontally for Faculty) */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-6 space-y-4 w-full">
+        {/* Chart 2: Real Difficulty Breakdown */}
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-6 space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div>
               <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                <Award className="w-4 h-4 text-amber-500" /> Question Bank Difficulty Balance
+                <TrendingUp className="w-4 h-4 text-teal-700" /> Difficulty Level Breakdown
               </h3>
-              <p className="text-[11px] text-slate-500 font-medium">Breakdown of Easy, Medium, and Hard questions in DB</p>
+              <p className="text-[11px] text-slate-500 font-medium">Easy, Medium, and Hard question balance</p>
             </div>
-            <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-md">
-              Live Balance
+            <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded-md">
+              AI Balanced
             </span>
           </div>
 
           <div className="space-y-4 pt-2">
             {loading ? (
-              <div className="text-xs text-slate-400 py-6 text-center">Loading difficulty balance...</div>
+              <div className="text-xs text-slate-400 py-6 text-center">Loading difficulty breakdown...</div>
             ) : (
               difficultyBreakdown.map(d => (
                 <div key={d.level} className="space-y-1.5">
                   <div className="flex justify-between text-xs font-bold text-slate-800">
-                    <span>{d.level} Difficulty</span>
-                    <span className="font-mono text-slate-900">{d.count} Questions ({d.percent}%)</span>
+                    <span className="flex items-center gap-2">
+                      <span className={`w-2.5 h-2.5 rounded-full ${d.color}`} />
+                      {d.level}
+                    </span>
+                    <span>{d.count} Qs ({d.percent}%)</span>
                   </div>
-                  <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
                     <div
                       className={`h-full ${d.color} rounded-full transition-all duration-500`}
                       style={{ width: `${d.percent}%` }}
@@ -399,9 +472,64 @@ export const ReportsPage: React.FC = () => {
             )}
           </div>
         </div>
-
       </div>
 
+      {/* Live Subject Summary Table */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <div className="flex items-center gap-2">
+            <Layers className="w-4 h-4 text-teal-700" />
+            <h3 className="text-xs font-black text-slate-900 uppercase tracking-wide">
+              Live Subject & Chapter Directory
+            </h3>
+          </div>
+          <span className="text-[11px] text-slate-500 font-semibold">
+            {apiSubjects.length} Subject{apiSubjects.length !== 1 ? 's' : ''} Configured
+          </span>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
+                <th className="py-3 px-6">Subject</th>
+                <th className="py-3 px-6">Subject Code</th>
+                <th className="py-3 px-6">Chapters</th>
+                <th className="py-3 px-6">Question Count</th>
+                <th className="py-3 px-6">Share</th>
+                <th className="py-3 px-6">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-slate-800 font-semibold">
+              {subjectPerformance.length > 0 ? (
+                subjectPerformance.map(s => (
+                  <tr key={s.name} className="hover:bg-slate-50/60 transition-colors">
+                    <td className="py-3.5 px-6 font-bold text-slate-900 flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${s.color}`} />
+                      {s.name}
+                    </td>
+                    <td className="py-3.5 px-6 font-mono text-[11px] text-slate-500">{s.code}</td>
+                    <td className="py-3.5 px-6">{s.chaptersCount} Chapter{s.chaptersCount !== 1 ? 's' : ''}</td>
+                    <td className="py-3.5 px-6 font-bold text-teal-800">{s.count} Questions</td>
+                    <td className="py-3.5 px-6">{s.percent}%</td>
+                    <td className="py-3.5 px-6">
+                      <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <CheckCircle2 className="w-3 h-3" /> Live Synced
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={6} className="py-6 text-center text-slate-400 font-medium">
+                    No subjects configured yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 };
