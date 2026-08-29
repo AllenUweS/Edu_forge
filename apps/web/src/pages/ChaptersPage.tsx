@@ -172,25 +172,25 @@ export const ChaptersPage: React.FC<ChaptersPageProps> = ({
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-8 py-8 space-y-6 font-sans">
+    <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4 sm:py-8 space-y-4 sm:space-y-6 font-sans animate-in fade-in slide-in-from-bottom-2 duration-300">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Chapters</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Chapters</h1>
           <p className="text-xs text-slate-500 font-medium mt-0.5">Subject → Chapter → Questions ({displayChapters.length} active)</p>
         </div>
         <button
           type="button"
           onClick={handleOpenAdd}
-          className="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 shadow-sm hover:shadow-md transition-all active:scale-[0.98] cursor-pointer"
+          className="px-3.5 sm:px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 shadow-sm hover:shadow-md transition-all active:scale-[0.98] cursor-pointer self-start sm:self-auto"
         >
           <Plus className="w-3.5 h-3.5" /> + Add Chapter
         </button>
       </div>
 
       {/* Wireframe Panel Table */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
-        <table className="w-full text-left text-xs">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-x-auto">
+        <table className="w-full text-left text-xs min-w-[540px]">
           <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold">
             <tr>
               <th className="px-5 py-3">#</th>

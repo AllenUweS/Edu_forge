@@ -267,13 +267,21 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
     try {
       if (initialQuestion?.id) {
         await api.updateQuestion(initialQuestion.id, questionData as Question);
+        alert('Question updated successfully!');
       } else {
-        await api.createQuestion(questionData);
+        const res: any = await api.createQuestion(questionData);
+        if (res?.error) {
+          alert(res.error);
+          return false;
+        }
+        alert('Question saved to Supabase Question Bank successfully!');
       }
-      alert('Question saved to Supabase Question Bank!');
-    } catch (err) {
+      return true;
+    } catch (err: any) {
       console.error('Save question error:', err);
-      alert('Question saved to Question Bank!');
+      const errMsg = err?.response?.data?.error || err?.message || 'Error saving question.';
+      alert(errMsg);
+      return false;
     }
   };
 
@@ -290,9 +298,11 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
   };
 
   const handlePublish = async () => {
-    await handleSaveDraft();
-    resetFormToBlank();
-    onBackToQuestionBank();
+    const success = await handleSaveDraft();
+    if (success) {
+      resetFormToBlank();
+      onBackToQuestionBank();
+    }
   };
 
   const previewQuestionObj: Question = {
@@ -316,11 +326,11 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-8 py-8 space-y-6 font-sans">
+    <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4 sm:py-8 space-y-4 sm:space-y-6 font-sans">
       {/* Screen Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
             {initialQuestion?.id ? 'Edit Question' : 'Create Question'}
           </h1>
           <p className="text-xs text-slate-500 font-medium mt-0.5">

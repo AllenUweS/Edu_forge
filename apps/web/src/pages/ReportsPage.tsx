@@ -269,11 +269,11 @@ export const ReportsPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-8 py-8 space-y-6 font-sans animate-in fade-in slide-in-from-bottom-2 duration-300">
+    <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4 sm:py-8 space-y-4 sm:space-y-6 font-sans animate-in fade-in slide-in-from-bottom-2 duration-300">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight font-sans">
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight font-sans">
             Analytics & Reports
           </h1>
           <p className="text-xs text-slate-500 font-medium mt-0.5">

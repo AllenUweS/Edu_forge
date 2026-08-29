@@ -1,9 +1,8 @@
 import React from 'react';
 import {
   LayoutDashboard, Database, BookOpen, Layers,
-  FileText, ClipboardCheck, BarChart3, Image, Settings, LogOut
+  FileText, ClipboardCheck, BarChart3, Image, Settings, LogOut, X
 } from 'lucide-react';
-
 import { getUserProfile } from '../utils/userProfile.js';
 
 export type PageView =
@@ -26,6 +25,8 @@ interface SidebarProps {
   currentPage: PageView;
   setCurrentPage: (page: PageView) => void;
   onLogout?: () => void;
+  isOpenMobile?: boolean;
+  onCloseMobile?: () => void;
 }
 
 interface NavItem {
@@ -34,7 +35,13 @@ interface NavItem {
   icon: React.ElementType;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, onLogout }) => {
+export const Sidebar: React.FC<SidebarProps> = ({
+  currentPage,
+  setCurrentPage,
+  onLogout,
+  isOpenMobile = false,
+  onCloseMobile
+}) => {
   const user = getUserProfile();
 
   const group1: NavItem[] = [
@@ -56,6 +63,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, o
     { id: 'settings', label: 'Settings', icon: Settings }
   ];
 
+  const handleSelectNav = (id: PageView) => {
+    setCurrentPage(id);
+    if (onCloseMobile) onCloseMobile();
+  };
+
   const renderNavGroup = (items: NavItem[]) => (
     <ul className="space-y-1">
       {items.map(item => {
@@ -65,7 +77,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, o
           <li key={item.id}>
             <button
               type="button"
-              onClick={() => setCurrentPage(item.id)}
+              onClick={() => handleSelectNav(item.id)}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all text-left cursor-pointer active:scale-[0.98] ${
                 isActive
                   ? 'bg-[#e6f4f6] text-[#005d66] font-extrabold shadow-2xs border border-teal-100/60'
@@ -81,42 +93,45 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, o
     </ul>
   );
 
-  return (
-    <aside className="w-64 bg-white border-r border-slate-200/80 flex flex-col shrink-0 h-screen sticky top-0 select-none shadow-xs z-20">
+  const sidebarContent = (
+    <div className="flex flex-col h-full bg-white select-none">
       {/* Brand Header */}
-      <div className="p-5 border-b border-slate-100 flex flex-col gap-0.5">
-        <div className="flex items-center gap-2.5">
-          <img
-            src="/logo.png"
-            alt="EduForge Logo"
-            className="w-6 h-6 object-contain"
-          />
-          <h1 className="font-black text-sm tracking-tight text-[#005d66] uppercase font-sans">
-            EduForge
-          </h1>
+      <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-2.5">
+            <img
+              src="/logo.png"
+              alt="EduForge Logo"
+              className="w-6 h-6 object-contain"
+            />
+            <h1 className="font-black text-sm tracking-tight text-[#005d66] uppercase font-sans">
+              EduForge
+            </h1>
+          </div>
+          <span className="text-[10px] sm:text-[11px] text-teal-700 font-extrabold pl-8">
+            {user.assigned_subject === 'All' ? 'Admin Portal' : user.assigned_subject === 'None' ? 'Unassigned Guest Mode' : `${user.assigned_subject} Faculty Portal`}
+          </span>
         </div>
-        <span className="text-[11px] text-teal-700 font-extrabold pl-8">
-          {user.assigned_subject === 'All' ? 'Admin Portal' : user.assigned_subject === 'None' ? 'Unassigned Guest Mode' : `${user.assigned_subject} Faculty Portal`}
-        </span>
+
+        {/* Mobile Close Button */}
+        {onCloseMobile && (
+          <button
+            type="button"
+            onClick={onCloseMobile}
+            className="md:hidden p-1.5 text-slate-400 hover:text-slate-700 rounded-lg"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
       </div>
 
       {/* Navigation Sections */}
-      <div className="flex-1 overflow-y-auto px-3.5 py-4 space-y-5">
-        <div>
-          {renderNavGroup(group1)}
-        </div>
-
-        <hr className="border-t border-slate-100 my-2.5" />
-
-        <div>
-          {renderNavGroup(group2)}
-        </div>
-
-        <hr className="border-t border-slate-100 my-2.5" />
-
-        <div>
-          {renderNavGroup(group3)}
-        </div>
+      <div className="flex-1 overflow-y-auto px-3.5 py-4 space-y-4">
+        <div>{renderNavGroup(group1)}</div>
+        <hr className="border-t border-slate-100 my-2" />
+        <div>{renderNavGroup(group2)}</div>
+        <hr className="border-t border-slate-100 my-2" />
+        <div>{renderNavGroup(group3)}</div>
       </div>
 
       {/* Sidebar Footer Logout */}
@@ -124,7 +139,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, o
         <div className="p-3 border-t border-slate-100">
           <button
             type="button"
-            onClick={onLogout}
+            onClick={() => {
+              if (onCloseMobile) onCloseMobile();
+              onLogout();
+            }}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-red-600 hover:bg-red-50 transition-all cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
@@ -132,6 +150,28 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, o
           </button>
         </div>
       )}
-    </aside>
+    </div>
+  );
+
+  return (
+    <>
+      {/* Desktop Persistent Sidebar */}
+      <aside className="hidden md:flex flex-col w-64 bg-white border-r border-slate-200/80 shrink-0 h-screen sticky top-0 shadow-xs z-20">
+        {sidebarContent}
+      </aside>
+
+      {/* Mobile Drawer Backdrop & Drawer */}
+      {isOpenMobile && (
+        <div className="fixed inset-0 z-50 md:hidden flex">
+          <div
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity animate-in fade-in"
+            onClick={onCloseMobile}
+          />
+          <aside className="relative w-72 max-w-[80vw] bg-white h-full shadow-2xl flex flex-col z-10 animate-in slide-in-from-left duration-200">
+            {sidebarContent}
+          </aside>
+        </div>
+      )}
+    </>
   );
 };

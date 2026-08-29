@@ -40,7 +40,13 @@ questionBankRouter.get('/', async (req: Request, res: Response, next: NextFuncti
       year: q.year,
       source: q.source,
       subject: q.subjects?.name || 'General',
+      subject_name: q.subjects?.name || 'General',
+      subjectId: q.subject_id,
+      subject_id: q.subject_id,
       chapter: q.chapters?.title || 'General',
+      chapter_name: q.chapters?.title || 'General',
+      chapterId: q.chapter_id,
+      chapter_id: q.chapter_id,
       rawText: q.raw_text || '',
       options: (q.question_options || []).map((opt: any) => ({
         id: opt.id,
@@ -54,9 +60,27 @@ questionBankRouter.get('/', async (req: Request, res: Response, next: NextFuncti
     }));
 
     let filtered = formatted;
-    const userSubject = (req.query.userSubject || req.query.subject || req.headers['x-user-subject'] || 'All') as string;
+    const userSubject = (req.query.userSubject || req.headers['x-user-subject'] || 'All') as string;
     if (userSubject && userSubject !== 'All') {
       filtered = filtered.filter((q: any) => (q.subject || '').toLowerCase() === userSubject.toLowerCase());
+    }
+
+    if (subject && subject !== 'all') {
+      const subStr = String(subject).toLowerCase();
+      filtered = filtered.filter((q: any) =>
+        (q.subject || '').toLowerCase() === subStr ||
+        (q.subject_name || '').toLowerCase() === subStr ||
+        String(q.subject_id || '') === String(subject)
+      );
+    }
+
+    if (chapter && chapter !== 'all') {
+      const chStr = String(chapter).toLowerCase();
+      filtered = filtered.filter((q: any) =>
+        (q.chapter || '').toLowerCase() === chStr ||
+        (q.chapter_name || '').toLowerCase() === chStr ||
+        String(q.chapter_id || '') === String(chapter)
+      );
     }
 
     res.json({ success: true, data: filtered });

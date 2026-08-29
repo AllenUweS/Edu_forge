@@ -280,6 +280,37 @@ questionsRouter.post('/', async (req: Request, res: Response, next: NextFunction
     const questionCode = body.questionCode || body.id || `Q-${Date.now()}`;
     const rawText = body.rawText || (Array.isArray(body.content) ? body.content.map((b: any) => b.text || b.html || '').join(' ') : '');
 
+    // Duplicate question verification:
+    // Check if a question with the identical statement already exists in the chapter/subject
+    const cleanRaw = rawText.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+    if (cleanRaw.length > 5) {
+      let dupQuery = supabase
+        .from('questions')
+        .select('id, question_code, raw_text');
+
+      if (chapter_id) {
+        dupQuery = dupQuery.eq('chapter_id', chapter_id);
+      } else if (subject_id) {
+        dupQuery = dupQuery.eq('subject_id', subject_id);
+      }
+
+      const { data: existingList } = await dupQuery.limit(300);
+
+      const exactDup = (existingList || []).find((eq: any) => {
+        const eqClean = (eq.raw_text || '').replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+        return eqClean === cleanRaw;
+      });
+
+      if (exactDup) {
+        return res.status(409).json({
+          success: false,
+          error: `Duplicate question detected! This question already exists in the question bank under code "${exactDup.question_code}". Duplicate questions are not allowed.`,
+          code: 'DUPLICATE_QUESTION',
+          existingCode: exactDup.question_code
+        });
+      }
+    }
+
     const insertPayload: any = {
       question_code: questionCode,
       subject_id,

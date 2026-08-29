@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, User, LogOut, Shield, X, Check, Mail } from 'lucide-react';
+import { ChevronDown, User, LogOut, Shield, X, Check, Mail, Menu } from 'lucide-react';
 import { PageView } from './Sidebar.js';
 import { getUserProfile } from '../utils/userProfile.js';
 
 interface HeaderProps {
   currentPage: PageView;
   onLogout?: () => void;
+  onToggleMobileSidebar?: () => void;
 }
 
 const pageTitles: Record<PageView, string> = {
@@ -25,7 +26,7 @@ const pageTitles: Record<PageView, string> = {
   science: 'Science Library'
 };
 
-export const Header: React.FC<HeaderProps> = ({ currentPage, onLogout }) => {
+export const Header: React.FC<HeaderProps> = ({ currentPage, onLogout, onToggleMobileSidebar }) => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
@@ -57,9 +58,19 @@ export const Header: React.FC<HeaderProps> = ({ currentPage, onLogout }) => {
   };
 
   return (
-    <header className="h-14 bg-white border-b border-slate-200/80 px-8 flex items-center justify-between sticky top-0 z-30 shadow-2xs">
-      {/* Current Page Title / Breadcrumb */}
-      <div className="flex items-center gap-2">
+    <header className="h-14 bg-white border-b border-slate-200/80 px-4 sm:px-8 flex items-center justify-between sticky top-0 z-30 shadow-2xs">
+      {/* Current Page Title / Breadcrumb & Mobile Menu Toggle */}
+      <div className="flex items-center gap-2.5">
+        {onToggleMobileSidebar && (
+          <button
+            type="button"
+            onClick={onToggleMobileSidebar}
+            className="md:hidden p-1.5 -ml-1 text-slate-600 hover:text-teal-800 hover:bg-slate-100 rounded-lg cursor-pointer"
+            aria-label="Open Navigation Menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        )}
         <h2 className="text-xs font-extrabold text-[#005d66]">
           {pageTitles[currentPage] || 'Dashboard'}
         </h2>

@@ -260,11 +260,11 @@ export const QuestionBankPage: React.FC<QuestionBankPageProps> = ({
   });
 
   return (
-    <div className="max-w-7xl mx-auto px-8 py-8 space-y-6 font-sans animate-in fade-in slide-in-from-bottom-2 duration-300">
+    <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4 sm:py-8 space-y-4 sm:space-y-6 font-sans animate-in fade-in slide-in-from-bottom-2 duration-300">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-4">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight font-sans">
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight font-sans">
             Question Bank
           </h1>
           <p className="text-xs text-slate-500 font-medium mt-0.5">
@@ -272,12 +272,12 @@ export const QuestionBankPage: React.FC<QuestionBankPageProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {selectedIds.length > 0 && (
             <button
               type="button"
               onClick={handleBulkDelete}
-              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 shadow-sm hover:shadow-md transition-all active:scale-[0.98] cursor-pointer"
+              className="px-3.5 sm:px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 shadow-sm hover:shadow-md transition-all active:scale-[0.98] cursor-pointer"
             >
               <Trash2 className="w-3.5 h-3.5" /> Delete Selected ({selectedIds.length})
             </button>
@@ -286,7 +286,7 @@ export const QuestionBankPage: React.FC<QuestionBankPageProps> = ({
           <button
             type="button"
             onClick={() => onOpenCreateQuestion && onOpenCreateQuestion()}
-            className="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 shadow-sm hover:shadow-md transition-all active:scale-[0.98] cursor-pointer"
+            className="px-3.5 sm:px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 shadow-sm hover:shadow-md transition-all active:scale-[0.98] cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" /> + Create Question
           </button>
@@ -295,8 +295,8 @@ export const QuestionBankPage: React.FC<QuestionBankPageProps> = ({
 
       {/* Chapter Filter Active Banner */}
       {selectedChapter && selectedChapter.title && (
-        <div className="bg-teal-50/90 border border-teal-200 rounded-xl p-3.5 flex items-center justify-between text-xs font-medium text-teal-900 shadow-2xs">
-          <div className="flex items-center gap-2">
+        <div className="bg-teal-50/90 border border-teal-200 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs font-medium text-teal-900 shadow-2xs">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="font-bold text-teal-950">Active Chapter Banner:</span>
             <span className="px-2.5 py-0.5 bg-teal-700 text-white rounded-md font-mono font-bold text-[11px]">
               {selectedChapter.title}
@@ -312,7 +312,7 @@ export const QuestionBankPage: React.FC<QuestionBankPageProps> = ({
                 setSelectedChapterFilter('all');
                 if (onClearChapterFilter) onClearChapterFilter();
               }}
-              className="px-3 py-1 bg-white hover:bg-teal-100 border border-teal-300 text-teal-800 font-bold rounded-md transition-colors cursor-pointer text-xs"
+              className="px-3 py-1 bg-white hover:bg-teal-100 border border-teal-300 text-teal-800 font-bold rounded-md transition-colors cursor-pointer text-xs self-start sm:self-auto"
             >
               Clear Banner Filter
             </button>
@@ -321,8 +321,8 @@ export const QuestionBankPage: React.FC<QuestionBankPageProps> = ({
       )}
 
       {/* Search & Comprehensive Filter Row */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+      <div className="bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 sm:gap-3">
           {/* Instant Search Box */}
           <div className="relative lg:col-span-2">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
@@ -387,9 +387,9 @@ export const QuestionBankPage: React.FC<QuestionBankPageProps> = ({
 
         {/* Filter Summary & Quick Reset */}
         {(selectedSubject !== 'all' || selectedChapterFilter !== 'all' || difficultyFilter !== 'all' || search.trim()) && (
-          <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-xs font-semibold text-slate-500">
-            <div className="flex items-center gap-2">
-              <Filter className="w-3.5 h-3.5 text-teal-600" />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 border-t border-slate-100 text-xs font-semibold text-slate-500">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Filter className="w-3.5 h-3.5 text-teal-600 shrink-0" />
               <span>
                 Filters applied: 
                 {selectedSubject !== 'all' && <b className="text-teal-700 ml-1">Subject: {selectedSubject}</b>}
@@ -408,7 +408,7 @@ export const QuestionBankPage: React.FC<QuestionBankPageProps> = ({
                 setSearch('');
                 if (onClearChapterFilter) onClearChapterFilter();
               }}
-              className="text-teal-700 hover:text-teal-900 hover:underline cursor-pointer"
+              className="text-teal-700 hover:text-teal-900 hover:underline cursor-pointer self-start sm:self-auto"
             >
               Reset All Filters
             </button>
@@ -416,8 +416,8 @@ export const QuestionBankPage: React.FC<QuestionBankPageProps> = ({
         )}
 
         {/* Questions Table */}
-        <div className="bg-white rounded-xl border border-slate-200/80 overflow-hidden shadow-2xs">
-          <table className="w-full text-left text-xs">
+        <div className="bg-white rounded-xl border border-slate-200/80 overflow-x-auto shadow-2xs">
+          <table className="w-full text-left text-xs min-w-[650px]">
             <thead className="bg-slate-50/80 border-b border-slate-200/80 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
               <tr>
                 <th className="px-3 py-3.5 w-10 text-center">

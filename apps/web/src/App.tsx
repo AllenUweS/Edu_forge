@@ -339,6 +339,8 @@ const AppContent: React.FC = () => {
     setIsAuthenticated(true);
   };
 
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
   if (!isAuthenticated) {
     return <LoginPage onLoginSuccess={handleLoginSuccess} />;
   }
@@ -357,17 +359,23 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-slate-50 text-slate-900 font-sans overflow-hidden">
-      {/* Left Sidebar Navigation */}
+      {/* Left Sidebar Navigation (Desktop Persistent + Mobile Drawer) */}
       <Sidebar
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
         onLogout={handleLogout}
+        isOpenMobile={isMobileSidebarOpen}
+        onCloseMobile={() => setIsMobileSidebarOpen(false)}
       />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
         {/* Top Header Bar */}
-        <Header currentPage={currentPage} onLogout={handleLogout} />
+        <Header
+          currentPage={currentPage}
+          onLogout={handleLogout}
+          onToggleMobileSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+        />
 
         {/* Dynamic Page Views */}
         <main className="flex-1 bg-slate-50 pb-12">
