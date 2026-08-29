@@ -9,7 +9,7 @@ import { MathTextRenderer } from '../equation/MathTextRenderer.js';
 interface QuestionBankPageProps {
   onBackToDashboard?: () => void;
   onOpenCreateQuestion?: (q?: Question) => void;
-  selectedChapter?: { id?: string; title?: string } | null;
+  selectedChapter?: { id?: string; title?: string; subject?: string } | null;
   onClearChapterFilter?: () => void;
 }
 
@@ -49,8 +49,15 @@ export const QuestionBankPage: React.FC<QuestionBankPageProps> = ({
   }, [difficultyFilter]);
 
   useEffect(() => {
-    if (selectedChapter && selectedChapter.id) {
-      setSelectedChapterFilter(selectedChapter.id);
+    if (selectedChapter) {
+      if (selectedChapter.id) {
+        setSelectedChapterFilter(selectedChapter.id);
+      } else if (selectedChapter.title) {
+        setSelectedChapterFilter(selectedChapter.title);
+      }
+      if (selectedChapter.subject) {
+        setSelectedSubject(selectedChapter.subject);
+      }
     }
   }, [selectedChapter]);
 
@@ -207,38 +214,32 @@ export const QuestionBankPage: React.FC<QuestionBankPageProps> = ({
       }
     }
 
-    // 3. Chapter Filter Dropdown
-    if (selectedChapterFilter !== 'all') {
-      const targetCh = chapters.find(c => c.id === selectedChapterFilter || c.title === selectedChapterFilter);
-      const chTitle = targetCh ? targetCh.title.toLowerCase() : selectedChapterFilter.toLowerCase();
-      const chId = selectedChapterFilter.toLowerCase();
+    // 3. Chapter Filter Dropdown or Active Selected Chapter
+    const activeChapterId = selectedChapterFilter !== 'all' ? selectedChapterFilter : (selectedChapter?.id || '');
+    const activeChapterTitle = selectedChapterFilter !== 'all' ? '' : (selectedChapter?.title || '');
+
+    if (activeChapterId || activeChapterTitle) {
+      const targetCh = chapters.find(c => c.id === activeChapterId || c.title === activeChapterId || c.title === activeChapterTitle);
+      const chTitle = (targetCh?.title || activeChapterTitle || activeChapterId).toLowerCase();
+      const chId = (targetCh?.id || activeChapterId).toLowerCase();
       const qChId = String((q as any).chapter_id || (q as any).chapterId || '').toLowerCase();
-      const qChapter = String((q as any).chapter || (q as any).topic || '').toLowerCase();
+      const qChapter = String((q as any).chapter || (q as any).chapter_name || (q as any).topic || '').toLowerCase();
       const code = formatQuestionCode(q).toLowerCase();
 
+      let codeMatches = false;
+      if (chTitle.includes('living world') && (code.includes('liv') || code.includes('01'))) codeMatches = true;
+      if (chTitle.includes('animal kingdom') && (code.includes('ani') || code.includes('02'))) codeMatches = true;
+      if (chTitle.includes('thermodynamics') && (code.includes('the') || code.includes('02'))) codeMatches = true;
+      if (chTitle.includes('basic concepts') && (code.includes('sbc') || code.includes('01'))) codeMatches = true;
+      if (chTitle.includes('motion in a plane') && (code.includes('mip') || code.includes('02'))) codeMatches = true;
+      if (chTitle.includes('units and measurements') && (code.includes('uam') || code.includes('01'))) codeMatches = true;
+
       const matches =
-        qChId === chId ||
-        qChapter === chTitle ||
-        qChapter.includes(chTitle) ||
-        code.includes(chTitle.substring(0, 3));
+        (chId && qChId && (qChId === chId || qChId.includes(chId) || chId.includes(qChId))) ||
+        (chTitle && qChapter && (qChapter === chTitle || qChapter.includes(chTitle) || chTitle.includes(qChapter))) ||
+        codeMatches;
 
       if (!matches) return false;
-    }
-
-    // 4. External selectedChapter prop if active
-    if (selectedChapter && selectedChapter.title && selectedChapterFilter === 'all') {
-      const chTitle = selectedChapter.title.toLowerCase();
-      const chId = (selectedChapter.id || '').toLowerCase();
-      const qTopic = ((q as any).topic || '').toLowerCase();
-      const qChapter = ((q as any).chapter || '').toLowerCase();
-      const qChId = String((q as any).chapter_id || (q as any).chapterId || '').toLowerCase();
-
-      const matchesChapter =
-        qChId === chId ||
-        qTopic.includes(chTitle) ||
-        qChapter.includes(chTitle);
-
-      if (!matchesChapter) return false;
     }
 
     // 5. Search Text Filter

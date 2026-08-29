@@ -57,7 +57,13 @@ questionsRouter.get('/', async (req: Request, res: Response, next: NextFunction)
         source: q.source,
         rawText: q.raw_text || '',
         subject: q.subjects?.name || 'General',
+        subject_name: q.subjects?.name || 'General',
+        subjectId: q.subject_id,
+        subject_id: q.subject_id,
         chapter: q.chapters?.title || 'General',
+        chapter_name: q.chapters?.title || 'General',
+        chapterId: q.chapter_id,
+        chapter_id: q.chapter_id,
         options,
         createdAt: q.created_at,
         updatedAt: q.updated_at
