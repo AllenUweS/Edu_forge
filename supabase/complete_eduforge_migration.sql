@@ -174,6 +174,7 @@ CREATE TABLE IF NOT EXISTS public.app_settings (
 -- 15. Create User Profiles Table
 CREATE TABLE IF NOT EXISTS public.user_profiles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID,
     email TEXT NOT NULL UNIQUE,
     name TEXT NOT NULL,
     role TEXT NOT NULL DEFAULT 'faculty',
@@ -181,6 +182,10 @@ CREATE TABLE IF NOT EXISTS public.user_profiles (
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- Remove foreign key blocking constraint if table existed previously
+ALTER TABLE IF EXISTS public.user_profiles DROP CONSTRAINT IF EXISTS user_profiles_id_fkey;
+ALTER TABLE IF EXISTS public.user_profiles ALTER COLUMN id SET DEFAULT gen_random_uuid();
 
 -- =============================================================================
 -- Configure Permissions & Row Level Security (RLS)
@@ -332,12 +337,12 @@ INSERT INTO public.question_options (id, question_id, option_key, content, raw_t
 ON CONFLICT (id) DO NOTHING;
 
 -- Upsert Standard User Profiles
-INSERT INTO public.user_profiles (email, name, role, assigned_subject) VALUES
-  ('admin@eduforge.com', 'System Admin', 'admin', 'All'),
-  ('physics@eduforge.com', 'Physics Faculty', 'faculty', 'Physics'),
-  ('chemistry@eduforge.com', 'Chemistry Faculty', 'faculty', 'Chemistry'),
-  ('biology@eduforge.com', 'Biology Faculty', 'faculty', 'Biology'),
-  ('maths@eduforge.com', 'Mathematics Faculty', 'faculty', 'Mathematics')
+INSERT INTO public.user_profiles (id, email, name, role, assigned_subject) VALUES
+  ('e0eebc99-9c0b-4ef8-bb6d-6bb9bd380e11', 'admin@eduforge.com', 'System Admin', 'admin', 'All'),
+  ('e0eebc99-9c0b-4ef8-bb6d-6bb9bd380e12', 'physics@eduforge.com', 'Physics Faculty', 'faculty', 'Physics'),
+  ('e0eebc99-9c0b-4ef8-bb6d-6bb9bd380e13', 'chemistry@eduforge.com', 'Chemistry Faculty', 'faculty', 'Chemistry'),
+  ('e0eebc99-9c0b-4ef8-bb6d-6bb9bd380e14', 'biology@eduforge.com', 'Biology Faculty', 'faculty', 'Biology'),
+  ('e0eebc99-9c0b-4ef8-bb6d-6bb9bd380e15', 'maths@eduforge.com', 'Mathematics Faculty', 'faculty', 'Mathematics')
 ON CONFLICT (email) DO UPDATE SET
   name = EXCLUDED.name,
   role = EXCLUDED.role,
