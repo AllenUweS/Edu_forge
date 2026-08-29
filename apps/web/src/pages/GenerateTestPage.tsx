@@ -878,16 +878,13 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                 <label className="block text-[11px] font-extrabold uppercase text-slate-500 mb-2 font-sans tracking-wide">
                   SUBJECT(S) INCLUDED
                 </label>
-                <select
+                <input
+                  type="text"
                   value={selectedSubject}
-                  onChange={e => handleSubjectChange(e.target.value)}
-                  className="w-full text-sm font-bold p-3 border border-slate-200 rounded-xl text-slate-900 bg-white focus:ring-2 focus:ring-teal-500 focus:outline-hidden cursor-pointer"
-                >
-                  <option value="All Subjects (Physics, Chemistry & Biology)">All Subjects (Physics, Chemistry & Biology)</option>
-                  {getAvailableSubjectNames().map(sub => (
-                    <option key={sub} value={sub}>{sub}</option>
-                  ))}
-                </select>
+                  onChange={e => setSelectedSubject(e.target.value)}
+                  placeholder="e.g. Physics, Chemistry & Biology"
+                  className="w-full text-sm font-bold p-3 border border-slate-200 rounded-xl text-slate-900 bg-white focus:ring-2 focus:ring-teal-500 focus:outline-hidden font-sans"
+                />
               </div>
 
               <div>
@@ -1749,24 +1746,21 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                                     <span className="shrink-0 font-extrabold text-teal-900 bg-teal-50 border border-teal-200/80 px-2 py-0.5 rounded">
                                       Q{globalQNum > 0 ? globalQNum : qIdx + 1}.
                                     </span>
-                                    <div
-                                      className="flex-1 pt-0.5"
-                                      dangerouslySetInnerHTML={{
-                                        __html: q.rawText || q.content || 'Question Statement'
-                                      }}
-                                    />
+                                    <div className="flex-1 pt-0.5 text-slate-900">
+                                      <MathTextRenderer text={q.rawText || (typeof q.content === 'string' ? q.content : '') || 'Question Statement'} />
+                                    </div>
                                   </div>
 
-                                  {/* Render Diagram / Image if present */}
-                                  {(q.imageUrl || q.diagramUrl) && (
-                                    <div className="my-2 max-h-48 overflow-hidden flex justify-center bg-slate-50 border border-slate-200 rounded-lg p-2">
-                                      <img
-                                        src={q.imageUrl || q.diagramUrl}
-                                        alt="Question Diagram"
-                                        className="max-h-44 object-contain rounded"
-                                      />
-                                    </div>
-                                  )}
+                                   {/* Render Diagram / Image if present */}
+                                   {(q.imageUrl || q.diagramUrl) && (
+                                     <div className="my-2 max-h-48 overflow-hidden flex justify-center bg-slate-50 border border-slate-200 rounded-lg p-2">
+                                       <img
+                                         src={q.imageUrl || q.diagramUrl}
+                                         alt="Question Diagram"
+                                         className="max-h-44 object-contain rounded"
+                                       />
+                                     </div>
+                                   )}
 
                                   {/* Multiple Choice Options (A, B, C, D) */}
                                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
@@ -1785,18 +1779,15 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                                                 : 'border-slate-200 bg-slate-50/70 text-slate-900'
                                             }`}
                                           >
-                                            <div className="flex items-center gap-2 min-w-0">
+                                            <div className="flex items-center gap-2 min-w-0 flex-1">
                                               <span className={`font-black shrink-0 px-2 py-0.5 rounded text-[11px] ${
                                                 isCorrect ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-800'
                                               }`}>
                                                 {String.fromCharCode(65 + oIdx)}
                                               </span>
-                                              <div
-                                                className="truncate"
-                                                dangerouslySetInnerHTML={{
-                                                  __html: opt.rawText || (opt as any).text || (opt as any).label || ''
-                                                }}
-                                              />
+                                              <div className="flex-1 text-xs font-medium text-slate-900">
+                                                <MathTextRenderer text={opt.rawText || (opt as any).text || (opt as any).label || ''} />
+                                              </div>
                                             </div>
 
                                             {/* GREEN TICK MARK FOR ANSWER KEY MODE */}
@@ -1840,14 +1831,26 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                                       })
                                     )}
                                   </div>
+
+                                  {/* Detailed Solution & Explanation in Answer Key Mode */}
+                                  {isAnswerKeyMode && ((q as any).solution || (q as any).explanation) && (
+                                    <div className="mt-2.5 p-3 bg-emerald-50/70 border border-emerald-200 rounded-lg text-xs space-y-1">
+                                      <span className="font-extrabold text-emerald-950 block uppercase text-[10px] tracking-wide">
+                                        Detailed Solution & Explanation:
+                                      </span>
+                                      <div className="text-emerald-900 font-medium leading-relaxed">
+                                        <MathTextRenderer text={(q as any).solution || (q as any).explanation || ''} />
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               );
                             })}
                           </div>
                         )}
-                        </div>
-                      );
-                    })
+                      </div>
+                    );
+                  })
                   )}
                 </div>
 
