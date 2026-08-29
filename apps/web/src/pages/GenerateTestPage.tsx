@@ -1088,7 +1088,7 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                       type="checkbox"
                       checked={paperSettings.shuffleQuestions}
                       onChange={e => setPaperSettings(s => ({ ...s, shuffleQuestions: e.target.checked }))}
-                      className="w-4 h-4 text-teal-600 rounded border-slate-300"
+                      className="w-4 h-4 text-teal-600 rounded border-slate-300 cursor-pointer"
                     />
                     <span>Shuffle Questions Order</span>
                   </label>
@@ -1098,7 +1098,7 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                       type="checkbox"
                       checked={paperSettings.shuffleOptions}
                       onChange={e => setPaperSettings(s => ({ ...s, shuffleOptions: e.target.checked }))}
-                      className="w-4 h-4 text-teal-600 rounded border-slate-300"
+                      className="w-4 h-4 text-teal-600 rounded border-slate-300 cursor-pointer"
                     />
                     <span>Shuffle Multiple Choice Options</span>
                   </label>
@@ -1108,29 +1108,9 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                       type="checkbox"
                       checked={paperSettings.showQuestionCode}
                       onChange={e => setPaperSettings(s => ({ ...s, showQuestionCode: e.target.checked }))}
-                      className="w-4 h-4 text-teal-600 rounded border-slate-300"
+                      className="w-4 h-4 text-teal-600 rounded border-slate-300 cursor-pointer"
                     />
                     <span>Show Question Codes on Paper</span>
-                  </label>
-
-                  <label className="flex items-center gap-2.5 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={paperSettings.generateAnswerKey}
-                      onChange={e => setPaperSettings(s => ({ ...s, generateAnswerKey: e.target.checked }))}
-                      className="w-4 h-4 text-teal-600 rounded border-slate-300"
-                    />
-                    <span>Generate Answer Key Document</span>
-                  </label>
-
-                  <label className="flex items-center gap-2.5 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={paperSettings.generateSolutionPaper}
-                      onChange={e => setPaperSettings(s => ({ ...s, generateSolutionPaper: e.target.checked }))}
-                      className="w-4 h-4 text-teal-600 rounded border-slate-300"
-                    />
-                    <span>Generate Detailed Solutions Sheet</span>
                   </label>
                 </div>
               </div>
@@ -1162,102 +1142,9 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
           </div>
 
           {/* ========================================== */}
-          {/* RIGHT ASIDE: STICKY SUMMARY & ACTION DECK */}
+          {/* RIGHT ASIDE: ACTION DECK                   */}
           {/* ========================================== */}
           <div className="sticky top-20 space-y-6">
-
-            {/* Test Summary Card */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-6 space-y-4">
-              <div className="border-b border-slate-100 pb-3">
-                <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                  Test Summary
-                </h2>
-              </div>
-
-              <div className="space-y-3 text-xs font-medium">
-                <div className="flex items-center justify-between border-b border-slate-50 pb-2">
-                  <span className="text-slate-500 font-semibold">Subject</span>
-                  <strong className="text-slate-900 font-bold">{selectedSubject}</strong>
-                </div>
-
-                <div className="flex items-center justify-between border-b border-slate-50 pb-2">
-                  <span className="text-slate-500 font-semibold">Topic</span>
-                  <strong className="text-slate-900 font-bold truncate max-w-[160px] text-right">{selectedChapter}</strong>
-                </div>
-
-                <div className="flex items-center justify-between border-b border-slate-50 pb-2">
-                  <span className="text-slate-500 font-semibold">Selected Questions</span>
-                  <strong className="text-teal-700 font-mono font-extrabold text-sm">
-                    {selectedQuestionIds.length}
-                  </strong>
-                </div>
-
-                <div className="flex items-center justify-between border-b border-slate-50 pb-2">
-                  <span className="text-slate-500 font-semibold">Total Marks</span>
-                  <strong className="text-slate-900 font-mono font-bold">
-                    {computedTotalMarks}
-                  </strong>
-                </div>
-
-                <div className="flex items-center justify-between border-b border-slate-50 pb-2">
-                  <span className="text-slate-500 font-semibold">Duration</span>
-                  <strong className="text-slate-900 font-bold">
-                    {durationMinutes} Min
-                  </strong>
-                </div>
-
-                <div className="pt-2">
-                  <span className="inline-block px-3 py-1 rounded-full bg-teal-50 border border-teal-200 text-teal-700 font-bold text-[11px]">
-                    Ready to Generate
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Selected Questions Deck */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-6 space-y-4">
-              <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
-                <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                  Selected Deck
-                </h2>
-                <span className="text-[11px] font-mono font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded">
-                  {selectedQuestionIds.length}
-                </span>
-              </div>
-
-              <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
-                {selectedQuestionIds.length === 0 ? (
-                  <div className="text-xs text-slate-400 py-3 text-center font-medium">No questions selected.</div>
-                ) : (
-                  selectedQuestionIds.slice(0, 5).map((qId, idx) => {
-                    const qObj = questions.find(q => q.id === qId);
-                    const qCode = qObj ? formatQuestionCode(qObj) : qId;
-                    return (
-                      <div
-                        key={qId}
-                        className="flex items-center justify-between text-xs font-mono font-bold text-slate-800 py-1.5 border-b border-slate-50"
-                      >
-                        <span>{qCode}</span>
-                        <button
-                          type="button"
-                          onClick={() => toggleQuestionSelection(qId)}
-                          className="text-slate-400 hover:text-red-600 font-sans text-sm font-bold cursor-pointer px-1"
-                          title="Remove question"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    );
-                  })
-                )}
-
-                {selectedQuestionIds.length > 5 && (
-                  <div className="text-[11px] font-bold text-teal-700 pt-1 text-center">
-                    + {selectedQuestionIds.length - 5} more questions
-                  </div>
-                )}
-              </div>
-            </div>
 
             {/* Generate Action Buttons */}
             <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-6 space-y-3">
@@ -1284,14 +1171,6 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                 className="w-full py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-900 font-bold text-xs rounded-xl transition-all active:scale-95 cursor-pointer shadow-2xs"
               >
                 Generate PDF
-              </button>
-
-              <button
-                type="button"
-                onClick={() => alert('Answer key generated successfully!')}
-                className="w-full py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-900 font-bold text-xs rounded-xl transition-all active:scale-95 cursor-pointer shadow-2xs"
-              >
-                Generate Answer Key
               </button>
 
               <button
