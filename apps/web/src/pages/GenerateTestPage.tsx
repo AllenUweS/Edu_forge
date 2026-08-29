@@ -79,11 +79,80 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
   const [difficultyFilter, setDifficultyFilter] = useState<string>('All'); // Difficulty filter: All | Easy | Medium | Hard
 
   // ==========================================
-  // Auto-Distribution Count Rules
+  // Auto-Distribution Percentage Rules (Synced to 100%)
   // ==========================================
-  const [easyCount, setEasyCount] = useState<number>(15);
-  const [mediumCount, setMediumCount] = useState<number>(25);
-  const [hardCount, setHardCount] = useState<number>(10);
+  const [easyPercent, setEasyPercent] = useState<number>(30);
+  const [mediumPercent, setMediumPercent] = useState<number>(50);
+  const [hardPercent, setHardPercent] = useState<number>(20);
+
+  const handleEasyPercentChange = (val: number) => {
+    const E = Math.max(0, Math.min(100, Math.round(val)));
+    const oldM = mediumPercent;
+    const oldH = hardPercent;
+    const remaining = 100 - E;
+    const oldOtherSum = oldM + oldH;
+
+    let newM = 0;
+    let newH = 0;
+
+    if (oldOtherSum > 0) {
+      newM = Math.round((oldM / oldOtherSum) * remaining);
+      newH = remaining - newM;
+    } else {
+      newM = Math.round(remaining / 2);
+      newH = remaining - newM;
+    }
+
+    setEasyPercent(E);
+    setMediumPercent(newM);
+    setHardPercent(newH);
+  };
+
+  const handleMediumPercentChange = (val: number) => {
+    const M = Math.max(0, Math.min(100, Math.round(val)));
+    const oldE = easyPercent;
+    const oldH = hardPercent;
+    const remaining = 100 - M;
+    const oldOtherSum = oldE + oldH;
+
+    let newE = 0;
+    let newH = 0;
+
+    if (oldOtherSum > 0) {
+      newE = Math.round((oldE / oldOtherSum) * remaining);
+      newH = remaining - newE;
+    } else {
+      newE = Math.round(remaining / 2);
+      newH = remaining - newE;
+    }
+
+    setEasyPercent(newE);
+    setMediumPercent(M);
+    setHardPercent(newH);
+  };
+
+  const handleHardPercentChange = (val: number) => {
+    const H = Math.max(0, Math.min(100, Math.round(val)));
+    const oldE = easyPercent;
+    const oldM = mediumPercent;
+    const remaining = 100 - H;
+    const oldOtherSum = oldE + oldM;
+
+    let newE = 0;
+    let newM = 0;
+
+    if (oldOtherSum > 0) {
+      newE = Math.round((oldE / oldOtherSum) * remaining);
+      newM = remaining - newE;
+    } else {
+      newE = Math.round(remaining / 2);
+      newM = remaining - newE;
+    }
+
+    setEasyPercent(newE);
+    setMediumPercent(newM);
+    setHardPercent(H);
+  };
 
   // ==========================================
   // Paper Sections & Target Section Assignment State
@@ -351,20 +420,36 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
     setQuestionSectionMap({});
   };
 
-  // Automatically selects questions based on configured difficulty counts (Easy / Medium / Hard)
+  // Automatically selects questions based on configured difficulty percentage rules (Easy / Medium / Hard)
   const handleAutoSelectDistribution = () => {
     const secToUse = targetSectionId || testSections[0]?.id || 'sec-1';
-    const easyQ = questions.filter(q => (q.difficulty || '').toLowerCase() === 'easy').map(q => q.id);
-    const medQ = questions.filter(q => (q.difficulty || '').toLowerCase() === 'medium').map(q => q.id);
-    const hardQ = questions.filter(q => (q.difficulty || '').toLowerCase() === 'hard').map(q => q.id);
+    const targetSecObj = testSections.find(s => s.id === secToUse);
+    const targetTotal = Number(targetSecObj?.questionsCount) || 50;
 
-    const chosenEasy = easyQ.slice(0, easyCount);
-    const chosenMed = medQ.slice(0, mediumCount);
-    const chosenHard = hardQ.slice(0, hardCount);
+    const calcEasy = Math.round((targetTotal * easyPercent) / 100);
+    const calcMed = Math.round((targetTotal * mediumPercent) / 100);
+    const calcHard = Math.max(0, targetTotal - calcEasy - calcMed);
+
+    // Filter questions matching current subject and chapter filters if set
+    const candidatePool = questions.filter(q => {
+      const matchSubject = selectedSubjectFilter === 'all' || (q.subject || '').toLowerCase() === selectedSubjectFilter.toLowerCase();
+      const matchChapter = selectedChapterFilter === 'all' || (q.chapter || '').toLowerCase() === selectedChapterFilter.toLowerCase();
+      return matchSubject && matchChapter;
+    });
+
+    const poolToUse = candidatePool.length > 0 ? candidatePool : questions;
+
+    const easyQ = poolToUse.filter(q => (q.difficulty || '').toLowerCase() === 'easy').map(q => q.id);
+    const medQ = poolToUse.filter(q => (q.difficulty || '').toLowerCase() === 'medium').map(q => q.id);
+    const hardQ = poolToUse.filter(q => (q.difficulty || '').toLowerCase() === 'hard').map(q => q.id);
+
+    const chosenEasy = easyQ.slice(0, calcEasy);
+    const chosenMed = medQ.slice(0, calcMed);
+    const chosenHard = hardQ.slice(0, calcHard);
 
     const combined = Array.from(new Set([...chosenEasy, ...chosenMed, ...chosenHard]));
-    const finalSelection = combined.length > 0 ? combined : questions.slice(0, 50).map(q => q.id);
-    
+    const finalSelection = combined.length > 0 ? combined : poolToUse.slice(0, targetTotal).map(q => q.id);
+
     setSelectedQuestionIds(finalSelection);
     setQuestionSectionMap(prev => {
       const updated = { ...prev };
@@ -373,7 +458,7 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
       });
       return updated;
     });
-    alert('Questions automatically selected based on your distribution rules!');
+    alert(`Auto-selected ${finalSelection.length} questions based on your ${easyPercent}% Easy / ${mediumPercent}% Medium / ${hardPercent}% Hard distribution rule!`);
   };
 
   // Section Management: Adds a new section (e.g. Section B)
@@ -528,9 +613,9 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
     setSelectedQuestionIds([]);
     setSearchQuery('');
     setDifficultyFilter('All');
-    setEasyCount(15);
-    setMediumCount(25);
-    setHardCount(10);
+    setEasyPercent(30);
+    setMediumPercent(50);
+    setHardPercent(20);
     setTestSections([{ id: 'sec-1', name: 'Section A — Biology', questionsCount: 50 }]);
     setPaperSettings({
       shuffleQuestions: true,
@@ -1052,6 +1137,120 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                     </tbody>
                   </table>
                 </div>
+              </div>
+            </div>
+
+            {/* Difficulty Distribution Rules Card */}
+            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-6 space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div>
+                  <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider font-sans">
+                    Difficulty Distribution Rules
+                  </h2>
+                  <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                    Target difficulty percentage ratio (Automatically synced to 100%)
+                  </p>
+                </div>
+                <span className="text-[10px] font-extrabold text-teal-800 bg-teal-50 border border-teal-200 px-3 py-1 rounded-full">
+                  Total: {easyPercent + mediumPercent + hardPercent}%
+                </span>
+              </div>
+
+              {/* 3 Synced Percentage Sliders & Inputs */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+                {/* Easy % */}
+                <div className="p-3.5 border border-slate-200 rounded-xl bg-slate-50/50 space-y-2">
+                  <div className="flex justify-between items-center text-xs font-bold text-slate-800">
+                    <span className="flex items-center gap-1.5 text-emerald-700">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                      Easy
+                    </span>
+                    <div className="flex items-center gap-0.5">
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={easyPercent}
+                        onChange={e => handleEasyPercentChange(Number(e.target.value))}
+                        className="w-12 text-right text-xs font-bold p-1 border border-slate-300 rounded-md text-slate-900 focus:ring-2 focus:ring-emerald-500 bg-white font-mono"
+                      />
+                      <span className="text-slate-500 font-bold">%</span>
+                    </div>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={easyPercent}
+                    onChange={e => handleEasyPercentChange(Number(e.target.value))}
+                    className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600"
+                  />
+                </div>
+
+                {/* Medium % */}
+                <div className="p-3.5 border border-slate-200 rounded-xl bg-slate-50/50 space-y-2">
+                  <div className="flex justify-between items-center text-xs font-bold text-slate-800">
+                    <span className="flex items-center gap-1.5 text-amber-700">
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                      Medium
+                    </span>
+                    <div className="flex items-center gap-0.5">
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={mediumPercent}
+                        onChange={e => handleMediumPercentChange(Number(e.target.value))}
+                        className="w-12 text-right text-xs font-bold p-1 border border-slate-300 rounded-md text-slate-900 focus:ring-2 focus:ring-amber-500 bg-white font-mono"
+                      />
+                      <span className="text-slate-500 font-bold">%</span>
+                    </div>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={mediumPercent}
+                    onChange={e => handleMediumPercentChange(Number(e.target.value))}
+                    className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                  />
+                </div>
+
+                {/* Hard % */}
+                <div className="p-3.5 border border-slate-200 rounded-xl bg-slate-50/50 space-y-2">
+                  <div className="flex justify-between items-center text-xs font-bold text-slate-800">
+                    <span className="flex items-center gap-1.5 text-rose-700">
+                      <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+                      Hard
+                    </span>
+                    <div className="flex items-center gap-0.5">
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={hardPercent}
+                        onChange={e => handleHardPercentChange(Number(e.target.value))}
+                        className="w-12 text-right text-xs font-bold p-1 border border-slate-300 rounded-md text-slate-900 focus:ring-2 focus:ring-rose-500 bg-white font-mono"
+                      />
+                      <span className="text-slate-500 font-bold">%</span>
+                    </div>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={hardPercent}
+                    onChange={e => handleHardPercentChange(Number(e.target.value))}
+                    className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-rose-600"
+                  />
+                </div>
+              </div>
+
+              {/* Progress Visual Bar */}
+              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden flex">
+                <div style={{ width: `${easyPercent}%` }} className="bg-emerald-500 h-full transition-all duration-300" title={`Easy: ${easyPercent}%`} />
+                <div style={{ width: `${mediumPercent}%` }} className="bg-amber-500 h-full transition-all duration-300" title={`Medium: ${mediumPercent}%`} />
+                <div style={{ width: `${hardPercent}%` }} className="bg-rose-500 h-full transition-all duration-300" title={`Hard: ${hardPercent}%`} />
               </div>
             </div>
 
