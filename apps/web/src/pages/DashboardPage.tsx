@@ -154,12 +154,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     });
     const count = subjectQuestions.length;
 
-    // Dynamic Share percentage
+    // Dynamic Share percentage with 1 decimal place precision
     let percent = 0;
     if (totalQuestionsCount > 0) {
-      percent = Math.round((count / totalQuestionsCount) * 100);
+      const rawPct = (count / totalQuestionsCount) * 100;
+      percent = rawPct === 0 ? 0 : Number(rawPct.toFixed(1));
     } else if (totalChaptersCount > 0) {
-      percent = Math.round((chaptersCount / totalChaptersCount) * 100);
+      const rawPct = (chaptersCount / totalChaptersCount) * 100;
+      percent = rawPct === 0 ? 0 : Number(rawPct.toFixed(1));
     }
 
     return {
@@ -473,12 +475,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                           <span className={`w-2 h-2 rounded-full ${s.color}`} />
                           {s.name} ({s.code})
                         </span>
-                        <span className="font-mono text-teal-800">{s.count} Qs ({s.percent}%)</span>
+                        <span className="font-mono text-teal-800">{s.count} Qs · {s.chaptersCount} Chs ({s.percent}%)</span>
                       </div>
                       <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
                         <div
                           className={`h-full ${s.color} rounded-full transition-all duration-500`}
-                          style={{ width: `${s.percent}%` }}
+                          style={{ width: `${Math.max(s.percent, s.count > 0 || s.chaptersCount > 0 ? 2 : 0)}%` }}
                         />
                       </div>
                     </div>
