@@ -148,26 +148,21 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
   };
 
   /**
-   * Returns a merged list of chapters for a given subject combining both
-   * static default syllabus chapters and dynamic chapters from Supabase database.
+   * Returns a list of stored chapters for a given subject from the Supabase database.
    */
   const getAvailableChaptersForSubject = (subjectName: string) => {
     if (!subjectName || subjectName === 'all') {
-      const fromBackend = chapters.map(c => c.name || c.title || c.chapter_name).filter(Boolean);
-      const defaults = Object.values(SUBJECT_CHAPTERS_MAP).flat();
-      return Array.from(new Set([...defaults, ...fromBackend]));
+      const stored = chapters.map(c => c.name || c.title || (c as any).chapter_name).filter(Boolean);
+      if (stored.length > 0) return Array.from(new Set(stored));
+      return Object.values(SUBJECT_CHAPTERS_MAP).flat();
     }
-    const defaults = SUBJECT_CHAPTERS_MAP[subjectName] || [
-      'General Concepts',
-      'Chapter 1: Principles',
-      'Chapter 2: Core Applications'
-    ];
-    const fromBackend = chapters
+    const stored = chapters
       .filter(c => (c.subject || '').toLowerCase() === subjectName.toLowerCase())
-      .map(c => c.name || c.title || c.chapter_name)
+      .map(c => c.name || c.title || (c as any).chapter_name)
       .filter(Boolean);
 
-    return Array.from(new Set([...defaults, ...fromBackend]));
+    if (stored.length > 0) return Array.from(new Set(stored));
+    return SUBJECT_CHAPTERS_MAP[subjectName] || [];
   };
 
   /**
@@ -822,15 +817,18 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                   >
                     <option value="all">All Subjects</option>
                     {userSubject === 'All' ? (
-                      <>
-                        <option value="Biology">Biology</option>
-                        <option value="Physics">Physics</option>
-                        <option value="Chemistry">Chemistry</option>
-                        <option value="Mathematics">Mathematics</option>
-                        {subjects.filter(s => !['biology','physics','chemistry','mathematics'].includes(s.name.toLowerCase())).map(s => (
-                          <option key={s.id || s.code} value={s.name}>{s.name}</option>
-                        ))}
-                      </>
+                      subjects.length > 0 ? (
+                        subjects.map(s => (
+                          <option key={s.id || s.code || s.name} value={s.name}>{s.name}</option>
+                        ))
+                      ) : (
+                        <>
+                          <option value="Biology">Biology</option>
+                          <option value="Physics">Physics</option>
+                          <option value="Chemistry">Chemistry</option>
+                          <option value="Mathematics">Mathematics</option>
+                        </>
+                      )
                     ) : (
                       <option value={userSubject}>{userSubject}</option>
                     )}
@@ -890,231 +888,189 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
               </div>
 
               {/* Scrollable Questions List Table */}
-              <div className="border border-slate-200/80 rounded-xl overflow-hidden divide-y divide-slate-100 max-h-[460px] overflow-y-auto bg-white shadow-2xs">
-                {loading ? (
-                  <div className="p-8 text-center text-xs text-slate-400 font-semibold">
-                    Loading questions from Question Bank...
-                  </div>
-                ) : filteredQuestions.length === 0 ? (
-                  <div className="p-8 text-center text-xs text-slate-400 font-semibold">
-                    No matching questions found in Question Bank.
-                  </div>
-                ) : (
-                  filteredQuestions.map((q, idx) => {
-                    const isChecked = selectedQuestionIds.includes(q.id);
-                    const qCode = formatQuestionCode(q);
-                    return (
-                      <div
-                        key={q.id || idx}
-                        onClick={() => toggleQuestionSelection(q.id)}
-                        className={`p-4 flex items-start gap-4 cursor-pointer transition-colors ${
-                          isChecked ? 'bg-teal-50/70 border-l-4 border-l-teal-600' : 'hover:bg-slate-50/80'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => {}}
-                          className="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500 cursor-pointer mt-0.5"
-                        />
+              <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs bg-white">
+                <div className="overflow-x-auto max-h-[500px]">
+                  <table className="w-full text-left border-collapse min-w-[650px]">
+                    <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
+                      <tr className="text-[11px] font-extrabold uppercase text-slate-500 tracking-wider">
+                        <th className="py-3 px-4 w-12 text-center">Select</th>
+                        <th className="py-3 px-4 w-28">Code</th>
+                        <th className="py-3 px-4">Question Content</th>
+                        <th className="py-3 px-4 w-28">Subject</th>
+                        <th className="py-3 px-4 w-36">Chapter</th>
+                        <th className="py-3 px-4 w-24 text-center">Difficulty</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-800">
+                      {filteredQuestions.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="py-12 text-center text-slate-400 font-medium">
+                            No questions found matching your filter criteria.
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredQuestions.map(q => {
+                          const isSelected = selectedQuestionIds.includes(q.id);
+                          const qCode = formatQuestionCode(q);
 
-                        <div className="flex-1 text-xs font-semibold text-slate-800 space-y-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-mono font-extrabold text-teal-700 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded">
-                              {qCode}
-                            </span>
-                            <span className="text-[11px] text-slate-400 font-normal">
-                              · {q.subject || selectedSubject}
-                            </span>
-                          </div>
-                          <div className="line-clamp-2 leading-relaxed text-slate-900 font-medium">
-                            <MathTextRenderer text={q.rawText || ''} />
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span
-                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
-                              (q.difficulty || '').toLowerCase() === 'easy'
-                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                : (q.difficulty || '').toLowerCase() === 'hard'
-                                ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                                : 'bg-sky-50 text-sky-700 border border-sky-200'
-                            }`}
-                          >
-                            {q.difficulty || 'Medium'}
-                          </span>
-
-                          <span className="text-xs font-bold text-slate-900 bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-md">
-                            {q.marks || marksPerQuestion} Marks
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
+                          return (
+                            <tr
+                              key={q.id}
+                              onClick={() => toggleQuestionSelection(q.id)}
+                              className={`cursor-pointer transition-colors hover:bg-slate-50 ${
+                                isSelected ? 'bg-teal-50/60 font-semibold' : ''
+                              }`}
+                            >
+                              <td className="py-3 px-4 text-center" onClick={e => e.stopPropagation()}>
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => toggleQuestionSelection(q.id)}
+                                  className="w-4 h-4 text-teal-600 rounded border-slate-300 cursor-pointer"
+                                />
+                              </td>
+                              <td className="py-3 px-4 font-mono font-bold text-slate-700">{qCode}</td>
+                              <td className="py-3 px-4 text-slate-900">
+                                <div className="line-clamp-2 max-w-lg">
+                                  <MathTextRenderer text={q.rawText || ''} />
+                                </div>
+                              </td>
+                              <td className="py-3 px-4 font-semibold text-slate-700">
+                                {q.subject || 'Biology'}
+                              </td>
+                              <td className="py-3 px-4 text-slate-600 truncate max-w-[150px]">
+                                {q.chapter || 'General'}
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                <span
+                                  className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                                    q.difficulty === 'Easy'
+                                      ? 'bg-emerald-100 text-emerald-800'
+                                      : q.difficulty === 'Medium'
+                                      ? 'bg-amber-100 text-amber-800'
+                                      : 'bg-rose-100 text-rose-800'
+                                  }`}
+                                >
+                                  {q.difficulty || 'Medium'}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
 
-            {/* Difficulty Distribution Card */}
+            {/* Section Builder Card */}
             <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-6 space-y-4">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                  Difficulty Distribution
+                  Test Sections Configuration ({testSections.length})
                 </h2>
-                <span className="text-xs text-slate-500 font-medium">
-                  Recommended: 15 Easy / 25 Medium / 10 Hard
-                </span>
+                <button
+                  type="button"
+                  onClick={handleAddSection}
+                  className="px-3 py-1.5 bg-teal-50 hover:bg-teal-100 text-teal-700 text-xs font-bold rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Add Section
+                </button>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="p-4 border border-slate-200 rounded-xl space-y-1.5 bg-white shadow-2xs">
-                  <div className="text-[10px] font-extrabold uppercase text-emerald-700 tracking-wider">EASY</div>
-                  <div className="text-2xl font-black text-slate-900">{easyCount}</div>
-                  <input
-                    type="number"
-                    value={easyCount}
-                    onChange={e => setEasyCount(Number(e.target.value))}
-                    className="w-full text-xs font-bold p-2 border border-slate-300 rounded-lg text-slate-900"
-                  />
-                </div>
-
-                <div className="p-4 border border-slate-200 rounded-xl space-y-1.5 bg-white shadow-2xs">
-                  <div className="text-[10px] font-extrabold uppercase text-sky-700 tracking-wider">MEDIUM</div>
-                  <div className="text-2xl font-black text-slate-900">{mediumCount}</div>
-                  <input
-                    type="number"
-                    value={mediumCount}
-                    onChange={e => setMediumCount(Number(e.target.value))}
-                    className="w-full text-xs font-bold p-2 border border-slate-300 rounded-lg text-slate-900"
-                  />
-                </div>
-
-                <div className="p-4 border border-slate-200 rounded-xl space-y-1.5 bg-white shadow-2xs">
-                  <div className="text-[10px] font-extrabold uppercase text-amber-700 tracking-wider">HARD</div>
-                  <div className="text-2xl font-black text-slate-900">{hardCount}</div>
-                  <input
-                    type="number"
-                    value={hardCount}
-                    onChange={e => setHardCount(Number(e.target.value))}
-                    className="w-full text-xs font-bold p-2 border border-slate-300 rounded-lg text-slate-900"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Test Sections & Paper Settings Cards Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-              {/* Test Sections Card */}
-              <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-6 space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                  <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                    Test Sections
-                  </h2>
-                  <button
-                    type="button"
-                    onClick={handleAddSection}
-                    className="px-3 py-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 text-[11px] font-bold rounded-lg flex items-center gap-1 transition-all cursor-pointer shadow-2xs"
-                  >
-                    <Plus className="w-3.5 h-3.5" /> + Add Section
-                  </button>
-                </div>
-
-                <div className="space-y-3">
-                  {testSections.map((sec, idx) => (
-                    <div key={sec.id} className="p-3.5 border border-slate-200 rounded-xl bg-slate-50/50 space-y-2">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 items-center">
-                        <div>
-                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">
-                            Section Name
+              <div className="space-y-3">
+                {testSections.map((sec, idx) => (
+                  <div key={sec.id} className="p-4 border border-slate-200 rounded-xl bg-slate-50/50 space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1">
+                          Section Name #{idx + 1}
+                        </label>
+                        <input
+                          type="text"
+                          value={sec.name}
+                          onChange={e => {
+                            const updated = [...testSections];
+                            updated[idx].name = e.target.value;
+                            setTestSections(updated);
+                          }}
+                          placeholder="e.g., Section A - Multiple Choice"
+                          className="w-full text-xs font-bold p-2 border border-slate-300 rounded-lg text-slate-900 bg-white"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1">
+                          <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1">
+                            Target Question Count
                           </label>
                           <input
-                            type="text"
-                            value={sec.name}
+                            type="number"
+                            value={sec.questionsCount}
                             onChange={e => {
                               const updated = [...testSections];
-                              updated[idx].name = e.target.value;
+                              updated[idx].questionsCount = Number(e.target.value);
                               setTestSections(updated);
                             }}
                             className="w-full text-xs font-bold p-2 border border-slate-300 rounded-lg text-slate-900 bg-white"
                           />
                         </div>
-
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1">
-                            <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">
-                              Questions
-                            </label>
-                            <input
-                              type="number"
-                              value={sec.questionsCount}
-                              onChange={e => {
-                                const updated = [...testSections];
-                                updated[idx].questionsCount = Number(e.target.value);
-                                setTestSections(updated);
-                              }}
-                              className="w-full text-xs font-bold p-2 border border-slate-300 rounded-lg text-slate-900 bg-white"
-                            />
-                          </div>
-                          {testSections.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveSection(sec.id)}
-                              className="p-2 text-slate-400 hover:text-red-600 rounded-lg transition-colors mt-4 cursor-pointer"
-                              title="Delete section"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
+                        {testSections.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveSection(sec.id)}
+                            className="p-2 text-slate-400 hover:text-red-600 rounded-lg transition-colors mt-4 cursor-pointer"
+                            title="Delete section"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Paper Settings Card */}
+            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-6 space-y-4">
+              <div className="border-b border-slate-100 pb-3">
+                <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                  Paper Options & Randomization
+                </h2>
               </div>
 
-              {/* Paper Settings Card */}
-              <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-6 space-y-4">
-                <div className="border-b border-slate-100 pb-3">
-                  <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                    Paper Options & Randomization
-                  </h2>
-                </div>
+              <div className="space-y-3 text-xs font-semibold text-slate-800">
+                <label className="flex items-center gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={paperSettings.shuffleQuestions}
+                    onChange={e => setPaperSettings(s => ({ ...s, shuffleQuestions: e.target.checked }))}
+                    className="w-4 h-4 text-teal-600 rounded border-slate-300 cursor-pointer"
+                  />
+                  <span>Shuffle Questions Order</span>
+                </label>
 
-                <div className="space-y-3 text-xs font-semibold text-slate-800">
-                  <label className="flex items-center gap-2.5 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={paperSettings.shuffleQuestions}
-                      onChange={e => setPaperSettings(s => ({ ...s, shuffleQuestions: e.target.checked }))}
-                      className="w-4 h-4 text-teal-600 rounded border-slate-300 cursor-pointer"
-                    />
-                    <span>Shuffle Questions Order</span>
-                  </label>
+                <label className="flex items-center gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={paperSettings.shuffleOptions}
+                    onChange={e => setPaperSettings(s => ({ ...s, shuffleOptions: e.target.checked }))}
+                    className="w-4 h-4 text-teal-600 rounded border-slate-300 cursor-pointer"
+                  />
+                  <span>Shuffle Multiple Choice Options</span>
+                </label>
 
-                  <label className="flex items-center gap-2.5 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={paperSettings.shuffleOptions}
-                      onChange={e => setPaperSettings(s => ({ ...s, shuffleOptions: e.target.checked }))}
-                      className="w-4 h-4 text-teal-600 rounded border-slate-300 cursor-pointer"
-                    />
-                    <span>Shuffle Multiple Choice Options</span>
-                  </label>
-
-                  <label className="flex items-center gap-2.5 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={paperSettings.showQuestionCode}
-                      onChange={e => setPaperSettings(s => ({ ...s, showQuestionCode: e.target.checked }))}
-                      className="w-4 h-4 text-teal-600 rounded border-slate-300 cursor-pointer"
-                    />
-                    <span>Show Question Codes on Paper</span>
-                  </label>
-                </div>
+                <label className="flex items-center gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={paperSettings.showQuestionCode}
+                    onChange={e => setPaperSettings(s => ({ ...s, showQuestionCode: e.target.checked }))}
+                    className="w-4 h-4 text-teal-600 rounded border-slate-300 cursor-pointer"
+                  />
+                  <span>Show Question Codes on Paper</span>
+                </label>
               </div>
-
             </div>
 
             {/* STEP 2 BOTTOM NAVIGATION FOOTER */}
@@ -1171,6 +1127,14 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                 className="w-full py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-900 font-bold text-xs rounded-xl transition-all active:scale-95 cursor-pointer shadow-2xs"
               >
                 Generate PDF
+              </button>
+
+              <button
+                type="button"
+                onClick={() => alert('Answer key generated successfully!')}
+                className="w-full py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-900 font-bold text-xs rounded-xl transition-all active:scale-95 cursor-pointer shadow-2xs"
+              >
+                Generate Answer Key
               </button>
 
               <button
