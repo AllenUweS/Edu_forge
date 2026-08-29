@@ -176,37 +176,15 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4 sm:py-8 space-y-5 sm:space-y-7 font-sans animate-in fade-in slide-in-from-bottom-2 duration-300">
       {/* Top Banner / Welcome */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-5">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight font-sans">
-            Welcome, {user.name}
-          </h1>
-          <p className="text-xs text-slate-500 font-medium mt-0.5">
-            {user.role === 'admin' 
-              ? 'Multi-Subject Central Dashboard · Real dynamic backend statistics' 
-              : `${user.assigned_subject} Department Dashboard · Scoped question authoring & test reports`}
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
-          <button
-            type="button"
-            onClick={onOpenQuestionBuilder}
-            className="flex-1 sm:flex-initial px-3.5 sm:px-4 py-2 border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs rounded-xl flex items-center justify-center gap-2 shadow-2xs transition-all active:scale-[0.98] cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Create Question</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={onNewPaperWizard}
-            className="flex-1 sm:flex-initial px-3.5 sm:px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 shadow-sm hover:shadow-md transition-all active:scale-[0.98] cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Generate Test Paper</span>
-          </button>
-        </div>
+      <div className="border-b border-slate-200/80 pb-5">
+        <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight font-sans">
+          Welcome, {user.name}
+        </h1>
+        <p className="text-xs text-slate-500 font-medium mt-0.5">
+          {user.role === 'admin' 
+            ? 'Multi-Subject Central Dashboard · Real dynamic backend statistics' 
+            : `${user.assigned_subject} Department Dashboard · Scoped question authoring & test reports`}
+        </p>
       </div>
 
       {/* 4 Metric Stats Cards */}
