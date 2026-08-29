@@ -88,14 +88,19 @@ export const ReportsPage: React.FC = () => {
 
   const subjectPerformance = liveSubjectNames.map((subName, idx) => {
     const subObj = apiSubjects.find(s => s.name.toLowerCase() === subName.toLowerCase());
-    const count = subObj?.questions !== undefined ? subObj.questions : (subjectCountMap[subName] || 0);
+    
+    // Count exact chapters and questions belonging to this subject from stored DB records
+    const chaptersCount = chapters.filter(c => (c.subject || '').trim().toLowerCase() === subName.trim().toLowerCase()).length;
+    const count = questions.filter(q => (q.subject || '').trim().toLowerCase() === subName.trim().toLowerCase()).length;
+    
     const percent = totalQuestionsCount > 0 ? Math.round((count / totalQuestionsCount) * 100) : 0;
+    
     return {
       name: subName,
       code: subObj?.code || subName.substring(0, 3).toUpperCase(),
       count,
       percent,
-      chaptersCount: subObj?.chapters || chapters.filter(c => (c.subject || '').toLowerCase() === subName.toLowerCase()).length,
+      chaptersCount,
       color: defaultColors[idx % defaultColors.length]
     };
   });
