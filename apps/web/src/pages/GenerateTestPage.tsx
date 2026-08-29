@@ -583,13 +583,24 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
       };
     });
 
+    const secSubs = Array.from(new Set(testSections.map(sec => {
+      let sub = (sec as any).subject;
+      if (!sub && sec.name) {
+        const parts = sec.name.split('—').map(s => s.trim());
+        if (parts.length > 1) sub = parts[1];
+      }
+      return sub || selectedSubject;
+    }).filter(Boolean)));
+
+    const finalSubjectString = secSubs.length > 1 ? secSubs.join(', ') : selectedSubject;
+
     return {
-      title: testName.trim() || `${selectedSubject} ${examType} Test Paper`,
+      title: testName.trim() || `${finalSubjectString} ${examType} Test Paper`,
       templateId: undefined,
       metadata: {
         instituteName: 'APEX INSTITUTE OF SCIENCE & TECHNOLOGY',
         examName: `${examType} EXAMINATION 2026`,
-        subject: selectedSubject,
+        subject: finalSubjectString,
         chapter: selectedChapter,
         timeAllowedMinutes: Number(durationMinutes) || 60,
         maxMarks: computedTotalMarks,
@@ -832,8 +843,8 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
               </span>
             </div>
 
-            {/* Grid: Test Name, Exam Type & Duration */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Grid: Test Name, Exam Type, Subject(s) & Duration */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               <div>
                 <label className="block text-[11px] font-extrabold uppercase text-slate-500 mb-2 font-sans tracking-wide">
                   TEST NAME
@@ -860,6 +871,22 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                   <option value="KCET">KCET</option>
                   <option value="JEE">JEE</option>
                   <option value="Custom">Custom</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-extrabold uppercase text-slate-500 mb-2 font-sans tracking-wide">
+                  SUBJECT(S) INCLUDED
+                </label>
+                <select
+                  value={selectedSubject}
+                  onChange={e => handleSubjectChange(e.target.value)}
+                  className="w-full text-sm font-bold p-3 border border-slate-200 rounded-xl text-slate-900 bg-white focus:ring-2 focus:ring-teal-500 focus:outline-hidden cursor-pointer"
+                >
+                  <option value="All Subjects (Physics, Chemistry & Biology)">All Subjects (Physics, Chemistry & Biology)</option>
+                  {getAvailableSubjectNames().map(sub => (
+                    <option key={sub} value={sub}>{sub}</option>
+                  ))}
                 </select>
               </div>
 
