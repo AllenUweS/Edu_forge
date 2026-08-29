@@ -30,10 +30,25 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
   const [subject, setSubject] = useState(
     initialQuestion?.subject || (userSubject !== 'All' ? userSubject : 'Biology')
   );
-  const [chapter, setChapter] = useState(initialQuestion?.chapter || 'Cell Structure and Function');
+  const [chapter, setChapter] = useState(initialQuestion?.chapter || 'The Living World');
   const [difficulty, setDifficulty] = useState<QuestionDifficulty>(initialQuestion?.difficulty || 'Medium');
   const [marks, setMarks] = useState<number>(initialQuestion?.marks || 4);
   const [negativeMarks, setNegativeMarks] = useState<number>(initialQuestion?.negativeMarks || 1);
+  const [dbChapters, setDbChapters] = useState<any[]>([]);
+
+  React.useEffect(() => {
+    api.getChapters().then(chs => {
+      if (chs && Array.isArray(chs)) {
+        setDbChapters(chs);
+        if (!initialQuestion?.chapter && chs.length > 0) {
+          const matching = chs.filter((c: any) => (c.subject || '').toLowerCase() === subject.toLowerCase());
+          if (matching.length > 0) {
+            setChapter(matching[0].title);
+          }
+        }
+      }
+    }).catch(console.error);
+  }, [subject]);
 
   // Content Blocks
   const [blocks, setBlocks] = useState<ContentBlock[]>([
@@ -338,12 +353,11 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
                   className="w-full p-2 border border-slate-300 rounded-lg text-slate-900 bg-white font-medium focus:outline-hidden focus:ring-2 focus:ring-slate-900"
                 />
                 <datalist id="create-chapter-list">
-                  <option value="Cell Structure and Function" />
-                  <option value="Kinematics & Motion" />
-                  <option value="Atomic Structure & Periodicity" />
-                  <option value="Organic Chemistry & Mechanisms" />
-                  <option value="Calculus & Integration" />
-                  <option value="Genetics & Evolution" />
+                  {dbChapters
+                    .filter((c: any) => !subject || (c.subject || '').toLowerCase() === subject.toLowerCase())
+                    .map((c: any) => (
+                      <option key={c.id || c.title} value={c.title} />
+                    ))}
                 </datalist>
               </div>
 

@@ -128,6 +128,7 @@ const AppContent: React.FC = () => {
         const mapped: ChapterItem[] = data.map((ch: any, idx: number) => ({
           num: String(idx + 1).padStart(2, '0'),
           id: String(ch.id || `CH-${idx + 1}`),
+          code: ch.code || ch.chapter_code || `CH-${String(idx + 1).padStart(2, '0')}`,
           title: ch.title || ch.name || 'Untitled Chapter',
           subject: ch.subject || 'Biology',
           count: ch.count || 0

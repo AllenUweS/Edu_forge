@@ -55,7 +55,7 @@ chaptersRouter.get('/', async (req: Request, res: Response, next: NextFunction) 
 
     const [chaptersRes, questionsRes] = await Promise.all([
       query,
-      supabase.from('questions').select('id, chapter, chapter_id')
+      supabase.from('questions').select('id, chapter_id, subject_id')
     ]);
 
     if (chaptersRes.error) {
@@ -68,12 +68,10 @@ chaptersRouter.get('/', async (req: Request, res: Response, next: NextFunction) 
 
     const formatted = chapters.map((ch: any) => {
       const chId = String(ch.id || '').toLowerCase();
-      const chTitle = String(ch.title || '').trim().toLowerCase();
 
       const qCount = questions.filter((q: any) => {
         const qChId = q.chapter_id ? String(q.chapter_id).toLowerCase() : '';
-        const qChTitle = q.chapter ? String(q.chapter).trim().toLowerCase() : '';
-        return (qChId && qChId === chId) || (qChTitle && (qChTitle === chTitle || qChTitle.includes(chTitle)));
+        return qChId === chId;
       }).length;
 
       return {

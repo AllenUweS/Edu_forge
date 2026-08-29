@@ -136,42 +136,83 @@ async function resolveSubjectAndChapter(subjectName?: string, chapterTitle?: str
   let chapter_id: string | null = null;
 
   if (subjectName) {
-    const { data: sub } = await supabase
-      .from('subjects')
-      .select('id')
-      .ilike('name', subjectName.trim())
-      .maybeSingle();
+    const strSub = String(subjectName).trim();
+    const isSubUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(strSub);
 
-    if (sub?.id) {
-      subject_id = sub.id;
-    } else {
-      const code = subjectName.trim().substring(0, 3).toUpperCase();
-      const { data: newSub } = await supabase
+    if (isSubUuid) {
+      const { data: sub } = await supabase.from('subjects').select('id').eq('id', strSub).maybeSingle();
+      if (sub?.id) subject_id = sub.id;
+    }
+
+    if (!subject_id) {
+      const { data: sub } = await supabase
         .from('subjects')
-        .insert({ name: subjectName.trim(), code })
         .select('id')
+        .or(`name.ilike.${strSub},code.ilike.${strSub}`)
+        .limit(1)
         .maybeSingle();
-      if (newSub?.id) subject_id = newSub.id;
+
+      if (sub?.id) {
+        subject_id = sub.id;
+      } else {
+        const code = strSub.substring(0, 3).toUpperCase();
+        const { data: newSub } = await supabase
+          .from('subjects')
+          .insert({ name: strSub, code, color: 'bg-teal-50 text-teal-700 border-teal-200' })
+          .select('id')
+          .maybeSingle();
+        if (newSub?.id) subject_id = newSub.id;
+      }
     }
   }
 
-  if (chapterTitle && subject_id) {
-    const { data: ch } = await supabase
-      .from('chapters')
-      .select('id')
-      .eq('subject_id', subject_id)
-      .ilike('title', chapterTitle.trim())
-      .maybeSingle();
+  if (chapterTitle) {
+    const strCh = String(chapterTitle).trim();
+    const isChUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(strCh);
 
-    if (ch?.id) {
-      chapter_id = ch.id;
-    } else {
+    if (isChUuid) {
+      const { data: ch } = await supabase.from('chapters').select('id, subject_id').eq('id', strCh).maybeSingle();
+      if (ch?.id) {
+        chapter_id = ch.id;
+        if (!subject_id && ch.subject_id) subject_id = ch.subject_id;
+      }
+    }
+
+    if (!chapter_id && subject_id) {
+      const { data: ch } = await supabase
+        .from('chapters')
+        .select('id')
+        .eq('subject_id', subject_id)
+        .or(`title.ilike.${strCh},chapter_code.ilike.${strCh}`)
+        .limit(1)
+        .maybeSingle();
+
+      if (ch?.id) {
+        chapter_id = ch.id;
+      }
+    }
+
+    if (!chapter_id) {
+      const { data: ch } = await supabase
+        .from('chapters')
+        .select('id, subject_id')
+        .or(`title.ilike.${strCh},chapter_code.ilike.${strCh}`)
+        .limit(1)
+        .maybeSingle();
+
+      if (ch?.id) {
+        chapter_id = ch.id;
+        if (!subject_id && ch.subject_id) subject_id = ch.subject_id;
+      }
+    }
+
+    if (!chapter_id && subject_id) {
       const { data: newCh } = await supabase
         .from('chapters')
         .insert({
           subject_id,
           chapter_code: `CH-${Date.now().toString().slice(-4)}`,
-          title: chapterTitle.trim()
+          title: strCh
         })
         .select('id')
         .maybeSingle();

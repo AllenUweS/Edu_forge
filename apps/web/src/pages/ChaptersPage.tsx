@@ -8,6 +8,7 @@ import { getUserProfile } from '../utils/userProfile.js';
 export interface ChapterItem {
   num?: string;
   id: string;
+  code?: string;
   title: string;
   subject: string;
   count: number;
@@ -205,7 +206,7 @@ export const ChaptersPage: React.FC<ChaptersPageProps> = ({
                 <tr key={ch.id || idx} className="hover:bg-slate-50/80 transition-colors">
                   <td className="px-5 py-3.5 font-mono text-slate-500">{ch.num || String(idx + 1).padStart(2, '0')}</td>
                   <td className="px-5 py-3.5 font-bold text-slate-900">{ch.title}</td>
-                  <td className="px-5 py-3.5 font-mono text-slate-600">{ch.id}</td>
+                  <td className="px-5 py-3.5 font-mono text-slate-600">{ch.code || ch.id}</td>
                   <td className="px-5 py-3.5 font-bold text-slate-900">{ch.count || 0}</td>
                   <td className="px-5 py-3.5 text-right">
                     <div className="flex items-center justify-end gap-2">
