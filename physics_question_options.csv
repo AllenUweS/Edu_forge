@@ -1,28 +1,28 @@
 id,question_id,option_key,content,raw_text,sort_order
-8dc9b0e5-dc25-45b5-aa1a-b4fbe6acad01,5ae98c7d-5fb8-4383-8e44-642779c8949e,a,"[{""type"": ""text"", ""html"": ""<p>6.67 x 10-8</p>""}]",6.67 x 10-8,1
+8dc9b0e5-dc25-45b5-aa1a-b4fbe6acad01,5ae98c7d-5fb8-4383-8e44-642779c8949e,a,"[{""type"": ""text"", ""html"": ""<p>$6.67 \\times 10^{-8}$</p>""}]",$6.67 \times 10^{-8}$,1
 72757348-199f-4329-8655-ce0ea846b1b9,5ae98c7d-5fb8-4383-8e44-642779c8949e,b,"[{""type"": ""text"", ""html"": ""<p>Option B</p>""}]",Option B,2
 1addbd99-e693-4b34-944d-1fe94bf7c492,5ae98c7d-5fb8-4383-8e44-642779c8949e,c,"[{""type"": ""text"", ""html"": ""<p>Option C</p>""}]",Option C,3
 7ab2791e-f4a4-439a-a4fd-cf32c2bff0a3,5ae98c7d-5fb8-4383-8e44-642779c8949e,d,"[{""type"": ""text"", ""html"": ""<p>Option D</p>""}]",Option D,4
 25a02916-f46d-412c-a2c7-994f70f1bb35,99e0c309-811e-4559-9543-62f5c47def37,a,"[{""type"": ""text"", ""html"": ""<p>Option A</p>""}]",Option A,1
 906f06a8-7929-4484-b08b-67843f70148a,99e0c309-811e-4559-9543-62f5c47def37,b,"[{""type"": ""text"", ""html"": ""<p>Option B</p>""}]",Option B,2
-b74a2d6e-af3e-4fb6-8823-6b87d80110a0,99e0c309-811e-4559-9543-62f5c47def37,c,"[{""type"": ""text"", ""html"": ""<p>6.67 x 10-9 (Page 2)</p>""}]",6.67 x 10-9 (Page 2),3
+b74a2d6e-af3e-4fb6-8823-6b87d80110a0,99e0c309-811e-4559-9543-62f5c47def37,c,"[{""type"": ""text"", ""html"": ""<p>$6.67 \\times 10^{-9}$ (Page 2)</p>""}]",$6.67 \times 10^{-9}$ (Page 2),3
 cc10dbe5-ccfd-4033-9806-c4a8b7bf04ab,99e0c309-811e-4559-9543-62f5c47def37,d,"[{""type"": ""text"", ""html"": ""<p>Option D</p>""}]",Option D,4
 257a9bc3-bb78-4eb6-9837-42ea38c4de02,33aaddaf-cc4e-4d1f-80f7-d5755f809a21,a,"[{""type"": ""text"", ""html"": ""<p>10*N m2</p>""}]",10*N m2,1
-51f6399e-7241-4a8d-a246-8ac03db9f6b4,33aaddaf-cc4e-4d1f-80f7-d5755f809a21,b,"[{""type"": ""text"", ""html"": ""<p>10\u00b0 N m-2</p>""}]",10° N m-2,2
-8ac9a444-4b38-4776-bc69-de6b24c7cf13,33aaddaf-cc4e-4d1f-80f7-d5755f809a21,c,"[{""type"": ""text"", ""html"": ""<p>10\u00b0 N m</p>""}]",10° N m,3
+51f6399e-7241-4a8d-a246-8ac03db9f6b4,33aaddaf-cc4e-4d1f-80f7-d5755f809a21,b,"[{""type"": ""text"", ""html"": ""<p>$10^{5}$ N m-2</p>""}]",$10^{5}$ N m-2,2
+8ac9a444-4b38-4776-bc69-de6b24c7cf13,33aaddaf-cc4e-4d1f-80f7-d5755f809a21,c,"[{""type"": ""text"", ""html"": ""<p>$10^{5}$ N m</p>""}]",$10^{5}$ N m,3
 add13c09-1e33-4a49-a3a3-60fb7d31866d,33aaddaf-cc4e-4d1f-80f7-d5755f809a21,d,"[{""type"": ""text"", ""html"": ""<p>10 N m-2 (Page 2)</p>""}]",10 N m-2 (Page 2),4
-f58d5e2c-5ede-4f87-acb1-08a27ed33d78,22e25f54-09a5-419c-97cb-d5c962a22925,a,"[{""type"": ""text"", ""html"": ""<p>2 x 102 steradian</p>""}]",2 x 102 steradian,1
-7d85a219-e94f-470a-ab6e-9ba397c820a2,22e25f54-09a5-419c-97cb-d5c962a22925,b,"[{""type"": ""text"", ""html"": ""<p>4 x 10-2 steradian</p>""}]",4 x 10-2 steradian,2
-3873738e-b219-4103-9b1b-d4a645ba6cb2,22e25f54-09a5-419c-97cb-d5c962a22925,c,"[{""type"": ""text"", ""html"": ""<p>6 x 102 steradian</p>""}]",6 x 102 steradian,3
-cf9f94be-8365-44a9-b172-4f4e9f281ec6,22e25f54-09a5-419c-97cb-d5c962a22925,d,"[{""type"": ""text"", ""html"": ""<p>8 x 10-2 steradian (Page 2) One barn is equal to</p>""}]",8 x 10-2 steradian (Page 2) One barn is equal to,4
+f58d5e2c-5ede-4f87-acb1-08a27ed33d78,22e25f54-09a5-419c-97cb-d5c962a22925,a,"[{""type"": ""text"", ""html"": ""<p>$2 \\times 10^{2}$ steradian</p>""}]",$2 \times 10^{2}$ steradian,1
+7d85a219-e94f-470a-ab6e-9ba397c820a2,22e25f54-09a5-419c-97cb-d5c962a22925,b,"[{""type"": ""text"", ""html"": ""<p>$4 \\times 10^{-2}$ steradian</p>""}]",$4 \times 10^{-2}$ steradian,2
+3873738e-b219-4103-9b1b-d4a645ba6cb2,22e25f54-09a5-419c-97cb-d5c962a22925,c,"[{""type"": ""text"", ""html"": ""<p>$6 \\times 10^{2}$ steradian</p>""}]",$6 \times 10^{2}$ steradian,3
+cf9f94be-8365-44a9-b172-4f4e9f281ec6,22e25f54-09a5-419c-97cb-d5c962a22925,d,"[{""type"": ""text"", ""html"": ""<p>$8 \\times 10^{-2}$ steradian (Page 2) One barn is equal to</p>""}]",$8 \times 10^{-2}$ steradian (Page 2) One barn is equal to,4
 d3415109-7201-4606-8991-5f73e035a3d0,550b4231-8987-490a-93b3-469f99bf77b6,a,"[{""type"": ""text"", ""html"": ""<p>All the non-zero digits are significant.</p>""}]",All the non-zero digits are significant.,1
 6520db16-5d67-4ca5-a1b8-5b7e99f235ea,550b4231-8987-490a-93b3-469f99bf77b6,b,"[{""type"": ""text"", ""html"": ""<p>All the zeros between two non-zero digits are significant.</p>""}]",All the zeros between two non-zero digits are significant.,2
-3e78e028-5c87-4116-a578-4ec43a80f12f,550b4231-8987-490a-93b3-469f99bf77b6,c,"[{""type"": ""text"", ""html"": ""<p> The trailing zero(s) in a number without a decimal point are not significant.</p>""}]", The trailing zero(s) in a number without a decimal point are not significant.,3
+3e78e028-5c87-4116-a578-4ec43a80f12f,550b4231-8987-490a-93b3-469f99bf77b6,c,"[{""type"": ""text"", ""html"": ""<p>The trailing zero(s) in a number without a decimal point are not significant.</p>""}]",The trailing zero(s) in a number without a decimal point are not significant.,3
 e928da56-aec7-45c0-ad66-86f8309fd13b,550b4231-8987-490a-93b3-469f99bf77b6,d,"[{""type"": ""text"", ""html"": ""<p>The power of 10 is counted while counting the (Page 4) number of significant figures.</p>""}]",The power of 10 is counted while counting the (Page 4) number of significant figures.,4
 3230d2f2-4aa0-447d-9443-a06aa4a8f628,f0eb1812-dad9-445a-9729-cdec9d75f079,a,"[{""type"": ""text"", ""html"": ""<p>3, 4,8</p>""}]","3, 4,8",1
 eabd2cec-a00c-437b-87bf-10ec2e1907e4,f0eb1812-dad9-445a-9729-cdec9d75f079,b,"[{""type"": ""text"", ""html"": ""<p>4, 4,8</p>""}]","4, 4,8",2
 648f3b5b-a1d4-4639-9333-2d51dfa44023,f0eb1812-dad9-445a-9729-cdec9d75f079,c,"[{""type"": ""text"", ""html"": ""<p>4, 4,4 (Page 4)</p>""}]","4, 4,4 (Page 4)",3
-c469f9a5-eee4-4f80-bd81-5aece707d16a,f0eb1812-dad9-445a-9729-cdec9d75f079,d,"[{""type"": ""text"", ""html"": ""<p> 4, 3,4</p>""}]"," 4, 3,4",4
+c469f9a5-eee4-4f80-bd81-5aece707d16a,f0eb1812-dad9-445a-9729-cdec9d75f079,d,"[{""type"": ""text"", ""html"": ""<p>4, 3,4</p>""}]","4, 3,4",4
 0a429334-6508-4c57-8d54-9e8903ff37be,c794d47b-2fa0-4204-b2e6-d3df70fd552b,a,"[{""type"": ""text"", ""html"": ""<p>Option A</p>""}]",Option A,1
 19660b14-48b4-4d50-a841-ff9c4b1b0f3b,c794d47b-2fa0-4204-b2e6-d3df70fd552b,b,"[{""type"": ""text"", ""html"": ""<p>Option B</p>""}]",Option B,2
 98e778da-bc4a-405a-a59a-c3adefb02bcd,c794d47b-2fa0-4204-b2e6-d3df70fd552b,c,"[{""type"": ""text"", ""html"": ""<p>Option C</p>""}]",Option C,3
@@ -35,13 +35,13 @@ f9d1ceb5-86e0-4dbe-af69-7bbb144d2859,3bc4e0ca-01f2-406e-b908-670b1f9bc61d,a,"[{"
 5d101530-41b5-4cef-8344-229264443c72,3bc4e0ca-01f2-406e-b908-670b1f9bc61d,b,"[{""type"": ""text"", ""html"": ""<p>35.0 V</p>""}]",35.0 V,2
 00771bb0-4be5-402c-bfe3-5efc8b387661,3bc4e0ca-01f2-406e-b908-670b1f9bc61d,c,"[{""type"": ""text"", ""html"": ""<p>Option C</p>""}]",Option C,3
 0aabcec3-fb5a-4fe9-90ef-4717e34fba2d,3bc4e0ca-01f2-406e-b908-670b1f9bc61d,d,"[{""type"": ""text"", ""html"": ""<p>35.03 V c) 35.029V</p>""}]",35.03 V c) 35.029V,4
-b1bd01e8-23f8-4613-b45f-4a4baaf54409,e83d6920-b6e2-4857-8103-fcbf8e3f4113,a,"[{""type"": ""text"", ""html"": ""<p>1.7 x 10\u00b0m'</p>""}]",1.7 x 10°m',1
+b1bd01e8-23f8-4613-b45f-4a4baaf54409,e83d6920-b6e2-4857-8103-fcbf8e3f4113,a,"[{""type"": ""text"", ""html"": ""<p>$1.7 \\times 10^{5}$m'</p>""}]",$1.7 \times 10^{5}$m',1
 328b82b4-193f-4daa-8f4b-c7d4fa2cb3f1,e83d6920-b6e2-4857-8103-fcbf8e3f4113,b,"[{""type"": ""text"", ""html"": ""<p>1.73 x 10-\u00b0 m?</p>""}]",1.73 x 10-° m?,2
-87789f4a-2431-409b-a6d8-3f98662f5804,e83d6920-b6e2-4857-8103-fcbf8e3f4113,c,"[{""type"": ""text"", ""html"": ""<p>1.78 x 106m* (Page 5)</p>""}]",1.78 x 106m* (Page 5),3
+87789f4a-2431-409b-a6d8-3f98662f5804,e83d6920-b6e2-4857-8103-fcbf8e3f4113,c,"[{""type"": ""text"", ""html"": ""<p>$1.78 \\times 10^{6}$m* (Page 5)</p>""}]",$1.78 \times 10^{6}$m* (Page 5),3
 0605a759-bb53-4dc7-a028-cc39fa02c23d,e83d6920-b6e2-4857-8103-fcbf8e3f4113,d,"[{""type"": ""text"", ""html"": ""<p>1.732 x 10-\u00b0 m3</p>""}]",1.732 x 10-° m3,4
 eaaf0cf5-2a1f-495b-aa03-81971079a3f5,18f34f0a-6ee5-459a-bae7-fcb9dbde8c17,a,"[{""type"": ""text"", ""html"": ""<p>11.73 cm\"" (Page 5)</p>""}]","11.73 cm"" (Page 5)",1
 9d7eef32-b3a5-419a-94c7-7d8f82e7ea94,18f34f0a-6ee5-459a-bae7-fcb9dbde8c17,b,"[{""type"": ""text"", ""html"": ""<p>11.736 cm</p>""}]",11.736 cm,2
-f8aa14e0-e623-40bd-9128-57bf6e36113b,18f34f0a-6ee5-459a-bae7-fcb9dbde8c17,c,"[{""type"": ""text"", ""html"": ""<p>11.7 cm?</p>""}]",11.7 cm?,3
+f8aa14e0-e623-40bd-9128-57bf6e36113b,18f34f0a-6ee5-459a-bae7-fcb9dbde8c17,c,"[{""type"": ""text"", ""html"": ""<p>11.$7 \\text{ cm}^2$</p>""}]",11.$7 \text{ cm}^2$,3
 d2aa6041-6c13-4f5c-88cf-96128127bae2,18f34f0a-6ee5-459a-bae7-fcb9dbde8c17,d,"[{""type"": ""text"", ""html"": ""<p>117 cm</p>""}]",117 cm,4
 78c52021-e195-4527-8a68-2e587edc00df,8508c30c-9cda-43c6-abf1-306681773bb5,a,"[{""type"": ""text"", ""html"": ""<p>Option A</p>""}]",Option A,1
 7d6e2ac7-a592-4925-b689-e207067718db,8508c30c-9cda-43c6-abf1-306681773bb5,b,"[{""type"": ""text"", ""html"": ""<p>Option B</p>""}]",Option B,2
@@ -58,7 +58,7 @@ b3b37be4-c58f-4411-8df8-ca55ae0f194c,0a32f83f-e3f0-4dff-8816-22e7f9295f5d,d,"[{"
 44c8ee4b-7e22-4437-b9ed-45404a4dd13c,fd4de545-d6de-4eb8-b121-647e6b0301e6,a,"[{""type"": ""text"", ""html"": ""<p>3.85 and 3.84</p>""}]",3.85 and 3.84,1
 a2fed75b-d61d-446e-8de3-0318dc2cb860,fd4de545-d6de-4eb8-b121-647e6b0301e6,b,"[{""type"": ""text"", ""html"": ""<p>Option B</p>""}]",Option B,2
 b06c71b9-383f-45da-acd4-6afbb18d2213,fd4de545-d6de-4eb8-b121-647e6b0301e6,c,"[{""type"": ""text"", ""html"": ""<p>3.85 and 3.83</p>""}]",3.85 and 3.83,3
-4fa06111-b45c-45e2-9276-cda17c055d55,fd4de545-d6de-4eb8-b121-647e6b0301e6,d,"[{""type"": ""text"", ""html"": ""<p> (Page5)</p>""}]", (Page5),4
+4fa06111-b45c-45e2-9276-cda17c055d55,fd4de545-d6de-4eb8-b121-647e6b0301e6,d,"[{""type"": ""text"", ""html"": ""<p>(Page5)</p>""}]",(Page5),4
 7c8a4804-e7c4-4ce6-9e92-4c25f1a6bd1c,567f19ae-ce19-4d3a-b704-2eb340e4cff0,a,"[{""type"": ""text"", ""html"": ""<p>3</p>""}]",3,1
 75360a1e-a56e-49b5-95e2-5561f2b75e5d,567f19ae-ce19-4d3a-b704-2eb340e4cff0,b,"[{""type"": ""text"", ""html"": ""<p>4</p>""}]",4,2
 00e0a514-e8fb-4ed0-a4a4-7835ab3eff08,567f19ae-ce19-4d3a-b704-2eb340e4cff0,c,"[{""type"": ""text"", ""html"": ""<p>2</p>""}]",2,3
@@ -84,10 +84,10 @@ e8e522e7-6f9b-49bb-8e2c-7ca490cd2aed,14081414-af6e-4640-913d-234e82fee2dd,d,"[{"
 e2018779-7cae-4b86-abb0-df5fd3eb1613,ea0c9b05-82cb-4b08-b699-260715c00db9,c,"[{""type"": ""text"", ""html"": ""<p>Angle Energy (Page 7)</p>""}]",Angle Energy (Page 7),3
 550e99e6-81ca-4fd9-bc06-60adec05d284,ea0c9b05-82cb-4b08-b699-260715c00db9,d,"[{""type"": ""text"", ""html"": ""<p>Option D</p>""}]",Option D,4
 162230ea-9090-446e-a152-33daf5b22549,95d120c2-aaaf-41f7-9a62-3f10e5357fac,a,"[{""type"": ""text"", ""html"": ""<p>never has a unit</p>""}]",never has a unit,1
-2a3b08a0-0c6b-4f47-8f60-c60dafa96f7b,95d120c2-aaaf-41f7-9a62-3f10e5357fac,b,"[{""type"": ""text"", ""html"": ""<p> always has unit</p>""}]", always has unit,2
+2a3b08a0-0c6b-4f47-8f60-c60dafa96f7b,95d120c2-aaaf-41f7-9a62-3f10e5357fac,b,"[{""type"": ""text"", ""html"": ""<p>always has unit</p>""}]",always has unit,2
 d7b06de2-b4b5-4392-9e54-189271b3781a,95d120c2-aaaf-41f7-9a62-3f10e5357fac,c,"[{""type"": ""text"", ""html"": ""<p>may have a unit</p>""}]",may have a unit,3
 0875e608-1077-420e-ace7-8afb2d22cb3a,95d120c2-aaaf-41f7-9a62-3f10e5357fac,d,"[{""type"": ""text"", ""html"": ""<p>does not exist. (Page 7)</p>""}]",does not exist. (Page 7),4
-14e5fcb2-9498-476f-8ca3-a948e7cd1e83,003968b8-9bb4-45bc-a5c8-7b18d0190871,a,"[{""type"": ""text"", ""html"": ""<p> Force and power</p>""}]", Force and power,1
+14e5fcb2-9498-476f-8ca3-a948e7cd1e83,003968b8-9bb4-45bc-a5c8-7b18d0190871,a,"[{""type"": ""text"", ""html"": ""<p>Force and power</p>""}]",Force and power,1
 67755b71-332d-4b03-bf31-7c671f096961,003968b8-9bb4-45bc-a5c8-7b18d0190871,b,"[{""type"": ""text"", ""html"": ""<p>Torque and energy</p>""}]",Torque and energy,2
 1c357180-e96b-41c4-9fb8-485722322771,003968b8-9bb4-45bc-a5c8-7b18d0190871,c,"[{""type"": ""text"", ""html"": ""<p>Torque and power (Page 7)</p>""}]",Torque and power (Page 7),3
 0505cb6c-cd9d-410f-adca-847b3e441e85,003968b8-9bb4-45bc-a5c8-7b18d0190871,d,"[{""type"": ""text"", ""html"": ""<p>Force and torque</p>""}]",Force and torque,4
@@ -114,7 +114,7 @@ afa7d528-e487-479c-818e-36a14dd44b03,6266d62f-cab8-40ce-8c76-053d79da9dca,b,"[{"
 e86383d3-77a8-4be6-913e-4ff0684c0a09,d3c5115b-662d-4cee-92b3-3adb9cfa8724,a,"[{""type"": ""text"", ""html"": ""<p>P, S, h</p>""}]","P, S, h",1
 4f96bdfc-b2bd-40cf-8c94-302a1a09fe1d,d3c5115b-662d-4cee-92b3-3adb9cfa8724,b,"[{""type"": ""text"", ""html"": ""<p>P, h, S</p>""}]","P, h, S",2
 0441d370-db2e-46a9-acb8-70a97990e385,d3c5115b-662d-4cee-92b3-3adb9cfa8724,c,"[{""type"": ""text"", ""html"": ""<p>S, P, h</p>""}]","S, P, h",3
-5a7c4a45-7d1b-46a0-bbc6-f0f90f34a162,d3c5115b-662d-4cee-92b3-3adb9cfa8724,d,"[{""type"": ""text"", ""html"": ""<p> S, h, P (Page 7)</p>""}]"," S, h, P (Page 7)",4
+5a7c4a45-7d1b-46a0-bbc6-f0f90f34a162,d3c5115b-662d-4cee-92b3-3adb9cfa8724,d,"[{""type"": ""text"", ""html"": ""<p>S, h, P (Page 7)</p>""}]","S, h, P (Page 7)",4
 faf054f9-bb2b-4d16-8573-d516f56445a8,1a6705b9-6a76-4af7-974c-288a2afda0b7,a,"[{""type"": ""text"", ""html"": ""<p>Option A</p>""}]",Option A,1
 17b2f694-71da-4fcb-8cbb-73f527716256,1a6705b9-6a76-4af7-974c-288a2afda0b7,b,"[{""type"": ""text"", ""html"": ""<p>Option B</p>""}]",Option B,2
 d48c501b-5f25-4407-bc28-61387387d076,1a6705b9-6a76-4af7-974c-288a2afda0b7,c,"[{""type"": ""text"", ""html"": ""<p>Option C</p>""}]",Option C,3
@@ -122,7 +122,7 @@ d48c501b-5f25-4407-bc28-61387387d076,1a6705b9-6a76-4af7-974c-288a2afda0b7,c,"[{"
 788a725f-dada-4f9a-b9f3-5954a9b32301,0b2bfa1f-180c-46f6-bb61-02590722d5b3,a,"[{""type"": ""text"", ""html"": ""<p>linear impulse work</p>""}]",linear impulse work,1
 969a4c92-21ff-4667-9c25-cce1bfd24cf7,0b2bfa1f-180c-46f6-bb61-02590722d5b3,b,"[{""type"": ""text"", ""html"": ""<p>Option B</p>""}]",Option B,2
 18b1f0f2-ad6a-4063-91c6-f717e6c9a3ee,0b2bfa1f-180c-46f6-bb61-02590722d5b3,c,"[{""type"": ""text"", ""html"": ""<p>linear momentum</p>""}]",linear momentum,3
-99424cc1-0e48-43ce-8dd4-d55852706a5a,0b2bfa1f-180c-46f6-bb61-02590722d5b3,d,"[{""type"": ""text"", ""html"": ""<p> angular momentum (Page 7)</p>""}]", angular momentum (Page 7),4
+99424cc1-0e48-43ce-8dd4-d55852706a5a,0b2bfa1f-180c-46f6-bb61-02590722d5b3,d,"[{""type"": ""text"", ""html"": ""<p>angular momentum (Page 7)</p>""}]",angular momentum (Page 7),4
 2bd2acf4-0710-416a-b026-b9d7e1b6043d,0fbe5eed-dd2d-4cee-b2b7-3c8e17914974,a,"[{""type"": ""text"", ""html"": ""<p>Dimensional formula of thermal conductivity (K) is [M'L'T-K-].</p>""}]",Dimensional formula of thermal conductivity (K) is [M'L'T-K-].,1
 d5322580-a7ed-4062-a049-50de4c466af9,0fbe5eed-dd2d-4cee-b2b7-3c8e17914974,b,"[{""type"": ""text"", ""html"": ""<p>Dimensional formula of potential (V) is [M'L'T'A].</p>""}]",Dimensional formula of potential (V) is [M'L'T'A].,2
 590077a2-a37d-45c2-a75a-a410c6dac8df,0fbe5eed-dd2d-4cee-b2b7-3c8e17914974,c,"[{""type"": ""text"", ""html"": ""<p>Dimensional formula of permeability of free space(u,) is [M'L'T-2A2).</p>""}]","Dimensional formula of permeability of free space(u,) is [M'L'T-2A2).",3
@@ -140,7 +140,7 @@ ad91153b-03ac-4872-8978-4123287db66f,90166323-2880-4894-b951-75e6ab26e068,b,"[{"
 747020b0-33c3-4cb9-8213-b622f4a0766d,90166323-2880-4894-b951-75e6ab26e068,c,"[{""type"": ""text"", ""html"": ""<p>Option C</p>""}]",Option C,3
 16a7e843-09a7-40c3-bd70-3d0c461c878d,90166323-2880-4894-b951-75e6ab26e068,d,"[{""type"": ""text"", ""html"": ""<p>Option D</p>""}]",Option D,4
 48ccddd3-602d-45e6-93f3-fa6172c56404,2696659c-5baf-4c20-b45a-85b63838b4bd,a,"[{""type"": ""text"", ""html"": ""<p>[ML'T2</p>""}]",[ML'T2,1
-87507aa7-ee75-4611-a6a6-68a559e94b9d,2696659c-5baf-4c20-b45a-85b63838b4bd,b,"[{""type"": ""text"", ""html"": ""<p>[MLT2]</p>""}]",[MLT2],2
+87507aa7-ee75-4611-a6a6-68a559e94b9d,2696659c-5baf-4c20-b45a-85b63838b4bd,b,"[{""type"": ""text"", ""html"": ""<p>$[MLT^{-2}]$</p>""}]",$[MLT^{-2}]$,2
 7d802da4-3112-48ed-b0e8-8c7afce928d3,2696659c-5baf-4c20-b45a-85b63838b4bd,c,"[{""type"": ""text"", ""html"": ""<p>[MLT']</p>""}]",[MLT'],3
 62d0352e-fc97-425a-8281-0f16c91e95eb,2696659c-5baf-4c20-b45a-85b63838b4bd,d,"[{""type"": ""text"", ""html"": ""<p>[MLT] (Page 7)</p>""}]",[MLT] (Page 7),4
 45fff63d-c8c7-4b05-9461-619f5d21ba48,c143a897-7535-452f-ab11-b5ad6b0d7d8d,a,"[{""type"": ""text"", ""html"": ""<p>Option A</p>""}]",Option A,1
@@ -160,7 +160,7 @@ c470faa1-1b1e-44ba-8986-722b68c2fed4,cbcfa587-0625-40e1-9454-f0208c944a0b,d,"[{"
 492a0e9e-9e72-4a28-b717-130fcf94a686,c1575767-5460-447c-8c19-9882244d3bbd,c,"[{""type"": ""text"", ""html"": ""<p>50\u0433?B-ly2 (Page 8)</p>""}]",50г?B-ly2 (Page 8),3
 0235bca6-35c2-40ef-8c13-60de9756280c,c1575767-5460-447c-8c19-9882244d3bbd,d,"[{""type"": ""text"", ""html"": ""<p>5a-By</p>""}]",5a-By,4
 5d09d928-e453-4fd7-b97b-0f9accb3b134,c1a2a9d9-1ac3-4171-8388-cbfce9973771,a,"[{""type"": ""text"", ""html"": ""<p>[MLST-2] and [I3/2]</p>""}]",[MLST-2] and [I3/2],1
-af2a5e04-a679-4768-8829-c5cb55c9d002,c1a2a9d9-1ac3-4171-8388-cbfce9973771,b,"[{""type"": ""text"", ""html"": ""<p>[MLT-2] and [L3]</p>""}]",[MLT-2] and [L3],2
+af2a5e04-a679-4768-8829-c5cb55c9d002,c1a2a9d9-1ac3-4171-8388-cbfce9973771,b,"[{""type"": ""text"", ""html"": ""<p>$[MLT^{-2}]$ and [L3]</p>""}]",$[MLT^{-2}]$ and [L3],2
 7c6a3b5d-6ade-4b88-b419-29b02780644b,c1a2a9d9-1ac3-4171-8388-cbfce9973771,c,"[{""type"": ""text"", ""html"": ""<p>[MLST-2] and [L]</p>""}]",[MLST-2] and [L],3
 8850c6f2-27ca-4286-bb8d-f3da456f7390,c1a2a9d9-1ac3-4171-8388-cbfce9973771,d,"[{""type"": ""text"", ""html"": ""<p>[ML'T-2] and [L3/2) (Page 8)</p>""}]",[ML'T-2] and [L3/2) (Page 8),4
 1e291461-d007-4890-a51b-568e2e93ab47,80d1b8a1-1bdb-4220-98f4-becee644fca3,a,"[{""type"": ""text"", ""html"": ""<p>- 1/2,1/2 and 5/2</p>""}]","- 1/2,1/2 and 5/2",1
@@ -175,10 +175,10 @@ be1c9859-cda0-4889-ae24-4d7f64824c1c,9ee8b6ad-0de7-4d04-badf-e3f9077bada3,b,"[{"
 4257e762-c1e9-424a-9f4e-ecb313e5d7c4,173f26b4-3daf-4c76-b043-cf8b61c4d93a,b,"[{""type"": ""text"", ""html"": ""<p>7%</p>""}]",7%,2
 9ed3a9e9-8280-4026-ab25-7ca77d3eb86a,173f26b4-3daf-4c76-b043-cf8b61c4d93a,c,"[{""type"": ""text"", ""html"": ""<p>9%</p>""}]",9%,3
 371e42f7-15e1-41d7-aa56-91a228332082,173f26b4-3daf-4c76-b043-cf8b61c4d93a,d,"[{""type"": ""text"", ""html"": ""<p>11%</p>""}]",11%,4
-eeed241c-ee43-4ed5-ac4e-11c60b9625cb,9a47914e-9dc3-4d53-81b2-cd2fbb7f2406,a,"[{""type"": ""text"", ""html"": ""<p> AZ =4AA 1AB, AC, 3 AD Z A 3 B 2 D 1 AB \u0414C 3 AD</p>""}]"," AZ =4AA 1AB, AC, 3 AD Z A 3 B 2 D 1 AB ДC 3 AD",1
-6492e578-a5e5-4ec5-9652-d5a98e53e804,9a47914e-9dc3-4d53-81b2-cd2fbb7f2406,b,"[{""type"": ""text"", ""html"": ""<p> AZ -4A4, 1AB -+-- Z A 3 B 2 D AZ</p>""}]"," AZ -4A4, 1AB -+-- Z A 3 B 2 D AZ",2
-348d947d-b500-4753-81b9-05d9a8267b68,9a47914e-9dc3-4d53-81b2-cd2fbb7f2406,c,"[{""type"": ""text"", ""html"": ""<p> =4-A+ 1AB, AC 3AD Z A3B C 2D 3 AD</p>""}]"," =4-A+ 1AB, AC 3AD Z A3B C 2D 3 AD",3
-c7442879-6765-450a-a02c-39ac74da9a1a,9a47914e-9dc3-4d53-81b2-cd2fbb7f2406,d,"[{""type"": ""text"", ""html"": ""<p> ==144+14B_AC, 3 \u0412 2 D</p>""}]"," ==144+14B_AC, 3 В 2 D",4
+eeed241c-ee43-4ed5-ac4e-11c60b9625cb,9a47914e-9dc3-4d53-81b2-cd2fbb7f2406,a,"[{""type"": ""text"", ""html"": ""<p>AZ =4AA 1AB, AC, 3 AD Z A 3 B 2 D 1 AB \u0414C 3 AD</p>""}]","AZ =4AA 1AB, AC, 3 AD Z A 3 B 2 D 1 AB ДC 3 AD",1
+6492e578-a5e5-4ec5-9652-d5a98e53e804,9a47914e-9dc3-4d53-81b2-cd2fbb7f2406,b,"[{""type"": ""text"", ""html"": ""<p>AZ -4A4, 1AB -+-- Z A 3 B 2 D AZ</p>""}]","AZ -4A4, 1AB -+-- Z A 3 B 2 D AZ",2
+348d947d-b500-4753-81b9-05d9a8267b68,9a47914e-9dc3-4d53-81b2-cd2fbb7f2406,c,"[{""type"": ""text"", ""html"": ""<p>=4-A+ 1AB, AC 3AD Z A3B C 2D 3 AD</p>""}]","=4-A+ 1AB, AC 3AD Z A3B C 2D 3 AD",3
+c7442879-6765-450a-a02c-39ac74da9a1a,9a47914e-9dc3-4d53-81b2-cd2fbb7f2406,d,"[{""type"": ""text"", ""html"": ""<p>==144+14B_AC, 3 \u0412 2 D</p>""}]","==144+14B_AC, 3 В 2 D",4
 203143c3-e050-4ac2-b72a-0e6ac0240505,8c206162-2d8f-4162-b17c-535ac5a51e15,a,"[{""type"": ""text"", ""html"": ""<p>Option A</p>""}]",Option A,1
 938eb0e1-e9a5-4cfc-b1b5-a33f605015ee,8c206162-2d8f-4162-b17c-535ac5a51e15,b,"[{""type"": ""text"", ""html"": ""<p>Option B</p>""}]",Option B,2
 3e6e775c-966e-4341-a976-6940a8ded026,8c206162-2d8f-4162-b17c-535ac5a51e15,c,"[{""type"": ""text"", ""html"": ""<p>Option C</p>""}]",Option C,3
@@ -215,10 +215,10 @@ bbcacd7c-840a-40a4-933f-c6c8e6373221,16e5abcf-7cda-4fad-a93f-dea21b1427ca,b,"[{"
 0b76d717-a081-47f2-9c3d-8bbd8c61053a,79ca819b-1535-4771-be69-51db3852b4c9,b,"[{""type"": ""text"", ""html"": ""<p>Option B</p>""}]",Option B,2
 9d750bd8-8f20-4f7f-a400-e6fb0ff6bc3e,79ca819b-1535-4771-be69-51db3852b4c9,c,"[{""type"": ""text"", ""html"": ""<p>Option C</p>""}]",Option C,3
 5bb8a348-992c-4f79-83b4-4ea0ea20490e,79ca819b-1535-4771-be69-51db3852b4c9,d,"[{""type"": ""text"", ""html"": ""<p>Option D</p>""}]",Option D,4
-dede1734-7596-490d-9893-cf2aef6afcbc,4a2e4e62-7b50-469c-bc48-62db661ad209,a,"[{""type"": ""text"", ""html"": ""<p>1.9 x 1010</p>""}]",1.9 x 1010,1
+dede1734-7596-490d-9893-cf2aef6afcbc,4a2e4e62-7b50-469c-bc48-62db661ad209,a,"[{""type"": ""text"", ""html"": ""<p>$1.9 \\times 10^{10}$</p>""}]",$1.9 \times 10^{10}$,1
 24d6f785-3af0-446d-b0f5-a433e2975c5d,4a2e4e62-7b50-469c-bc48-62db661ad209,b,"[{""type"": ""text"", ""html"": ""<p>1.9 x 10\""1</p>""}]","1.9 x 10""1",2
-ca546d73-2639-4408-b4df-2bbd82135b62,4a2e4e62-7b50-469c-bc48-62db661ad209,c,"[{""type"": ""text"", ""html"": ""<p>1.9 x 102</p>""}]",1.9 x 102,3
-ed1874e5-89b8-4dfc-a657-d8c9407576c5,4a2e4e62-7b50-469c-bc48-62db661ad209,d,"[{""type"": ""text"", ""html"": ""<p>1.9 x 1013</p>""}]",1.9 x 1013,4
+ca546d73-2639-4408-b4df-2bbd82135b62,4a2e4e62-7b50-469c-bc48-62db661ad209,c,"[{""type"": ""text"", ""html"": ""<p>$1.9 \\times 10^{2}$</p>""}]",$1.9 \times 10^{2}$,3
+ed1874e5-89b8-4dfc-a657-d8c9407576c5,4a2e4e62-7b50-469c-bc48-62db661ad209,d,"[{""type"": ""text"", ""html"": ""<p>$1.9 \\times 10^{13}$</p>""}]",$1.9 \times 10^{13}$,4
 6ea2558e-5999-4ebd-9468-264129de89bb,9d6f1557-1228-4a5c-867a-f43974a83778,a,"[{""type"": ""text"", ""html"": ""<p>Work and torque.</p>""}]",Work and torque.,1
 da7f5d02-9a15-420c-8f1c-2831f2ef3769,9d6f1557-1228-4a5c-867a-f43974a83778,b,"[{""type"": ""text"", ""html"": ""<p>Angular momentum and Planck's constant.</p>""}]",Angular momentum and Planck's constant.,2
 e22f2bb1-7c2f-4fff-b756-7a4b22ec9868,9d6f1557-1228-4a5c-867a-f43974a83778,c,"[{""type"": ""text"", ""html"": ""<p>Tension and surface tension.</p>""}]",Tension and surface tension.,3
@@ -291,8 +291,8 @@ a5ea6e55-8c39-4527-ac46-78068a110892,3bb0fe23-e193-419e-a10c-48f4f3976a47,d,"[{"
 18aa2dfa-3b93-41af-9b85-b22069104c2d,9344b1b5-9037-4463-bead-49067057e267,b,"[{""type"": ""text"", ""html"": ""<p>kilowatt hour (Page 2)</p>""}]",kilowatt hour (Page 2),2
 e58e5882-d134-4209-8a3f-82552e512c7c,9344b1b5-9037-4463-bead-49067057e267,c,"[{""type"": ""text"", ""html"": ""<p>joule Explain unified atomic mass unit in kg.</p>""}]",joule Explain unified atomic mass unit in kg.,3
 31b0df9b-ee33-42a4-a604-f57c9a0f50eb,9344b1b5-9037-4463-bead-49067057e267,d,"[{""type"": ""text"", ""html"": ""<p>watt</p>""}]",watt,4
-800e8e26-9d76-4a5d-bf42-728039058e4b,e0c94e14-f452-482d-a66b-4ccfdcd0c9ce,a,"[{""type"": ""text"", ""html"": ""<p>1.13 x 103 (Page2)</p>""}]",1.13 x 103 (Page2),1
-ceb3e3ce-bfba-472d-9ae2-6f2fc69b1f7a,e0c94e14-f452-482d-a66b-4ccfdcd0c9ce,b,"[{""type"": ""text"", ""html"": ""<p>1.13 x 102</p>""}]",1.13 x 102,2
+800e8e26-9d76-4a5d-bf42-728039058e4b,e0c94e14-f452-482d-a66b-4ccfdcd0c9ce,a,"[{""type"": ""text"", ""html"": ""<p>$1.13 \\times 10^{3}$ (Page2)</p>""}]",$1.13 \times 10^{3}$ (Page2),1
+ceb3e3ce-bfba-472d-9ae2-6f2fc69b1f7a,e0c94e14-f452-482d-a66b-4ccfdcd0c9ce,b,"[{""type"": ""text"", ""html"": ""<p>$1.13 \\times 10^{2}$</p>""}]",$1.13 \times 10^{2}$,2
 bf584d7e-941b-4119-8706-3b5443106c20,e0c94e14-f452-482d-a66b-4ccfdcd0c9ce,c,"[{""type"": ""text"", ""html"": ""<p>1.13 x 10*</p>""}]",1.13 x 10*,3
 c25a5f01-7a8d-46b4-9155-c2e051f12c6a,e0c94e14-f452-482d-a66b-4ccfdcd0c9ce,d,"[{""type"": ""text"", ""html"": ""<p>11.3</p>""}]",11.3,4
 29ce4baf-10f6-4f39-aba4-6ff582e1e9a5,265b9fbf-3077-450f-adfc-35ec3e4bea83,a,"[{""type"": ""text"", ""html"": ""<p>Option A</p>""}]",Option A,1
@@ -300,7 +300,7 @@ d86a5ed5-dda8-4738-9d10-8e07f08e642b,265b9fbf-3077-450f-adfc-35ec3e4bea83,b,"[{"
 170d972a-9a04-4020-88ac-632ce96972d0,265b9fbf-3077-450f-adfc-35ec3e4bea83,c,"[{""type"": ""text"", ""html"": ""<p>Option C</p>""}]",Option C,3
 5a701cce-e567-4e4f-bc59-1ecea8cb8914,265b9fbf-3077-450f-adfc-35ec3e4bea83,d,"[{""type"": ""text"", ""html"": ""<p>Option D</p>""}]",Option D,4
 1853992f-12ca-484b-9f25-c48628cdc103,5b17f8dc-776a-464a-9732-7a2bbd3e3d5d,a,"[{""type"": ""text"", ""html"": ""<p>Option A</p>""}]",Option A,1
-72e38cee-105c-4be0-b7b2-3bdadb2886f1,5b17f8dc-776a-464a-9732-7a2bbd3e3d5d,b,"[{""type"": ""text"", ""html"": ""<p> [ML-T] (R) 1kgK-</p>""}]", [ML-T] (R) 1kgK-,2
+72e38cee-105c-4be0-b7b2-3bdadb2886f1,5b17f8dc-776a-464a-9732-7a2bbd3e3d5d,b,"[{""type"": ""text"", ""html"": ""<p>[ML-T] (R) 1kgK-</p>""}]",[ML-T] (R) 1kgK-,2
 4fbff6eb-74bf-4ef0-aa4e-514fc5c75290,5b17f8dc-776a-464a-9732-7a2bbd3e3d5d,c,"[{""type"": ""text"", ""html"": ""<p>Option C</p>""}]",Option C,3
 2de66aca-5711-4955-808e-e2dbd0ad5183,5b17f8dc-776a-464a-9732-7a2bbd3e3d5d,d,"[{""type"": ""text"", ""html"": ""<p>Option D</p>""}]",Option D,4
 8196a340-8e0d-4b24-a8fb-002d22983137,e0756790-960a-4b33-9362-3efc15b03815,a,"[{""type"": ""text"", ""html"": ""<p>\u2192 (S),</p>""}]","→ (S),",1
@@ -312,8 +312,8 @@ d1cbfadd-91d1-4637-9c73-34cc8d757135,66c23653-2108-4287-99b2-1841b46d34ed,b,"[{"
 88eb77d1-d712-4f83-96fb-c5c7fb2c4e14,66c23653-2108-4287-99b2-1841b46d34ed,c,"[{""type"": ""text"", ""html"": ""<p>Option C</p>""}]",Option C,3
 440c3322-bd09-4f10-a6c4-51717c868ebe,66c23653-2108-4287-99b2-1841b46d34ed,d,"[{""type"": ""text"", ""html"": ""<p>Option D</p>""}]",Option D,4
 1b06115c-69c2-4d5b-96b3-4cea61970ea8,d2dbfbf4-4f46-4315-af23-2a6ab5bd0342,a,"[{""type"": ""text"", ""html"": ""<p>RH(Rydberg constant) (P) kgm's!</p>""}]",RH(Rydberg constant) (P) kgm's!,1
-0e0d61ba-bfde-442b-ac39-91823d17aef2,d2dbfbf4-4f46-4315-af23-2a6ab5bd0342,b,"[{""type"": ""text"", ""html"": ""<p> hPlanck's constant) (Q) kgm's!</p>""}]", hPlanck's constant) (Q) kgm's!,2
-23e9e489-01a0-4fd3-8226-314065d9f0d6,d2dbfbf4-4f46-4315-af23-2a6ab5bd0342,c,"[{""type"": ""text"", ""html"": ""<p> (R) Ug(Magnetic field energy density) (S) kgm's2</p>""}]", (R) Ug(Magnetic field energy density) (S) kgm's2,3
+0e0d61ba-bfde-442b-ac39-91823d17aef2,d2dbfbf4-4f46-4315-af23-2a6ab5bd0342,b,"[{""type"": ""text"", ""html"": ""<p>hPlanck's constant) (Q) kgm's!</p>""}]",hPlanck's constant) (Q) kgm's!,2
+23e9e489-01a0-4fd3-8226-314065d9f0d6,d2dbfbf4-4f46-4315-af23-2a6ab5bd0342,c,"[{""type"": ""text"", ""html"": ""<p>(R) Ug(Magnetic field energy density) (S) kgm's2</p>""}]",(R) Ug(Magnetic field energy density) (S) kgm's2,3
 a74ca407-a938-4b32-853d-98ecaea269c2,d2dbfbf4-4f46-4315-af23-2a6ab5bd0342,d,"[{""type"": ""text"", ""html"": ""<p>n(coefficient of viscosity)</p>""}]",n(coefficient of viscosity),4
 a61deaa1-7bae-4e80-aa8b-680fb48ecbe1,b8d1c62e-447d-4baa-b545-6010f819c715,a,"[{""type"": ""text"", ""html"": ""<p>\u2192 (R),</p>""}]","→ (R),",1
 5515ee4c-9bf8-44a9-a6e0-1b0c5039ebdf,b8d1c62e-447d-4baa-b545-6010f819c715,b,"[{""type"": ""text"", ""html"": ""<p>\u2192 (Q),</p>""}]","→ (Q),",2
@@ -380,7 +380,7 @@ a393c717-f6b8-4df5-a9ef-b2214bf26427,451fc13c-a9eb-4ee9-b034-79450f2f76c6,b,"[{"
 8fd91892-9549-4e35-9617-947d4fc97af1,451fc13c-a9eb-4ee9-b034-79450f2f76c6,c,"[{""type"": ""text"", ""html"": ""<p>Dimensions of n'sine is same that of a\u00df.</p>""}]",Dimensions of n'sine is same that of aß.,3
 0133e4af-9ab0-45f9-9ee6-f6f47cd188ae,451fc13c-a9eb-4ee9-b034-79450f2f76c6,d,"[{""type"": ""text"", ""html"": ""<p>Dimensions of a is same as that of B.</p>""}]",Dimensions of a is same as that of B.,4
 0808f4ba-5143-4aab-9b11-122f012bc88e,97cc1afe-4b53-4325-a7f0-8b84db90595a,a,"[{""type"": ""text"", ""html"": ""<p>Error AT in measuring T, the time period is</p>""}]","Error AT in measuring T, the time period is",1
-ffcf29dc-7eac-4bf0-8a90-481ba6947c9b,97cc1afe-4b53-4325-a7f0-8b84db90595a,b,"[{""type"": ""text"", ""html"": ""<p> Error AT in measuring T, the time period is 1 s.</p>""}]"," Error AT in measuring T, the time period is 1 s.",2
+ffcf29dc-7eac-4bf0-8a90-481ba6947c9b,97cc1afe-4b53-4325-a7f0-8b84db90595a,b,"[{""type"": ""text"", ""html"": ""<p>Error AT in measuring T, the time period is 1 s.</p>""}]","Error AT in measuring T, the time period is 1 s.",2
 ae810366-682b-4bf4-85a3-7694a6d4b3b6,97cc1afe-4b53-4325-a7f0-8b84db90595a,c,"[{""type"": ""text"", ""html"": ""<p>Option C</p>""}]",Option C,3
 fb4ac082-d7d2-4ac3-ba4b-edbc05894205,97cc1afe-4b53-4325-a7f0-8b84db90595a,d,"[{""type"": ""text"", ""html"": ""<p>Option D</p>""}]",Option D,4
 cfc377f5-b20f-4fbd-b48a-d18096b43468,638b3054-2fb0-45d8-9b4a-a7dbae5bd001,a,"[{""type"": ""text"", ""html"": ""<p>Option A</p>""}]",Option A,1
@@ -389,8 +389,8 @@ cfc377f5-b20f-4fbd-b48a-d18096b43468,638b3054-2fb0-45d8-9b4a-a7dbae5bd001,a,"[{"
 b7840447-c18f-42f9-945e-66faef1d03ab,638b3054-2fb0-45d8-9b4a-a7dbae5bd001,d,"[{""type"": ""text"", ""html"": ""<p>Option D</p>""}]",Option D,4
 339d1442-6604-4a5f-9505-4abe7be6aee3,46ab9f97-4329-4e5b-adf4-10d52c907621,a,"[{""type"": ""text"", ""html"": ""<p>W = t0 8nL \u0434\u0415</p>""}]",W = t0 8nL дЕ,1
 5fa7f1ad-3a59-42b3-8d3e-28c58ed3d944,46ab9f97-4329-4e5b-adf4-10d52c907621,b,"[{""type"": ""text"", ""html"": ""<p>Option B</p>""}]",Option B,2
-31f5af05-66b8-4101-963a-42c8b426e019,46ab9f97-4329-4e5b-adf4-10d52c907621,c,"[{""type"": ""text"", ""html"": ""<p> h=2scose dt prg</p>""}]", h=2scose dt prg,3
-1ffa3625-50c2-464d-8ac6-ae191405c961,46ab9f97-4329-4e5b-adf4-10d52c907621,d,"[{""type"": ""text"", ""html"": ""<p> J=E</p>""}]", J=E,4
+31f5af05-66b8-4101-963a-42c8b426e019,46ab9f97-4329-4e5b-adf4-10d52c907621,c,"[{""type"": ""text"", ""html"": ""<p>h=2scose dt prg</p>""}]",h=2scose dt prg,3
+1ffa3625-50c2-464d-8ac6-ae191405c961,46ab9f97-4329-4e5b-adf4-10d52c907621,d,"[{""type"": ""text"", ""html"": ""<p>J=E</p>""}]",J=E,4
 a0ffd9f8-1992-4f42-b7f6-a0ee68ab362b,b849db92-ac4f-4dd3-b3d0-c5bc182eb5c6,a,"[{""type"": ""text"", ""html"": ""<p>S, B, k and uR have the same dimensions</p>""}]","S, B, k and uR have the same dimensions",1
 96b141bc-e1ef-4a5e-87b0-7a83ccfa9a75,b849db92-ac4f-4dd3-b3d0-c5bc182eb5c6,b,"[{""type"": ""text"", ""html"": ""<p>o and k have the same dimensions</p>""}]",o and k have the same dimensions,2
 33d0aeb5-277e-4711-af9f-f5f09cd1d852,b849db92-ac4f-4dd3-b3d0-c5bc182eb5c6,c,"[{""type"": ""text"", ""html"": ""<p>o and J have the same dimensions</p>""}]",o and J have the same dimensions,3
@@ -399,7 +399,7 @@ f848ce66-f04c-4126-a6ac-abd75a98b2ad,b849db92-ac4f-4dd3-b3d0-c5bc182eb5c6,d,"[{"
 1f2a3248-35bf-4cf1-b0f5-1f39c09f76a4,fe94ae9f-2924-4d55-b781-526ce1cba135,b,"[{""type"": ""text"", ""html"": ""<p>0.82%</p>""}]",0.82%,2
 286508b9-d385-45a4-b66f-81d0bee7abbe,fe94ae9f-2924-4d55-b781-526ce1cba135,c,"[{""type"": ""text"", ""html"": ""<p>0.72% d)0.25% (JEE Main 2026)</p>""}]",0.72% d)0.25% (JEE Main 2026),3
 10f25c99-aa00-4f79-aef3-89ecece4b402,fe94ae9f-2924-4d55-b781-526ce1cba135,d,"[{""type"": ""text"", ""html"": ""<p>Option D</p>""}]",Option D,4
-c987e140-3e28-439b-8fde-d97b4513a45d,7e3b1446-5b43-49ce-9ed1-926a6d5f232e,a,"[{""type"": ""text"", ""html"": ""<p> (JEE Main 2026)</p>""}]", (JEE Main 2026),1
+c987e140-3e28-439b-8fde-d97b4513a45d,7e3b1446-5b43-49ce-9ed1-926a6d5f232e,a,"[{""type"": ""text"", ""html"": ""<p>(JEE Main 2026)</p>""}]",(JEE Main 2026),1
 69e4266c-8e3a-40d1-9095-a99c18797fd8,7e3b1446-5b43-49ce-9ed1-926a6d5f232e,b,"[{""type"": ""text"", ""html"": ""<p>Am\""</p>""}]","Am""",2
 cbc4fabe-26d1-4b1a-b8f3-949375c629ae,7e3b1446-5b43-49ce-9ed1-926a6d5f232e,c,"[{""type"": ""text"", ""html"": ""<p>A/m</p>""}]",A/m,3
 16158054-79be-430b-9955-3b54ee1e60bd,7e3b1446-5b43-49ce-9ed1-926a6d5f232e,d,"[{""type"": ""text"", ""html"": ""<p>A/m' Am</p>""}]",A/m' Am,4
@@ -436,7 +436,7 @@ c5a8229f-4ae8-4b87-8914-17f0bea19749,c4b3aab4-55ab-4618-97ef-e19179c4eaca,b,"[{"
 eb5ccbf6-68f7-496c-8fa4-d8a201a3d1ad,5b79bdc3-462d-4113-a97f-2910a474e4dd,c,"[{""type"": ""text"", ""html"": ""<p>strain and arc (NEET2024)</p>""}]",strain and arc (NEET2024),3
 4a84dcd1-26f3-4975-9587-7297dd838c8f,5b79bdc3-462d-4113-a97f-2910a474e4dd,d,"[{""type"": ""text"", ""html"": ""<p>angular speed and stress</p>""}]",angular speed and stress,4
 2d2e3f49-cec4-4fa5-8d68-2e8481590445,8e11194d-dde8-4363-ac37-29a9e4d40b6d,a,"[{""type"": ""text"", ""html"": ""<p>Bt</p>""}]",Bt,1
-2b4dafdd-aee8-496c-b21e-1707d4740d1d,8e11194d-dde8-4363-ac37-29a9e4d40b6d,b,"[{""type"": ""text"", ""html"": ""<p> (NEET2024)</p>""}]", (NEET2024),2
+2b4dafdd-aee8-496c-b21e-1707d4740d1d,8e11194d-dde8-4363-ac37-29a9e4d40b6d,b,"[{""type"": ""text"", ""html"": ""<p>(NEET2024)</p>""}]",(NEET2024),2
 2289f645-c4c9-404b-8c20-a810f70e2954,8e11194d-dde8-4363-ac37-29a9e4d40b6d,c,"[{""type"": ""text"", ""html"": ""<p>Option C</p>""}]",Option C,3
 169a0966-de1e-44a3-8277-75fda53c0956,8e11194d-dde8-4363-ac37-29a9e4d40b6d,d,"[{""type"": ""text"", ""html"": ""<p>Option D</p>""}]",Option D,4
 a22edba4-0858-423d-a23a-5898d9ed2224,15883ebd-eafd-42e4-ad41-afc0afc336b4,a,"[{""type"": ""text"", ""html"": ""<p>Option A</p>""}]",Option A,1
@@ -499,10 +499,10 @@ c350c2c1-33bb-4cf0-b3c5-9529eb904661,0ef3774f-ad02-40da-81a6-fe25a2b52938,b,"[{"
 dbb052bf-6cfb-4b2d-a04b-1df8e3737be9,1228320c-84ce-4f73-b8b8-a0f84d8bb482,b,"[{""type"": ""text"", ""html"": ""<p>Both Statement I and Statement II are incorrect.</p>""}]",Both Statement I and Statement II are incorrect.,2
 3f7c62a9-c3f0-4671-b62a-50665356f051,1228320c-84ce-4f73-b8b8-a0f84d8bb482,c,"[{""type"": ""text"", ""html"": ""<p>Statement I is correct but Statement II is incorrect.</p>""}]",Statement I is correct but Statement II is incorrect.,3
 3e9a264f-4dee-4d9e-89d8-1b6b923d5f12,1228320c-84ce-4f73-b8b8-a0f84d8bb482,d,"[{""type"": ""text"", ""html"": ""<p>Statement I is incorrect but Statement II is correct.</p>""}]",Statement I is incorrect but Statement II is correct.,4
-8ab2a58e-4c50-466b-9785-f3344e386afd,e1a6582b-1a00-4752-94b2-56438378f574,a,"[{""type"": ""text"", ""html"": ""<p> Both Statement l and Statement Il are correct.</p>""}]", Both Statement l and Statement Il are correct.,1
-de753308-473f-4d6a-9ceb-a00d2d70462c,e1a6582b-1a00-4752-94b2-56438378f574,b,"[{""type"": ""text"", ""html"": ""<p> Statement I is correct but Statement Il is incorrect. Both Statement I and Statement Il are incorrect.</p>""}]", Statement I is correct but Statement Il is incorrect. Both Statement I and Statement Il are incorrect.,2
+8ab2a58e-4c50-466b-9785-f3344e386afd,e1a6582b-1a00-4752-94b2-56438378f574,a,"[{""type"": ""text"", ""html"": ""<p>Both Statement l and Statement Il are correct.</p>""}]",Both Statement l and Statement Il are correct.,1
+de753308-473f-4d6a-9ceb-a00d2d70462c,e1a6582b-1a00-4752-94b2-56438378f574,b,"[{""type"": ""text"", ""html"": ""<p>Statement I is correct but Statement Il is incorrect. Both Statement I and Statement Il are incorrect.</p>""}]",Statement I is correct but Statement Il is incorrect. Both Statement I and Statement Il are incorrect.,2
 18b027cf-e5f5-474e-8bcc-52bef1b6357b,e1a6582b-1a00-4752-94b2-56438378f574,c,"[{""type"": ""text"", ""html"": ""<p>Option C</p>""}]",Option C,3
-94da2c28-6a54-42b2-bd1c-d7dc583cc83c,e1a6582b-1a00-4752-94b2-56438378f574,d,"[{""type"": ""text"", ""html"": ""<p> Statement I is incorrect but Statement Il is correct.</p>""}]", Statement I is incorrect but Statement Il is correct.,4
+94da2c28-6a54-42b2-bd1c-d7dc583cc83c,e1a6582b-1a00-4752-94b2-56438378f574,d,"[{""type"": ""text"", ""html"": ""<p>Statement I is incorrect but Statement Il is correct.</p>""}]",Statement I is incorrect but Statement Il is correct.,4
 c6e63d8b-e948-44cc-92d6-2acd12b3dc79,2a70f8d8-983b-4fea-a7d7-50c5208a0f1d,a,"[{""type"": ""text"", ""html"": ""<p>Option A</p>""}]",Option A,1
 d62a5bd1-e1e2-4eb5-8aa1-9f4b78a64cf9,2a70f8d8-983b-4fea-a7d7-50c5208a0f1d,b,"[{""type"": ""text"", ""html"": ""<p>Option B</p>""}]",Option B,2
 4648e27f-32e6-4f50-aced-6358dc592d95,2a70f8d8-983b-4fea-a7d7-50c5208a0f1d,c,"[{""type"": ""text"", ""html"": ""<p>Option C</p>""}]",Option C,3

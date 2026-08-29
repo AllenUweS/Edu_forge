@@ -4,6 +4,7 @@ import { Question } from '@eduforge/shared';
 import { Search, Plus, Trash2, Edit3, Eye, Check } from 'lucide-react';
 import { StudentPreviewDrawer } from '../components/StudentPreviewDrawer.js';
 import { formatQuestionCode } from '../utils/questionCode.js';
+import { MathTextRenderer } from '../equation/MathTextRenderer.js';
 
 interface QuestionBankPageProps {
   onBackToDashboard?: () => void;
@@ -359,7 +360,7 @@ export const QuestionBankPage: React.FC<QuestionBankPageProps> = ({
                           <span className="text-slate-400 text-[11px]">· {q.subject || 'Biology'}</span>
                         </div>
                         <span className="text-slate-900 font-semibold line-clamp-1 mt-1 block">
-                          {getCleanQuestionText(q.rawText)}
+                          <MathTextRenderer text={getCleanQuestionText(q.rawText)} />
                         </span>
                       </td>
 

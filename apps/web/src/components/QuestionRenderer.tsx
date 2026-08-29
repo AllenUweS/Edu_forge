@@ -1,6 +1,7 @@
 import React from 'react';
 import { Question, DocumentBlock } from '@eduforge/shared';
 import { KaTeXRenderer } from '../equation/KaTeXRenderer.js';
+import { MathTextRenderer } from '../equation/MathTextRenderer.js';
 import { OptionLayoutRenderer } from '../questions/OptionLayoutRenderer.js';
 
 interface ContentBlockProps {
@@ -86,10 +87,9 @@ export const ContentBlockRenderer: React.FC<ContentBlockProps> = ({ block }) => 
       const html = block.html || block.text || '';
       if (html) {
         return (
-          <div
-            className="prose prose-slate prose-sm max-w-none inline-block leading-relaxed"
-            dangerouslySetInnerHTML={{ __html: html }}
-          />
+          <div className="prose prose-slate prose-sm max-w-none inline-block leading-relaxed">
+            <MathTextRenderer text={html} />
+          </div>
         );
       }
 
@@ -105,7 +105,7 @@ export const ContentBlockRenderer: React.FC<ContentBlockProps> = ({ block }) => 
                   textDecoration: r.formatting?.underline ? 'underline' : 'none'
                 }}
               >
-                {r.text}
+                <MathTextRenderer text={r.text || ''} />
               </span>
             ))}
           </p>

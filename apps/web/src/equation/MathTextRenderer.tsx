@@ -228,6 +228,22 @@ export const MathTextRenderer: React.FC<MathTextRendererProps> = ({
       .replace(/\\\(([\s\S]*?)\\\)/g, '$$ $1 $$');
   }
 
+  // Auto-detect and wrap un-delimited math expressions, exponents, scientific notation, and chemical formulas into $...$
+  if (!trimmed.includes('$')) {
+    // 1. Scientific notation e.g. 6.67 x 10^-11 or 2.5 x 10^5
+    trimmed = trimmed.replace(/(\b\d+(?:\.\d+)?\s*(?:x|×|\*|\\times)\s*10\s*[\^]\s*(?:\{[+-]?\d+\}|[+-]?\d+))/gi, (m) => `$${m.replace(/\s*x\s*/g, ' \\times ').replace(/10\^([+-]?\d+)/g, '10^{$1}')}$`);
+    // 2. Pure powers of 10 e.g. 10^-11, 10^5, 10^-28
+    trimmed = trimmed.replace(/(?<!\$)\b(10\s*[\^]\s*(?:\{[+-]?\d+\}|[+-]?\d+))\b(?!\$)/gi, (m) => `$${m.replace(/10\^([+-]?\d+)/g, '10^{$1}')}$`);
+    // 3. Dimensional formulas e.g. [M L^2 T^-2], [M L^-1 T^-2]
+    trimmed = trimmed.replace(/(?<!\$)(\[[MmLlTtAaKk\d\s\^\-\+\{\}]+\])(?!\$)/g, (m) => `$${m}$`);
+    // 4. Units with powers e.g. N m^-2, g cm^-3, dyne cm^-2, s^-1, m s^-2
+    trimmed = trimmed.replace(/(?<!\$)\b((?:[Nn]|dyne|dyn|[Gg]|kg|[Cc]m|[Mm]|s)\s*[\^]\s*\{?[+-]?\d+\}?)(?!\$)/g, (m) => `$\\text{${m}}$`);
+    // 5. Chemical formulas with subscripts e.g. CaCO_3, H_2O, CO_2, H_2SO_4
+    trimmed = trimmed.replace(/(?<!\$)\b(CaCO_3|H_2O|CO_2|O_2|N_2|H_2SO_4|KMnO_4|FeSO_4|NaCl|C_6H_\{?12\}?O_6|NO_2|SO_2|NH_3)\b(?!\$)/g, (m) => `$\\text{${m}}$`);
+    // 6. Inline LaTeX expressions with backslash e.g. \frac{a}{b}, \sqrt{x}, \alpha, \beta, \Delta, \mu, \Omega
+    trimmed = trimmed.replace(/(?<!\$)(\\[a-zA-Z]+(?:\{[^\}]*\})*(?:_\{?[a-zA-Z0-9]+\}?)?(?:\^\{?[a-zA-Z0-9+-]+\}?)?)(?!\$)/g, (m) => `$${m}$`);
+  }
+
   // 1. Explicit $...$ or $$...$$ delimiters
   if (trimmed.includes('$')) {
     const parts: React.ReactNode[] = [];
