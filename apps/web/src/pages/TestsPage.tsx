@@ -534,19 +534,27 @@ export const TestsPage: React.FC<TestsPageProps> = ({
                               </div>
 
                               {/* Render Diagram / Image if present */}
-                              {(qObj?.diagramSvg || qObj?.diagram_svg || qObj?.imageUrl || qObj?.diagramUrl) && (
-                                <div className="my-2 max-h-56 overflow-hidden flex justify-center bg-white border border-slate-200 rounded-lg p-2">
-                                  {(qObj?.diagramSvg || qObj?.diagram_svg) ? (
-                                    <div className="max-h-52 w-full flex items-center justify-center scale-95" dangerouslySetInnerHTML={{ __html: qObj.diagramSvg || qObj.diagram_svg }} />
-                                  ) : (
-                                    <img
-                                      src={qObj?.imageUrl || qObj?.diagramUrl}
-                                      alt="Question Diagram"
-                                      className="max-h-48 object-contain rounded"
-                                    />
-                                  )}
-                                </div>
-                              )}
+                              {(() => {
+                                const contentArr = Array.isArray(qObj?.content) ? (qObj.content as any[]) : [];
+                                const qSvg = qObj?.diagramSvg || qObj?.diagram_svg || contentArr.find((b: any) => b.type === 'diagram' || b.diagramSvg || b.svg)?.diagramSvg || contentArr.find((b: any) => b.type === 'diagram' || b.diagramSvg || b.svg)?.svg;
+                                const qImg = qObj?.imageUrl || qObj?.diagramUrl || contentArr.find((b: any) => b.type === 'image' || b.imageUrl || b.url)?.url;
+
+                                if (!qSvg && !qImg) return null;
+
+                                return (
+                                  <div className="my-2 max-h-56 overflow-hidden flex justify-center bg-white border border-slate-200 rounded-lg p-2">
+                                    {qSvg ? (
+                                      <div className="max-h-52 w-full flex items-center justify-center scale-95" dangerouslySetInnerHTML={{ __html: qSvg }} />
+                                    ) : (
+                                      <img
+                                        src={qImg}
+                                        alt="Question Diagram"
+                                        className="max-h-48 object-contain rounded"
+                                      />
+                                    )}
+                                  </div>
+                                );
+                              })()}
 
                               {/* Options */}
                               {qOptions && qOptions.length > 0 && (

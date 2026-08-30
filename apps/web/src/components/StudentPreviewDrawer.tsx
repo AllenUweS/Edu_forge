@@ -20,7 +20,9 @@ export const StudentPreviewDrawer: React.FC<StudentPreviewDrawerProps> = ({
   const defaultCode = question?.id ? `BIO-CELL-${question.id.slice(-4)}` : 'BIO-CELL-0016';
   const defaultOptions = question?.options || [];
 
-  const imageSrc = question?.imageUrl || question?.imageUrls?.[0];
+  const contentArr = Array.isArray(question?.content) ? (question?.content as any[]) : [];
+  const diagSvg = question?.diagramSvg || (question as any)?.diagram_svg || contentArr.find((b: any) => b.type === 'diagram' || b.diagramSvg || b.svg)?.diagramSvg || contentArr.find((b: any) => b.type === 'diagram' || b.diagramSvg || b.svg)?.svg;
+  const imageSrc = question?.imageUrl || (question as any)?.diagramUrl || question?.imageUrls?.[0] || contentArr.find((b: any) => b.type === 'image' || b.imageUrl || b.url)?.url;
 
   return (
     <>
@@ -44,24 +46,29 @@ export const StudentPreviewDrawer: React.FC<StudentPreviewDrawerProps> = ({
           </button>
         </div>
 
-        {/* Drawer Content Body */}
-        <div className="p-6 flex-1 overflow-y-auto space-y-4 text-slate-800">
-          <span className="text-xs font-mono text-slate-400 block">{defaultCode}</span>
+        {/* Question Content View */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-slate-500 font-mono tracking-wider">
+              {(question as any)?.questionCode || (question as any)?.question_code || defaultCode}
+            </span>
+          </div>
+
           <h3 className="text-base font-bold text-slate-900">Question Preview</h3>
 
           <div className="text-base leading-relaxed text-slate-900 font-medium">
             <MathTextRenderer text={defaultQuestionText} />
           </div>
 
-          {imageSrc && (
-            <div className="my-3 p-2 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-center">
-              <img src={imageSrc} alt="Question preview illustration" className="max-h-48 object-contain rounded" />
+          {diagSvg && (
+            <div className="my-3 p-2 bg-white border border-slate-200 rounded-lg flex items-center justify-center overflow-hidden">
+              <div className="max-h-52 w-full flex items-center justify-center scale-95" dangerouslySetInnerHTML={{ __html: diagSvg }} />
             </div>
           )}
 
-          {question?.diagramSvg && (
-            <div className="my-3 p-2 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-center">
-              <div dangerouslySetInnerHTML={{ __html: question.diagramSvg }} />
+          {!diagSvg && imageSrc && (
+            <div className="my-3 p-2 bg-white border border-slate-200 rounded-lg flex items-center justify-center">
+              <img src={imageSrc} alt="Question preview illustration" className="max-h-48 object-contain rounded" />
             </div>
           )}
 

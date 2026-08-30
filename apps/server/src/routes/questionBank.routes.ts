@@ -26,38 +26,68 @@ questionBankRouter.get('/', async (req: Request, res: Response, next: NextFuncti
       return res.json({ success: true, data: [] });
     }
 
-    const formatted = data.map((q: any) => ({
-      id: q.id,
-      questionCode: q.question_code,
-      questionType: q.question_type || 'MCQ_SINGLE',
-      content: q.content || [],
-      explanation: q.explanation || [],
-      difficulty: q.difficulty || 'Medium',
-      marks: Number(q.marks) || 1,
-      negativeMarks: Number(q.negative_marks) || 0,
-      correctAnswer: (q.correct_option || 'a').toUpperCase(),
-      optionLayout: q.option_layout || 'grid_2x2',
-      year: q.year,
-      source: q.source,
-      subject: q.subjects?.name || 'General',
-      subject_name: q.subjects?.name || 'General',
-      subjectId: q.subject_id,
-      subject_id: q.subject_id,
-      chapter: q.chapters?.title || 'General',
-      chapter_name: q.chapters?.title || 'General',
-      chapterId: q.chapter_id,
-      chapter_id: q.chapter_id,
-      rawText: q.raw_text || '',
-      options: (q.question_options || []).map((opt: any) => ({
-        id: opt.id,
-        key: opt.option_key ? opt.option_key.toUpperCase() : 'A',
-        rawText: opt.raw_text || (Array.isArray(opt.content) ? opt.content.map((c: any) => c.latex ? `\\(${c.latex}\\)` : (c.html || c.text || '')).join(' ') : ''),
-        content: opt.content || [],
-        isCorrect: (q.correct_option || '').toLowerCase() === (opt.option_key || '').toLowerCase()
-      })),
-      createdAt: q.created_at,
-      updatedAt: q.updated_at
-    }));
+    const formatted = data.map((q: any) => {
+      let diagramSvg: string | null = null;
+      let diagramUrl: string | null = null;
+
+      if (Array.isArray(q.content)) {
+        for (const blk of q.content) {
+          if (blk.diagramSvg || blk.svg) {
+            diagramSvg = blk.diagramSvg || blk.svg;
+          }
+          if (blk.type === 'diagram' && (blk.diagramSvg || blk.svg)) {
+            diagramSvg = blk.diagramSvg || blk.svg;
+          }
+          if (blk.type === 'image' && (blk.url || blk.src)) {
+            diagramUrl = blk.url || blk.src;
+          }
+          if (blk.diagramUrl || blk.imageUrl || blk.url) {
+            diagramUrl = blk.diagramUrl || blk.imageUrl || blk.url;
+          }
+        }
+      }
+
+      return {
+        id: q.id,
+        questionCode: q.question_code,
+        question_code: q.question_code,
+        questionType: q.question_type || 'MCQ_SINGLE',
+        question_type: q.question_type || 'MCQ_SINGLE',
+        content: q.content || [],
+        explanation: q.explanation || [],
+        difficulty: q.difficulty || 'Medium',
+        marks: Number(q.marks) || 1,
+        negativeMarks: Number(q.negative_marks) || 0,
+        correctAnswer: (q.correct_option || 'a').toUpperCase(),
+        correctOption: (q.correct_option || 'a').toLowerCase(),
+        correct_option: (q.correct_option || 'a').toLowerCase(),
+        optionLayout: q.option_layout || 'grid_2x2',
+        year: q.year,
+        source: q.source,
+        subject: q.subjects?.name || 'General',
+        subject_name: q.subjects?.name || 'General',
+        subjectId: q.subject_id,
+        subject_id: q.subject_id,
+        chapter: q.chapters?.title || 'General',
+        chapter_name: q.chapters?.title || 'General',
+        chapterId: q.chapter_id,
+        chapter_id: q.chapter_id,
+        rawText: q.raw_text || '',
+        diagramSvg: diagramSvg || undefined,
+        diagramUrl: diagramUrl || undefined,
+        imageUrl: diagramUrl || undefined,
+        options: (q.question_options || []).map((opt: any) => ({
+          id: opt.id,
+          key: opt.option_key ? opt.option_key.toUpperCase() : 'A',
+          option_key: opt.option_key || 'a',
+          rawText: opt.raw_text || (Array.isArray(opt.content) ? opt.content.map((c: any) => c.latex ? `\\(${c.latex}\\)` : (c.html || c.text || '')).join(' ') : ''),
+          content: opt.content || [],
+          isCorrect: (q.correct_option || '').toLowerCase() === (opt.option_key || '').toLowerCase()
+        })),
+        createdAt: q.created_at,
+        updatedAt: q.updated_at
+      };
+    });
 
     let filtered = formatted;
     const userSubject = (req.query.userSubject || req.headers['x-user-subject'] || 'All') as string;
@@ -107,25 +137,53 @@ questionBankRouter.get('/:id', async (req: Request, res: Response, next: NextFun
       });
     }
 
+    let diagramSvg: string | null = null;
+    let diagramUrl: string | null = null;
+
+    if (Array.isArray(q.content)) {
+      for (const blk of q.content) {
+        if (blk.diagramSvg || blk.svg) {
+          diagramSvg = blk.diagramSvg || blk.svg;
+        }
+        if (blk.type === 'diagram' && (blk.diagramSvg || blk.svg)) {
+          diagramSvg = blk.diagramSvg || blk.svg;
+        }
+        if (blk.type === 'image' && (blk.url || blk.src)) {
+          diagramUrl = blk.url || blk.src;
+        }
+        if (blk.diagramUrl || blk.imageUrl || blk.url) {
+          diagramUrl = blk.diagramUrl || blk.imageUrl || blk.url;
+        }
+      }
+    }
+
     const formatted = {
       id: q.id,
       questionCode: q.question_code,
+      question_code: q.question_code,
       questionType: q.question_type || 'MCQ_SINGLE',
+      question_type: q.question_type || 'MCQ_SINGLE',
       content: q.content || [],
       explanation: q.explanation || [],
       difficulty: q.difficulty || 'Medium',
       marks: Number(q.marks) || 1,
       negativeMarks: Number(q.negative_marks) || 0,
       correctAnswer: (q.correct_option || 'a').toUpperCase(),
+      correctOption: (q.correct_option || 'a').toLowerCase(),
+      correct_option: (q.correct_option || 'a').toLowerCase(),
       optionLayout: q.option_layout || 'grid_2x2',
       year: q.year,
       source: q.source,
       subject: q.subjects?.name || 'General',
       chapter: q.chapters?.title || 'General',
       rawText: q.raw_text || '',
+      diagramSvg: diagramSvg || undefined,
+      diagramUrl: diagramUrl || undefined,
+      imageUrl: diagramUrl || undefined,
       options: (q.question_options || []).map((opt: any) => ({
         id: opt.id,
         key: opt.option_key ? opt.option_key.toUpperCase() : 'A',
+        option_key: opt.option_key || 'a',
         rawText: opt.raw_text || (Array.isArray(opt.content) ? opt.content.map((c: any) => c.latex ? `\\(${c.latex}\\)` : (c.html || c.text || '')).join(' ') : ''),
         content: opt.content || [],
         isCorrect: (q.correct_option || '').toLowerCase() === (opt.option_key || '').toLowerCase()

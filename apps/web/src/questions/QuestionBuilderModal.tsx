@@ -82,6 +82,17 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
 }) => {
   const [questionNumber, setQuestionNumber] = useState<string | number>(initialQuestion?.questionNumber || 1);
   const [rawText, setRawText] = useState(initialQuestion?.rawText || '');
+  const extractSvg = (q?: Partial<Question> | Question | null) => {
+    if (!q) return '';
+    if (q.diagramSvg) return q.diagramSvg;
+    if ((q as any).diagram_svg) return (q as any).diagram_svg;
+    if (Array.isArray(q.content)) {
+      const diag = q.content.find((c: any) => c.type === 'diagram' || (c as any).diagramSvg || (c as any).svg) as any;
+      if (diag) return diag.diagramSvg || diag.svg || '';
+    }
+    return '';
+  };
+
   const [subject, setSubject] = useState(initialQuestion?.subject || 'Physics');
   const [chapter, setChapter] = useState(initialQuestion?.chapter || '');
   const [topic, setTopic] = useState(initialQuestion?.topic || '');
@@ -91,7 +102,7 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
   const [optionLayout, setOptionLayout] = useState<OptionLayoutType>(initialQuestion?.optionLayout || 'grid_2x2');
   const [tagsInput, setTagsInput] = useState<string>((initialQuestion?.tags || []).join(', '));
   const [explanationText, setExplanationText] = useState<string>(initialQuestion?.explanationText || '');
-  const [diagramSvg, setDiagramSvg] = useState<string>(initialQuestion?.diagramSvg || '');
+  const [diagramSvg, setDiagramSvg] = useState<string>(extractSvg(initialQuestion));
   const [imageUrls, setImageUrls] = useState<string[]>(() => {
     if (initialQuestion?.imageUrls && initialQuestion.imageUrls.length > 0) {
       return initialQuestion.imageUrls;
@@ -144,7 +155,7 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
         setOptionLayout(initialQuestion.optionLayout || 'grid_2x2');
         setTagsInput((initialQuestion.tags || []).join(', '));
         setExplanationText(initialQuestion.explanationText || '');
-        setDiagramSvg(initialQuestion.diagramSvg || '');
+        setDiagramSvg(extractSvg(initialQuestion));
 
         if (initialQuestion.imageUrls && initialQuestion.imageUrls.length > 0) {
           setImageUrls(initialQuestion.imageUrls);

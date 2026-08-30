@@ -367,21 +367,31 @@ questionsRouter.post('/', async (req: Request, res: Response, next: NextFunction
       }
     }
 
+    let contentToSave = Array.isArray(body.content) ? [...body.content] : (Array.isArray(body.blocks) ? [...body.blocks] : []);
+    if (body.diagramSvg && !contentToSave.some((b: any) => b.type === 'diagram' || b.diagramSvg || b.svg)) {
+      contentToSave.push({ type: 'diagram', diagramSvg: body.diagramSvg, svg: body.diagramSvg });
+    }
+    if (body.imageUrl && !contentToSave.some((b: any) => b.type === 'image' || b.url || b.imageUrl)) {
+      contentToSave.push({ type: 'image', url: body.imageUrl, imageUrl: body.imageUrl });
+    }
+
     const insertPayload: any = {
       question_code: questionCode,
       subject_id,
       chapter_id,
       question_type: body.questionType || 'MCQ_SINGLE',
-      content: body.content || body.blocks || [],
+      content: contentToSave,
       explanation: body.explanation || body.explanationText || [],
       difficulty: body.difficulty || 'Medium',
       marks: body.marks || 1,
       negative_marks: body.negativeMarks || 0,
       correct_option: (body.correctAnswer || 'a').toLowerCase(),
       option_layout: body.optionLayout || 'grid_2x2',
-      year: body.year,
-      source: body.source,
-      raw_text: rawText
+      raw_text: rawText,
+      year: body.year || null,
+      source: body.source || null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     };
 
     // Only pass id if it is a valid UUID
@@ -392,11 +402,11 @@ questionsRouter.post('/', async (req: Request, res: Response, next: NextFunction
     const { data: newQ, error } = await supabase
       .from('questions')
       .insert(insertPayload)
-      .select()
+      .select('id')
       .single();
 
     if (error) {
-      console.error('Supabase Question Insert Error:', error);
+      console.error('Supabase create question insert error:', error);
       throw error;
     }
 
@@ -419,12 +429,22 @@ questionsRouter.put('/:id', async (req: Request, res: Response, next: NextFuncti
     const body = req.body;
     const { subject_id, chapter_id } = await resolveSubjectAndChapter(body.subject, body.chapter);
 
+    let contentToUpdate = Array.isArray(body.content) ? [...body.content] : (Array.isArray(body.blocks) ? [...body.blocks] : undefined);
+    if (contentToUpdate) {
+      if (body.diagramSvg && !contentToUpdate.some((b: any) => b.type === 'diagram' || b.diagramSvg || b.svg)) {
+        contentToUpdate.push({ type: 'diagram', diagramSvg: body.diagramSvg, svg: body.diagramSvg });
+      }
+      if (body.imageUrl && !contentToUpdate.some((b: any) => b.type === 'image' || b.url || b.imageUrl)) {
+        contentToUpdate.push({ type: 'image', url: body.imageUrl, imageUrl: body.imageUrl });
+      }
+    }
+
     const { error } = await supabase
       .from('questions')
       .update({
         subject_id: subject_id || undefined,
         chapter_id: chapter_id || undefined,
-        content: body.content || body.blocks,
+        content: contentToUpdate,
         explanation: body.explanation || body.explanationText,
         difficulty: body.difficulty,
         marks: body.marks,

@@ -1752,19 +1752,27 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                                   </div>
 
                                   {/* Render Diagram / Image if present */}
-                                  {(q.diagramSvg || (q as any).diagram_svg || q.imageUrl || q.diagramUrl) && (
-                                    <div className="my-2.5 max-h-56 overflow-hidden flex justify-center bg-white border border-slate-200/80 rounded-lg p-2">
-                                      {(q.diagramSvg || (q as any).diagram_svg) ? (
-                                        <div className="max-h-52 w-full flex items-center justify-center scale-95" dangerouslySetInnerHTML={{ __html: q.diagramSvg || (q as any).diagram_svg }} />
-                                      ) : (
-                                        <img
-                                          src={q.imageUrl || q.diagramUrl}
-                                          alt="Question Diagram"
-                                          className="max-h-48 object-contain rounded"
-                                        />
-                                      )}
-                                    </div>
-                                  )}
+                                  {(() => {
+                                    const contentArr = Array.isArray(q.content) ? (q.content as any[]) : [];
+                                    const qSvg = q.diagramSvg || (q as any).diagram_svg || contentArr.find((b: any) => b.type === 'diagram' || b.diagramSvg || b.svg)?.diagramSvg || contentArr.find((b: any) => b.type === 'diagram' || b.diagramSvg || b.svg)?.svg;
+                                    const qImg = q.imageUrl || q.diagramUrl || contentArr.find((b: any) => b.type === 'image' || b.imageUrl || b.url)?.url;
+
+                                    if (!qSvg && !qImg) return null;
+
+                                    return (
+                                      <div className="my-2.5 max-h-56 overflow-hidden flex justify-center bg-white border border-slate-200/80 rounded-lg p-2">
+                                        {qSvg ? (
+                                          <div className="max-h-52 w-full flex items-center justify-center scale-95" dangerouslySetInnerHTML={{ __html: qSvg }} />
+                                        ) : (
+                                          <img
+                                            src={qImg}
+                                            alt="Question Diagram"
+                                            className="max-h-48 object-contain rounded"
+                                          />
+                                        )}
+                                      </div>
+                                    );
+                                  })()}
 
                                   {/* Multiple Choice Options (A, B, C, D) */}
                                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">

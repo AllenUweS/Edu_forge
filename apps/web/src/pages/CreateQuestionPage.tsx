@@ -9,9 +9,10 @@ import { getUserProfile } from '../utils/userProfile.js';
 
 interface ContentBlock {
   id: string;
-  type: 'text' | 'image';
+  type: 'text' | 'image' | 'diagram';
   text?: string;
   imageUrl?: string;
+  diagramSvg?: string;
 }
 
 interface CreateQuestionPageProps {
@@ -133,9 +134,14 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
       setMarks(initialQuestion.marks || 4);
       setNegativeMarks(initialQuestion.negativeMarks || 1);
       const questionStatement = initialQuestion.rawText || (Array.isArray(initialQuestion.content) ? initialQuestion.content.map((b: any) => b.text || b.html || '').join(' ') : '');
+      const contentArr = Array.isArray(initialQuestion.content) ? (initialQuestion.content as any[]) : [];
+      const initialSvg = initialQuestion.diagramSvg || (initialQuestion as any)?.diagram_svg || contentArr.find(b => b.type === 'diagram' || b.diagramSvg || b.svg)?.diagramSvg || contentArr.find(b => b.type === 'diagram' || b.diagramSvg || b.svg)?.svg;
+      const initialImg = initialQuestion.imageUrl || initialQuestion.diagramUrl || contentArr.find(b => b.type === 'image' || b.imageUrl || b.url)?.url;
+
       setBlocks([
         { id: 'blk-1', type: 'text', text: questionStatement },
-        ...(initialQuestion.imageUrl ? [{ id: 'blk-2', type: 'image' as const, imageUrl: initialQuestion.imageUrl }] : [])
+        ...(initialSvg ? [{ id: 'blk-2', type: 'diagram' as const, diagramSvg: initialSvg }] : []),
+        ...(initialImg ? [{ id: 'blk-3', type: 'image' as const, imageUrl: initialImg }] : [])
       ]);
       const loadedOpts = (initialQuestion.options || []).map((opt, idx) => {
         let textVal = opt.rawText || '';
@@ -503,6 +509,10 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
                         onChange={txt => updateTextBlock(b.id, txt)}
                         placeholder="Enter text block content..."
                       />
+                    ) : b.type === 'diagram' && b.diagramSvg ? (
+                      <div className="py-4 text-center space-y-2 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                        <div className="max-h-52 w-full flex items-center justify-center scale-95" dangerouslySetInnerHTML={{ __html: b.diagramSvg }} />
+                      </div>
                     ) : b.imageUrl ? (
                       <div className="py-4 text-center space-y-2 bg-slate-50 border border-slate-200 rounded-lg p-3">
                         <img src={b.imageUrl} alt="Diagram" className="max-h-48 mx-auto rounded border border-slate-200 object-contain shadow-2xs" />
