@@ -28,6 +28,26 @@ questionsRouter.get('/', async (req: Request, res: Response, next: NextFunction)
     }
 
     let formattedList = (data || []).map((q: any) => {
+      let diagramSvg: string | null = null;
+      let diagramUrl: string | null = null;
+
+      if (Array.isArray(q.content)) {
+        for (const blk of q.content) {
+          if (blk.diagramSvg || blk.svg) {
+            diagramSvg = blk.diagramSvg || blk.svg;
+          }
+          if (blk.type === 'diagram' && (blk.diagramSvg || blk.svg)) {
+            diagramSvg = blk.diagramSvg || blk.svg;
+          }
+          if (blk.type === 'image' && (blk.url || blk.src)) {
+            diagramUrl = blk.url || blk.src;
+          }
+          if (blk.diagramUrl || blk.imageUrl || blk.url) {
+            diagramUrl = blk.diagramUrl || blk.imageUrl || blk.url;
+          }
+        }
+      }
+
       const options = (q.question_options || []).map((opt: any) => {
         let textVal = opt.raw_text || '';
         if (!textVal && Array.isArray(opt.content)) {
@@ -36,26 +56,34 @@ questionsRouter.get('/', async (req: Request, res: Response, next: NextFunction)
         return {
           id: opt.id,
           key: opt.option_key ? opt.option_key.toUpperCase() : 'A',
+          option_key: opt.option_key || 'a',
           content: opt.content || [],
           rawText: textVal,
-          isCorrect: q.correct_option === opt.option_key
+          isCorrect: (q.correct_option || '').toLowerCase() === (opt.option_key || '').toLowerCase()
         };
       });
 
       return {
         id: q.id,
         questionCode: q.question_code,
+        question_code: q.question_code,
         questionType: q.question_type || 'MCQ_SINGLE',
+        question_type: q.question_type || 'MCQ_SINGLE',
         content: q.content || [],
         explanation: q.explanation || [],
         difficulty: q.difficulty || 'Medium',
         marks: Number(q.marks) || 1,
         negativeMarks: Number(q.negative_marks) || 0,
         correctAnswer: (q.correct_option || 'a').toUpperCase(),
+        correctOption: (q.correct_option || 'a').toLowerCase(),
+        correct_option: (q.correct_option || 'a').toLowerCase(),
         optionLayout: q.option_layout || 'grid_2x2',
         year: q.year,
         source: q.source,
         rawText: q.raw_text || '',
+        diagramSvg: diagramSvg || undefined,
+        diagramUrl: diagramUrl || undefined,
+        imageUrl: diagramUrl || undefined,
         subject: q.subjects?.name || 'General',
         subject_name: q.subjects?.name || 'General',
         subjectId: q.subject_id,
@@ -99,6 +127,26 @@ questionsRouter.get('/:id', async (req: Request, res: Response, next: NextFuncti
       });
     }
 
+    let diagramSvg: string | null = null;
+    let diagramUrl: string | null = null;
+
+    if (Array.isArray(q.content)) {
+      for (const blk of q.content) {
+        if (blk.diagramSvg || blk.svg) {
+          diagramSvg = blk.diagramSvg || blk.svg;
+        }
+        if (blk.type === 'diagram' && (blk.diagramSvg || blk.svg)) {
+          diagramSvg = blk.diagramSvg || blk.svg;
+        }
+        if (blk.type === 'image' && (blk.url || blk.src)) {
+          diagramUrl = blk.url || blk.src;
+        }
+        if (blk.diagramUrl || blk.imageUrl || blk.url) {
+          diagramUrl = blk.diagramUrl || blk.imageUrl || blk.url;
+        }
+      }
+    }
+
     const options = (q.question_options || []).map((opt: any) => {
       let textVal = opt.raw_text || '';
       if (!textVal && Array.isArray(opt.content)) {
@@ -107,6 +155,7 @@ questionsRouter.get('/:id', async (req: Request, res: Response, next: NextFuncti
       return {
         id: opt.id,
         key: opt.option_key ? opt.option_key.toUpperCase() : 'A',
+        option_key: opt.option_key || 'a',
         rawText: textVal,
         content: opt.content || [],
         isCorrect: (q.correct_option || '').toLowerCase() === (opt.option_key || '').toLowerCase()
@@ -116,7 +165,9 @@ questionsRouter.get('/:id', async (req: Request, res: Response, next: NextFuncti
     const fullQuestion = {
       id: q.id,
       questionCode: q.question_code,
+      question_code: q.question_code,
       questionType: q.question_type || 'MCQ_SINGLE',
+      question_type: q.question_type || 'MCQ_SINGLE',
       content: q.content || [],
       explanation: q.explanation || [],
       explanationText: typeof q.explanation === 'string' ? q.explanation : (Array.isArray(q.explanation) ? q.explanation.map((e: any) => e.text || e.html || '').join(' ') : ''),
@@ -124,10 +175,15 @@ questionsRouter.get('/:id', async (req: Request, res: Response, next: NextFuncti
       marks: Number(q.marks) || 1,
       negativeMarks: Number(q.negative_marks) || 0,
       correctAnswer: (q.correct_option || 'a').toUpperCase(),
+      correctOption: (q.correct_option || 'a').toLowerCase(),
+      correct_option: (q.correct_option || 'a').toLowerCase(),
       optionLayout: q.option_layout || 'grid_2x2',
       year: q.year,
       source: q.source,
       rawText: q.raw_text || (Array.isArray(q.content) ? q.content.map((b: any) => b.text || b.html || '').join(' ') : ''),
+      diagramSvg: diagramSvg || undefined,
+      diagramUrl: diagramUrl || undefined,
+      imageUrl: diagramUrl || undefined,
       subject: q.subjects?.name || 'General',
       chapter: q.chapters?.title || 'General',
       options,

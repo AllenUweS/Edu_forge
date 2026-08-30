@@ -533,6 +533,21 @@ export const TestsPage: React.FC<TestsPageProps> = ({
                                 <span className="text-[11px] font-bold text-slate-500 font-mono shrink-0">[{qObj?.marks || 1} Mark]</span>
                               </div>
 
+                              {/* Render Diagram / Image if present */}
+                              {(qObj?.diagramSvg || qObj?.diagram_svg || qObj?.imageUrl || qObj?.diagramUrl) && (
+                                <div className="my-2 max-h-56 overflow-hidden flex justify-center bg-white border border-slate-200 rounded-lg p-2">
+                                  {(qObj?.diagramSvg || qObj?.diagram_svg) ? (
+                                    <div className="max-h-52 w-full flex items-center justify-center scale-95" dangerouslySetInnerHTML={{ __html: qObj.diagramSvg || qObj.diagram_svg }} />
+                                  ) : (
+                                    <img
+                                      src={qObj?.imageUrl || qObj?.diagramUrl}
+                                      alt="Question Diagram"
+                                      className="max-h-48 object-contain rounded"
+                                    />
+                                  )}
+                                </div>
+                              )}
+
                               {/* Options */}
                               {qOptions && qOptions.length > 0 && (
                                 <div className="pt-1">
