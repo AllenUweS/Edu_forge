@@ -333,7 +333,19 @@ questionsRouter.post('/', async (req: Request, res: Response, next: NextFunction
     const body = req.body;
     const { subject_id, chapter_id } = await resolveSubjectAndChapter(body.subject, body.chapter);
 
-    const questionCode = body.questionCode || body.id || `Q-${Date.now()}`;
+    let questionCode = body.questionCode;
+    if (!questionCode || questionCode.startsWith('Q-') || questionCode === 'undefined') {
+      const sub = (body.subject || 'BIO').trim().toLowerCase();
+      let sCode = 'BIO';
+      if (sub.includes('phys')) sCode = 'PHY';
+      else if (sub.includes('chem')) sCode = 'CHE';
+      else if (sub.includes('math')) sCode = 'MAT';
+      else sCode = (body.subject || 'GEN').replace(/[^a-zA-Z]/g, '').substring(0, 3).toUpperCase() || 'GEN';
+
+      const chClean = (body.chapter || 'GEN').replace(/[^a-zA-Z]/g, '').substring(0, 3).toUpperCase() || 'GEN';
+      const num = String(Math.floor(Math.random() * 9000) + 1000);
+      questionCode = `${sCode}-${chClean.padEnd(3, 'X')}-${num}`;
+    }
     const rawText = body.rawText || (Array.isArray(body.content) ? body.content.map((b: any) => b.text || b.html || '').join(' ') : '');
 
     // Duplicate question verification:

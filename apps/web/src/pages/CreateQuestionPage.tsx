@@ -478,290 +478,272 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
         </div>
       </div>
 
-      {/* 2-Column Question Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
-        {/* Main Form Column */}
-        <div className="space-y-4">
-          {/* Panel 1: Question Details */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-slate-100 font-bold text-xs text-slate-900">
-              Question Details
+      {/* Single-Column Question Layout */}
+      <div className="max-w-5xl mx-auto space-y-6">
+        {/* Panel 1: Question Details */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+            <span className="font-bold text-xs text-slate-900">Question Details</span>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold text-slate-400 uppercase">Question Code:</span>
+              <span className="font-mono font-bold text-xs bg-teal-50 text-teal-800 border border-teal-200 px-2.5 py-0.5 rounded-md">
+                {formatQuestionCode({ subject, chapter, id: initialQuestion?.id })}
+              </span>
             </div>
-            <div className="p-5 grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
-              <div>
-                <label className="block font-bold text-[11px] text-slate-500 uppercase mb-1">
-                  Subject
+          </div>
+          <div className="p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
+            <div>
+              <label className="block font-bold text-[11px] text-slate-500 uppercase mb-1">
+                Question Code
+              </label>
+              <div className="w-full p-2 border border-slate-200 rounded-lg text-teal-900 bg-slate-50 font-mono font-bold text-xs truncate">
+                {formatQuestionCode({ subject, chapter, id: initialQuestion?.id })}
+              </div>
+            </div>
+
+            <div>
+              <label className="block font-bold text-[11px] text-slate-500 uppercase mb-1">
+                Subject
+              </label>
+              <select
+                value={subject}
+                onChange={e => {
+                  setSubject(e.target.value);
+                  setIsCustomChapter(false);
+                }}
+                disabled={userSubject !== 'All'}
+                className="w-full p-2 border border-slate-300 rounded-lg text-slate-900 bg-white font-medium focus:outline-hidden focus:ring-2 focus:ring-slate-900 disabled:bg-slate-100 disabled:cursor-not-allowed"
+              >
+                {allowedSubjects.map(s => (
+                  <option key={s.id || s.code || s.name} value={s.name}>
+                    {s.name} ({s.code || s.name.substring(0, 3).toUpperCase()})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="lg:col-span-2">
+              <div className="flex items-center justify-between mb-1">
+                <label className="block font-bold text-[11px] text-slate-500 uppercase">
+                  Chapter / Unit
                 </label>
-                <select
-                  value={subject}
-                  onChange={e => {
-                    setSubject(e.target.value);
-                    setIsCustomChapter(false);
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCustomChapter(!isCustomChapter);
+                    if (!isCustomChapter) setChapter('');
+                    else if (availableChapters.length > 0) setChapter(availableChapters[0]);
                   }}
-                  disabled={userSubject !== 'All'}
-                  className="w-full p-2 border border-slate-300 rounded-lg text-slate-900 bg-white font-medium focus:outline-hidden focus:ring-2 focus:ring-slate-900 disabled:bg-slate-100 disabled:cursor-not-allowed"
+                  className="text-[10px] text-teal-700 font-bold hover:underline cursor-pointer"
                 >
-                  {allowedSubjects.map(s => (
-                    <option key={s.id || s.code || s.name} value={s.name}>
-                      {s.name} ({s.code || s.name.substring(0, 3).toUpperCase()})
+                  {isCustomChapter ? '← Choose from dropdown' : '+ Type custom chapter'}
+                </button>
+              </div>
+
+              {!isCustomChapter ? (
+                <select
+                  value={chapter}
+                  onChange={e => {
+                    if (e.target.value === '__NEW__') {
+                      setIsCustomChapter(true);
+                      setChapter('');
+                    } else {
+                      setChapter(e.target.value);
+                    }
+                  }}
+                  className="w-full p-2 border border-slate-300 rounded-lg text-slate-900 bg-white font-medium focus:outline-hidden focus:ring-2 focus:ring-slate-900 cursor-pointer"
+                >
+                  {availableChapters.map(chTitle => (
+                    <option key={chTitle} value={chTitle}>
+                      {chTitle}
                     </option>
                   ))}
+                  <option value="__NEW__">+ Add new custom chapter...</option>
                 </select>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block font-bold text-[11px] text-slate-500 uppercase">
-                    Chapter / Unit
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsCustomChapter(!isCustomChapter);
-                      if (!isCustomChapter) setChapter('');
-                      else if (availableChapters.length > 0) setChapter(availableChapters[0]);
-                    }}
-                    className="text-[10px] text-teal-700 font-bold hover:underline cursor-pointer"
-                  >
-                    {isCustomChapter ? '← Choose from dropdown' : '+ Type custom chapter'}
-                  </button>
-                </div>
-
-                {!isCustomChapter ? (
-                  <select
-                    value={chapter}
-                    onChange={e => {
-                      if (e.target.value === '__NEW__') {
-                        setIsCustomChapter(true);
-                        setChapter('');
-                      } else {
-                        setChapter(e.target.value);
-                      }
-                    }}
-                    className="w-full p-2 border border-slate-300 rounded-lg text-slate-900 bg-white font-medium focus:outline-hidden focus:ring-2 focus:ring-slate-900 cursor-pointer"
-                  >
-                    {availableChapters.map(chTitle => (
-                      <option key={chTitle} value={chTitle}>
-                        {chTitle}
-                      </option>
-                    ))}
-                    <option value="__NEW__">+ Add new custom chapter...</option>
-                  </select>
-                ) : (
-                  <input
-                    type="text"
-                    placeholder="Type custom chapter name..."
-                    value={chapter}
-                    onChange={e => setChapter(e.target.value)}
-                    className="w-full p-2 border border-slate-300 rounded-lg text-slate-900 bg-white font-medium focus:outline-hidden focus:ring-2 focus:ring-slate-900"
-                  />
-                )}
-              </div>
-
-              <div>
-                <label className="block font-bold text-[11px] text-slate-500 uppercase mb-1">
-                  Difficulty
-                </label>
-                <select
-                  value={difficulty}
-                  onChange={e => setDifficulty(e.target.value as QuestionDifficulty)}
+              ) : (
+                <input
+                  type="text"
+                  placeholder="Type custom chapter name..."
+                  value={chapter}
+                  onChange={e => setChapter(e.target.value)}
                   className="w-full p-2 border border-slate-300 rounded-lg text-slate-900 bg-white font-medium focus:outline-hidden focus:ring-2 focus:ring-slate-900"
-                >
-                  <option value="Easy">Easy</option>
-                  <option value="Medium">Medium</option>
-                  <option value="Hard">Hard</option>
-                </select>
-              </div>
+                />
+              )}
+            </div>
 
-              <div>
-                <label className="block font-bold text-[11px] text-slate-500 uppercase mb-1">
-                  Marks
-                </label>
+            <div>
+              <label className="block font-bold text-[11px] text-slate-500 uppercase mb-1">
+                Difficulty
+              </label>
+              <select
+                value={difficulty}
+                onChange={e => setDifficulty(e.target.value as QuestionDifficulty)}
+                className="w-full p-2 border border-slate-300 rounded-lg text-slate-900 bg-white font-medium focus:outline-hidden focus:ring-2 focus:ring-slate-900"
+              >
+                <option value="Easy">Easy</option>
+                <option value="Medium">Medium</option>
+                <option value="Hard">Hard</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block font-bold text-[11px] text-slate-500 uppercase mb-1">
+                Marks (+ / -)
+              </label>
+              <div className="flex items-center gap-1">
                 <input
                   type="number"
                   value={marks}
                   onChange={e => setMarks(Number(e.target.value))}
-                  className="w-full p-2 border border-slate-300 rounded-lg text-slate-900 bg-white font-bold focus:outline-hidden focus:ring-2 focus:ring-slate-900"
+                  className="w-1/2 p-2 border border-slate-300 rounded-lg text-slate-900 bg-white font-medium focus:outline-hidden focus:ring-2 focus:ring-slate-900 text-center"
+                  title="Marks for correct answer"
+                />
+                <input
+                  type="number"
+                  value={negativeMarks}
+                  onChange={e => setNegativeMarks(Number(e.target.value))}
+                  className="w-1/2 p-2 border border-slate-300 rounded-lg text-slate-900 bg-white font-medium focus:outline-hidden focus:ring-2 focus:ring-slate-900 text-center"
+                  title="Negative marks for incorrect answer"
                 />
               </div>
             </div>
-          </div>
-
-          {/* Panel 2: Question Content Blocks */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
-              <span className="font-bold text-xs text-slate-900">Question Content</span>
-              <span className="text-xs text-slate-400">Text / Image blocks</span>
-            </div>
-            <div className="p-5 space-y-3">
-              {blocks.map(b => (
-                <div key={b.id} className="border border-slate-200 rounded-lg bg-white overflow-hidden">
-                  <div className="h-9 px-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-xs text-slate-600 font-semibold">
-                    <span>☰ {b.type === 'text' ? 'Text Block' : 'Image Block'}</span>
-                    <button
-                      type="button"
-                      onClick={() => removeBlock(b.id)}
-                      className="text-slate-400 hover:text-red-600 text-sm font-bold cursor-pointer"
-                    >
-                      ×
-                    </button>
-                  </div>
-                  <div className="p-3">
-                    {b.type === 'text' ? (
-                      <RichTextEditor
-                        value={b.text || ''}
-                        onChange={txt => updateTextBlock(b.id, txt)}
-                        placeholder="Enter text block content..."
-                      />
-                    ) : b.type === 'diagram' && b.diagramSvg ? (
-                      <div className="py-4 text-center space-y-2 bg-slate-50 border border-slate-200 rounded-lg p-3">
-                        <div className="max-h-52 w-full flex items-center justify-center scale-95" dangerouslySetInnerHTML={{ __html: b.diagramSvg }} />
-                      </div>
-                    ) : b.imageUrl ? (
-                      <div className="py-4 text-center space-y-2 bg-slate-50 border border-slate-200 rounded-lg p-3">
-                        <img src={b.imageUrl} alt="Diagram" className="max-h-48 mx-auto rounded border border-slate-200 object-contain shadow-2xs" />
-                        <button
-                          type="button"
-                          onClick={() => setActiveImageBlockId(b.id)}
-                          className="px-3 py-1 bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 text-xs font-bold rounded-md shadow-2xs transition-colors cursor-pointer"
-                        >
-                          Change / Select Image
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="py-6 text-center space-y-2 bg-slate-50 border border-dashed border-slate-300 rounded-lg">
-                        <div className="text-xs font-bold text-slate-400 uppercase tracking-wide">
-                          IMAGE / DIAGRAM PLACEHOLDER
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setActiveImageBlockId(b.id)}
-                          className="px-3 rounded-lg py-1.5 bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold shadow-2xs transition-colors cursor-pointer"
-                        >
-                          Select Image from Library / Upload
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Panel 3: Options */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
-              <span className="font-bold text-xs text-slate-900">Options</span>
-              <span className="text-xs text-slate-400">Select one correct answer</span>
-            </div>
-            <div className="p-5 space-y-3">
-              {options.map((opt, idx) => (
-                <div key={opt.key || idx} className="grid grid-cols-[36px_1fr_28px] gap-2 items-start">
-                  <div className="h-10 flex items-center justify-center bg-slate-50 border border-slate-200 rounded-md font-bold text-slate-900 text-xs">
-                    {opt.key?.toUpperCase() || String.fromCharCode(65 + idx)}
-                  </div>
-                  <RichTextEditor
-                    compact
-                    value={opt.rawText || ''}
-                    onChange={txt => updateOptionText(idx, txt)}
-                    placeholder={`Option ${opt.key || String.fromCharCode(65 + idx)} (supports Ctrl+V image paste)`}
-                  />
-                  <div className="h-10 flex items-center justify-center">
-                    <input
-                      type="radio"
-                      name="ans"
-                      checked={opt.isCorrect}
-                      onChange={() => setCorrectOption(idx)}
-                      className="w-4 h-4 text-slate-900 focus:ring-slate-900 cursor-pointer"
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Panel 4: Solution */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
-              <span className="font-bold text-xs text-slate-900">Solution</span>
-              <button
-                type="button"
-                onClick={() => setIsSolutionExpanded(!isSolutionExpanded)}
-                className="text-xs font-bold text-slate-600 hover:text-slate-900 cursor-pointer"
-              >
-                {isSolutionExpanded ? 'Collapse' : 'Expand'}
-              </button>
-            </div>
-
-            {isSolutionExpanded && (
-              <div className="p-5 space-y-3">
-                <RichTextEditor
-                  value={solutionText}
-                  onChange={setSolutionText}
-                  placeholder="Solution explanation..."
-                />
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Right Sidebar Column */}
-        <div className="space-y-4">
-          {/* Panel 1: Question Status */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-slate-100 font-bold text-xs text-slate-900">
-              Question Status
-            </div>
-            <div className="p-5 space-y-3 text-xs">
-              <span className="px-2.5 py-0.5 border border-slate-200 rounded-full text-[10px] font-bold uppercase tracking-wide text-slate-600 bg-slate-100">
-                DRAFT
-              </span>
-              <hr className="border-t border-slate-100" />
-              <div>
-                <span className="text-slate-400 text-[11px]">Question Code</span>
-                <p className="font-bold text-slate-900 mt-0.5">
-                  {formatQuestionCode({ subject, chapter, id: initialQuestion?.id })}
-                </p>
-              </div>
-              <div>
-                <span className="text-slate-400 text-[11px]">Created by</span>
-                <p className="font-bold text-slate-900 mt-0.5">Gautam</p>
-              </div>
-              <div>
-                <span className="text-slate-400 text-[11px]">Last saved</span>
-                <p className="font-bold text-slate-900 mt-0.5">Just now</p>
-              </div>
+        {/* Panel 2: Content Blocks */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+            <span className="font-bold text-xs text-slate-900">Question Content</span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={addTextBlock}
+                className="px-2.5 py-1 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-md transition-colors cursor-pointer"
+              >
+                + Text Block
+              </button>
+              <button
+                type="button"
+                onClick={addImageBlock}
+                className="px-2.5 py-1 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-md transition-colors cursor-pointer"
+              >
+                + Image Block
+              </button>
             </div>
           </div>
 
-          {/* Panel 2: Validation */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-slate-100 font-bold text-xs text-slate-900">
-              Validation
-            </div>
-            <div className="p-5 space-y-2 text-xs font-semibold text-emerald-700">
-              <div>✓ Question content</div>
-              <div>✓ Four options</div>
-              <div>✓ Correct answer</div>
-              <div>✓ Solution</div>
-            </div>
+          <div className="p-5 space-y-4">
+            {blocks.map((b) => (
+              <div key={b.id} className="border border-slate-200 rounded-lg overflow-hidden">
+                <div className="bg-slate-50 px-3 py-1.5 border-b border-slate-200 flex items-center justify-between text-xs font-bold text-slate-500">
+                  <span>☰ {b.type === 'text' ? 'Text Block' : 'Image Block'}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeBlock(b.id)}
+                    className="text-slate-400 hover:text-red-600 text-sm font-bold cursor-pointer"
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className="p-3">
+                  {b.type === 'text' ? (
+                    <RichTextEditor
+                      value={b.text || ''}
+                      onChange={txt => updateTextBlock(b.id, txt)}
+                      placeholder="Enter text block content..."
+                    />
+                  ) : b.type === 'diagram' && b.diagramSvg ? (
+                    <div className="py-4 text-center space-y-2 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                      <div className="max-h-52 w-full flex items-center justify-center scale-95" dangerouslySetInnerHTML={{ __html: b.diagramSvg }} />
+                    </div>
+                  ) : b.imageUrl ? (
+                    <div className="py-4 text-center space-y-2 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                      <img src={b.imageUrl} alt="Diagram" className="max-h-48 mx-auto rounded border border-slate-200 object-contain shadow-2xs" />
+                      <button
+                        type="button"
+                        onClick={() => setActiveImageBlockId(b.id)}
+                        className="px-3 py-1 bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 text-xs font-bold rounded-md shadow-2xs transition-colors cursor-pointer"
+                      >
+                        Change / Select Image
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="py-6 text-center space-y-2 bg-slate-50 border border-dashed border-slate-300 rounded-lg">
+                      <div className="text-xs font-bold text-slate-400 uppercase tracking-wide">
+                        IMAGE / DIAGRAM PLACEHOLDER
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setActiveImageBlockId(b.id)}
+                        className="px-3 rounded-lg py-1.5 bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold shadow-2xs transition-colors cursor-pointer"
+                      >
+                        Select Image from Library / Upload
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Panel 3: Options */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+            <span className="font-bold text-xs text-slate-900">Multiple Choice Options</span>
+            <span className="text-xs text-slate-400">Select one correct answer</span>
+          </div>
+          <div className="p-5 space-y-3">
+            {options.map((opt, idx) => (
+              <div key={opt.key || idx} className="grid grid-cols-[36px_1fr_28px] gap-2 items-start">
+                <div className="h-10 flex items-center justify-center bg-slate-50 border border-slate-200 rounded-md font-bold text-slate-900 text-xs">
+                  {opt.key?.toUpperCase() || String.fromCharCode(65 + idx)}
+                </div>
+                <RichTextEditor
+                  compact
+                  value={opt.rawText || ''}
+                  onChange={txt => updateOptionText(idx, txt)}
+                  placeholder={`Option ${opt.key?.toUpperCase() || String.fromCharCode(65 + idx)}...`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setCorrectOption(idx)}
+                  className={`w-7 h-7 rounded-full flex items-center justify-center border transition-all mt-1.5 cursor-pointer ${
+                    opt.isCorrect
+                      ? 'bg-teal-700 text-white border-teal-700 shadow-2xs ring-2 ring-teal-200'
+                      : 'border-slate-300 text-transparent hover:border-slate-400 hover:text-slate-300'
+                  }`}
+                  title={opt.isCorrect ? 'Correct Answer' : 'Mark as Correct'}
+                >
+                  ✓
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Panel 4: Solution */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+            <span className="font-bold text-xs text-slate-900">Solution & Explanation</span>
+            <button
+              type="button"
+              onClick={() => setIsSolutionExpanded(!isSolutionExpanded)}
+              className="text-xs font-bold text-slate-600 hover:text-slate-900 cursor-pointer"
+            >
+              {isSolutionExpanded ? 'Collapse' : 'Expand'}
+            </button>
           </div>
 
-          {/* Panel 3: Internal Note */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-slate-100 font-bold text-xs text-slate-900">
-              Internal Note
-            </div>
-            <div className="p-5">
-              <textarea
-                rows={5}
-                value={internalNote}
-                onChange={e => setInternalNote(e.target.value)}
-                placeholder="Note for question setter..."
-                className="w-full p-3 border border-slate-300 rounded-lg text-xs font-medium text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-slate-900 bg-white"
+          {isSolutionExpanded && (
+            <div className="p-5 space-y-3">
+              <RichTextEditor
+                value={solutionText}
+                onChange={setSolutionText}
+                placeholder="Solution explanation..."
               />
             </div>
-          </div>
+          )}
         </div>
       </div>
 
