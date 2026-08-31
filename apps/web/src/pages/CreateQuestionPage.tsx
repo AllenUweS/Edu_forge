@@ -175,20 +175,47 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
     ]
   };
 
-  // Helper to resolve chapters for any given subject name
+  // Helper to resolve chapters strictly for any given subject name
   const getChaptersForSubject = (subName: string): string[] => {
     if (!subName) return [];
-    const selectedSub = dbSubjects.find(s => s.name.toLowerCase() === subName.toLowerCase());
+    const normSub = subName.trim().toLowerCase();
+
+    // Standard list for target subject
+    const standardList = SUBJECT_CHAPTERS_MAP[subName] || SUBJECT_CHAPTERS_MAP[
+      Object.keys(SUBJECT_CHAPTERS_MAP).find(k => k.toLowerCase() === normSub) || ''
+    ] || [];
+
+    // Standard chapters from OTHER subjects (to prevent cross-subject leaks)
+    const otherSubjectsStandardChapters = new Set<string>();
+    Object.entries(SUBJECT_CHAPTERS_MAP).forEach(([sKey, sList]) => {
+      if (sKey.toLowerCase() !== normSub) {
+        sList.forEach(ch => otherSubjectsStandardChapters.add(ch.toLowerCase()));
+      }
+    });
+
+    const selectedSub = dbSubjects.find(s => s.name.toLowerCase() === normSub);
     const selectedSubId = selectedSub?.id ? String(selectedSub.id).toLowerCase() : '';
 
     const dbMatches = dbChapters.filter((c: any) => {
-      const cSubId = c.subjectId || c.subject_id ? String(c.subjectId || c.subject_id).toLowerCase() : '';
-      const cSubName = (c.subject || c.subjects?.name || '').toLowerCase();
-      return (selectedSubId && cSubId === selectedSubId) || (cSubName && cSubName === subName.toLowerCase());
-    }).map((c: any) => c.title || c.name || (c as any).chapter_name).filter(Boolean);
+      const cSubName = (
+        typeof c.subject === 'string' ? c.subject : (c.subjects?.name || c.subject_name || '')
+      ).trim().toLowerCase();
+      const cSubId = (c.subjectId || c.subject_id || '').toString().trim().toLowerCase();
 
-    const standardList = SUBJECT_CHAPTERS_MAP[subName] || [];
-    return Array.from(new Set([...dbMatches, ...standardList]));
+      // Check if DB chapter explicitly belongs to this subject
+      const matchesName = cSubName && cSubName === normSub;
+      const matchesId = selectedSubId && cSubId && selectedSubId === cSubId;
+      if (!matchesName && !matchesId) return false;
+
+      // Exclude DB chapter if its title belongs to another subject's standard curriculum
+      const chName = (c.title || c.name || c.chapter_name || '').trim();
+      if (otherSubjectsStandardChapters.has(chName.toLowerCase()) && !standardList.some(s => s.toLowerCase() === chName.toLowerCase())) {
+        return false;
+      }
+      return true;
+    }).map((c: any) => (c.title || c.name || c.chapter_name || '').trim()).filter(Boolean);
+
+    return Array.from(new Set([...standardList, ...dbMatches]));
   };
 
   // Available chapters for current subject
