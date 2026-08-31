@@ -24,42 +24,106 @@ type MathTypeTarget =
 
 const chapterSuggestionsBySubject: Record<string, string[]> = {
   Physics: [
-    'Kinematics & Motion',
-    'Thermodynamics & Heat',
-    'Electrostatics & Current',
-    'Optics & Wave Physics',
-    'Modern Physics & Nuclear',
-    'Work, Energy & Power',
-    'Gravitation & Circular Motion'
+    'Units and Measurements',
+    'Motion in a Straight Line',
+    'Motion in a Plane',
+    'Laws of Motion',
+    'Work, Energy and Power',
+    'System of Particles and Rotational Motion',
+    'Gravitation',
+    'Mechanical Properties of Solids',
+    'Mechanical Properties of Fluids',
+    'Thermal Properties of Matter',
+    'Thermodynamics',
+    'Kinetic Theory',
+    'Oscillations',
+    'Waves',
+    'Electric Charges and Fields',
+    'Electrostatic Potential and Capacitance',
+    'Current Electricity',
+    'Moving Charges and Magnetism',
+    'Magnetism and Matter',
+    'Electromagnetic Induction',
+    'Alternating Current',
+    'Electromagnetic Waves',
+    'Ray Optics and Optical Instruments',
+    'Wave Optics',
+    'Dual Nature of Radiation and Matter',
+    'Atoms',
+    'Nuclei',
+    'Semiconductor Electronics'
   ],
   Chemistry: [
-    'Atomic Structure & Periodicity',
-    'Chemical Bonding & Molecular Structure',
-    'Organic Chemistry & Mechanisms',
-    'Physical Chemistry & Equilibrium',
-    'Electrochemistry & Kinetics',
-    'Coordination Compounds'
+    'Some Basic Concepts of Chemistry',
+    'Structure of Atom',
+    'Classification of Elements and Periodicity in Properties',
+    'Chemical Bonding and Molecular Structure',
+    'Thermodynamics',
+    'Equilibrium',
+    'Redox Reactions',
+    'Organic Chemistry: Some Basic Principles and Techniques',
+    'Hydrocarbons',
+    'Solutions',
+    'Electrochemistry',
+    'Chemical Kinetics',
+    'The d- and f-Block Elements',
+    'Coordination Compounds',
+    'Haloalkanes and Haloarenes',
+    'Alcohols, Phenols and Ethers',
+    'Aldehydes, Ketones and Carboxylic Acids',
+    'Amines',
+    'Biomolecules'
   ],
   Biology: [
-    'Cell Structure & Function',
-    'Genetics & Evolution',
-    'Human Physiology',
-    'Plant Physiology',
-    'Ecology & Environment',
-    'Biotechnology & Applications'
+    'The Living World',
+    'Biological Classification',
+    'Plant Kingdom',
+    'Animal Kingdom',
+    'Morphology of Flowering Plants',
+    'Anatomy of Flowering Plants',
+    'Structural Organisation in Animals',
+    'Cell: The Unit of Life',
+    'Biomolecules',
+    'Cell Cycle and Cell Division',
+    'Photosynthesis in Higher Plants',
+    'Respiration in Plants',
+    'Plant Growth and Development',
+    'Breathing and Exchange of Gases',
+    'Body Fluids and Circulation',
+    'Excretory Products and their Elimination',
+    'Locomotion and Movement',
+    'Neural Control and Coordination',
+    'Chemical Coordination and Integration',
+    'Sexual Reproduction in Flowering Plants',
+    'Human Reproduction',
+    'Reproductive Health',
+    'Principles of Inheritance and Variation',
+    'Molecular Basis of Inheritance',
+    'Evolution',
+    'Human Health and Disease',
+    'Microbes in Human Welfare',
+    'Biotechnology: Principles and Processes',
+    'Biotechnology and its Applications',
+    'Organisms and Populations',
+    'Ecosystem',
+    'Biodiversity and Conservation'
   ],
   Mathematics: [
-    'Algebra & Quadratic Equations',
-    'Calculus & Integration',
-    'Vectors & 3D Geometry',
-    'Trigonometry & Functions',
-    'Matrices & Determinants',
-    'Probability & Statistics'
-  ],
-  'General Science': [
-    'General Scientific Principles',
-    'Measurement & Units',
-    'Applied Science'
+    'Sets, Relations and Functions',
+    'Complex Numbers and Quadratic Equations',
+    'Matrices and Determinants',
+    'Permutations and Combinations',
+    'Mathematical Induction & Binomial Theorem',
+    'Sequences and Series',
+    'Limits, Continuity and Differentiability',
+    'Integral Calculus',
+    'Differential Equations',
+    'Coordinate Geometry & Straight Lines',
+    'Conic Sections & Circles',
+    'Three Dimensional Geometry',
+    'Vector Algebra',
+    'Statistics and Probability',
+    'Trigonometry'
   ]
 };
 
@@ -95,6 +159,35 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
 
   const [subject, setSubject] = useState(initialQuestion?.subject || 'Physics');
   const [chapter, setChapter] = useState(initialQuestion?.chapter || '');
+  const [isCustomChapter, setIsCustomChapter] = useState(false);
+  const [dbChapters, setDbChapters] = useState<any[]>([]);
+  const [dbSubjects, setDbSubjects] = useState<any[]>([]);
+
+  useEffect(() => {
+    api.getSubjects().then(subs => {
+      if (subs && Array.isArray(subs)) setDbSubjects(subs);
+    }).catch(console.error);
+
+    api.getChapters().then(chs => {
+      if (chs && Array.isArray(chs)) setDbChapters(chs);
+    }).catch(console.error);
+  }, []);
+
+  const availableChapters = React.useMemo(() => {
+    if (!subject) return [];
+    const selectedSub = dbSubjects.find(s => s.name.toLowerCase() === subject.toLowerCase());
+    const selectedSubId = selectedSub?.id ? String(selectedSub.id).toLowerCase() : '';
+
+    const dbMatches = dbChapters.filter((c: any) => {
+      const cSubId = c.subjectId || c.subject_id ? String(c.subjectId || c.subject_id).toLowerCase() : '';
+      const cSubName = (c.subject || c.subjects?.name || '').toLowerCase();
+      return (selectedSubId && cSubId === selectedSubId) || (cSubName && cSubName === subject.toLowerCase());
+    }).map((c: any) => c.title || c.name || (c as any).chapter_name).filter(Boolean);
+
+    const standardList = chapterSuggestionsBySubject[subject] || chapterSuggestionsBySubject['Physics'] || [];
+    return Array.from(new Set([...dbMatches, ...standardList]));
+  }, [dbChapters, dbSubjects, subject]);
+
   const [topic, setTopic] = useState(initialQuestion?.topic || '');
   const [difficulty, setDifficulty] = useState<QuestionDifficulty>(initialQuestion?.difficulty || 'Medium');
   const [marks, setMarks] = useState<number>(initialQuestion?.marks || 4);
@@ -497,25 +590,56 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
               </div>
             </div>
 
-            {/* Chapter & Topic with Dropdown + Typing Support (HTML Datalist) */}
+            {/* Chapter & Topic with Dropdown + Typing Support */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1">
-                  Chapter / Unit
-                </label>
-                <input
-                  type="text"
-                  list="builder-chapter-list"
-                  placeholder="Select from dropdown or type custom chapter..."
-                  value={chapter}
-                  onChange={e => setChapter(e.target.value)}
-                  className="w-full text-sm font-semibold p-2 border border-slate-300 rounded-lg text-black bg-white focus:outline-hidden focus:ring-2 focus:ring-sky-500 shadow-2xs placeholder:text-slate-400"
-                />
-                <datalist id="builder-chapter-list">
-                  {(chapterSuggestionsBySubject[subject] || chapterSuggestionsBySubject['Physics']).map(chItem => (
-                    <option key={chItem} value={chItem} />
-                  ))}
-                </datalist>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-black">
+                    Chapter / Unit
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCustomChapter(!isCustomChapter);
+                      if (!isCustomChapter) setChapter('');
+                      else if (availableChapters.length > 0) setChapter(availableChapters[0]);
+                    }}
+                    className="text-[10px] text-teal-700 font-bold hover:underline cursor-pointer"
+                  >
+                    {isCustomChapter ? '← Choose from dropdown' : '+ Type custom chapter'}
+                  </button>
+                </div>
+
+                {!isCustomChapter ? (
+                  <select
+                    value={chapter}
+                    onChange={e => {
+                      if (e.target.value === '__NEW__') {
+                        setIsCustomChapter(true);
+                        setChapter('');
+                      } else {
+                        setChapter(e.target.value);
+                      }
+                    }}
+                    className="w-full text-sm font-semibold p-2 border border-slate-300 rounded-lg text-black bg-white focus:outline-hidden focus:ring-2 focus:ring-sky-500 shadow-2xs cursor-pointer"
+                  >
+                    <option value="">-- Select Chapter from List --</option>
+                    {availableChapters.map(chItem => (
+                      <option key={chItem} value={chItem}>
+                        {chItem}
+                      </option>
+                    ))}
+                    <option value="__NEW__">+ Add Custom Chapter...</option>
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    placeholder="Type custom chapter name..."
+                    value={chapter}
+                    onChange={e => setChapter(e.target.value)}
+                    className="w-full text-sm font-semibold p-2 border border-slate-300 rounded-lg text-black bg-white focus:outline-hidden focus:ring-2 focus:ring-sky-500 shadow-2xs"
+                  />
+                )}
               </div>
 
               <div>

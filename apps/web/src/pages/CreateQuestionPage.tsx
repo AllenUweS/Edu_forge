@@ -67,29 +67,135 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
   const [marks, setMarks] = useState<number>(initialQuestion?.marks || 4);
   const [negativeMarks, setNegativeMarks] = useState<number>(initialQuestion?.negativeMarks || 1);
 
-  // Available chapters for the selected subject
+  const SUBJECT_CHAPTERS_MAP: Record<string, string[]> = {
+    Biology: [
+      'The Living World',
+      'Biological Classification',
+      'Plant Kingdom',
+      'Animal Kingdom',
+      'Morphology of Flowering Plants',
+      'Anatomy of Flowering Plants',
+      'Structural Organisation in Animals',
+      'Cell: The Unit of Life',
+      'Biomolecules',
+      'Cell Cycle and Cell Division',
+      'Photosynthesis in Higher Plants',
+      'Respiration in Plants',
+      'Plant Growth and Development',
+      'Breathing and Exchange of Gases',
+      'Body Fluids and Circulation',
+      'Excretory Products and their Elimination',
+      'Locomotion and Movement',
+      'Neural Control and Coordination',
+      'Chemical Coordination and Integration',
+      'Sexual Reproduction in Flowering Plants',
+      'Human Reproduction',
+      'Reproductive Health',
+      'Principles of Inheritance and Variation',
+      'Molecular Basis of Inheritance',
+      'Evolution',
+      'Human Health and Disease',
+      'Microbes in Human Welfare',
+      'Biotechnology: Principles and Processes',
+      'Biotechnology and its Applications',
+      'Organisms and Populations',
+      'Ecosystem',
+      'Biodiversity and Conservation'
+    ],
+    Physics: [
+      'Units and Measurements',
+      'Motion in a Straight Line',
+      'Motion in a Plane',
+      'Laws of Motion',
+      'Work, Energy and Power',
+      'System of Particles and Rotational Motion',
+      'Gravitation',
+      'Mechanical Properties of Solids',
+      'Mechanical Properties of Fluids',
+      'Thermal Properties of Matter',
+      'Thermodynamics',
+      'Kinetic Theory',
+      'Oscillations',
+      'Waves',
+      'Electric Charges and Fields',
+      'Electrostatic Potential and Capacitance',
+      'Current Electricity',
+      'Moving Charges and Magnetism',
+      'Magnetism and Matter',
+      'Electromagnetic Induction',
+      'Alternating Current',
+      'Electromagnetic Waves',
+      'Ray Optics and Optical Instruments',
+      'Wave Optics',
+      'Dual Nature of Radiation and Matter',
+      'Atoms',
+      'Nuclei',
+      'Semiconductor Electronics'
+    ],
+    Chemistry: [
+      'Some Basic Concepts of Chemistry',
+      'Structure of Atom',
+      'Classification of Elements and Periodicity in Properties',
+      'Chemical Bonding and Molecular Structure',
+      'Thermodynamics',
+      'Equilibrium',
+      'Redox Reactions',
+      'Organic Chemistry: Some Basic Principles and Techniques',
+      'Hydrocarbons',
+      'Solutions',
+      'Electrochemistry',
+      'Chemical Kinetics',
+      'The d- and f-Block Elements',
+      'Coordination Compounds',
+      'Haloalkanes and Haloarenes',
+      'Alcohols, Phenols and Ethers',
+      'Aldehydes, Ketones and Carboxylic Acids',
+      'Amines',
+      'Biomolecules'
+    ],
+    Mathematics: [
+      'Sets, Relations and Functions',
+      'Complex Numbers and Quadratic Equations',
+      'Matrices and Determinants',
+      'Permutations and Combinations',
+      'Mathematical Induction & Binomial Theorem',
+      'Sequences and Series',
+      'Limits, Continuity and Differentiability',
+      'Integral Calculus',
+      'Differential Equations',
+      'Coordinate Geometry & Straight Lines',
+      'Conic Sections & Circles',
+      'Three Dimensional Geometry',
+      'Vector Algebra',
+      'Statistics and Probability',
+      'Trigonometry'
+    ]
+  };
+
+  // Available chapters for the selected subject (combines DB chapters + standard curriculum)
   const availableChapters = React.useMemo(() => {
     if (!subject) return [];
     const selectedSub = dbSubjects.find(s => s.name.toLowerCase() === subject.toLowerCase());
     const selectedSubId = selectedSub?.id ? String(selectedSub.id).toLowerCase() : '';
 
-    return dbChapters.filter((c: any) => {
+    const dbMatches = dbChapters.filter((c: any) => {
       const cSubId = c.subjectId || c.subject_id ? String(c.subjectId || c.subject_id).toLowerCase() : '';
-      const cSubName = c.subject ? String(c.subject).toLowerCase() : '';
+      const cSubName = (c.subject || c.subjects?.name || '').toLowerCase();
       return (selectedSubId && cSubId === selectedSubId) || (cSubName && cSubName === subject.toLowerCase());
-    });
+    }).map((c: any) => c.title || c.name || (c as any).chapter_name).filter(Boolean);
+
+    const standardList = SUBJECT_CHAPTERS_MAP[subject] || [];
+    return Array.from(new Set([...dbMatches, ...standardList]));
   }, [dbChapters, dbSubjects, subject]);
 
   // Automatically select first chapter when subject changes if not custom
   React.useEffect(() => {
     if (availableChapters.length > 0) {
-      const exists = availableChapters.some(c => c.title.toLowerCase() === (chapter || '').toLowerCase());
+      const exists = availableChapters.some(c => c.toLowerCase() === (chapter || '').toLowerCase());
       if (!exists && !initialQuestion?.chapter) {
-        setChapter(availableChapters[0].title);
+        setChapter(availableChapters[0]);
         setIsCustomChapter(false);
       }
-    } else if (!chapter && !initialQuestion?.chapter) {
-      setIsCustomChapter(true);
     }
   }, [subject, availableChapters]);
 
@@ -406,24 +512,22 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="block font-bold text-[11px] text-slate-500 uppercase">
-                    Chapter
+                    Chapter / Unit
                   </label>
-                  {availableChapters.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsCustomChapter(!isCustomChapter);
-                        if (!isCustomChapter) setChapter('');
-                        else if (availableChapters.length > 0) setChapter(availableChapters[0].title);
-                      }}
-                      className="text-[10px] text-teal-700 font-bold hover:underline cursor-pointer"
-                    >
-                      {isCustomChapter ? 'Select existing' : '+ Add new'}
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCustomChapter(!isCustomChapter);
+                      if (!isCustomChapter) setChapter('');
+                      else if (availableChapters.length > 0) setChapter(availableChapters[0]);
+                    }}
+                    className="text-[10px] text-teal-700 font-bold hover:underline cursor-pointer"
+                  >
+                    {isCustomChapter ? '← Choose from dropdown' : '+ Type custom chapter'}
+                  </button>
                 </div>
 
-                {availableChapters.length > 0 && !isCustomChapter ? (
+                {!isCustomChapter ? (
                   <select
                     value={chapter}
                     onChange={e => {
@@ -434,19 +538,19 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
                         setChapter(e.target.value);
                       }
                     }}
-                    className="w-full p-2 border border-slate-300 rounded-lg text-slate-900 bg-white font-medium focus:outline-hidden focus:ring-2 focus:ring-slate-900"
+                    className="w-full p-2 border border-slate-300 rounded-lg text-slate-900 bg-white font-medium focus:outline-hidden focus:ring-2 focus:ring-slate-900 cursor-pointer"
                   >
-                    {availableChapters.map((c: any) => (
-                      <option key={c.id || c.title} value={c.title}>
-                        {c.title} {c.code ? `(${c.code})` : ''}
+                    {availableChapters.map(chTitle => (
+                      <option key={chTitle} value={chTitle}>
+                        {chTitle}
                       </option>
                     ))}
-                    <option value="__NEW__">+ Add new chapter...</option>
+                    <option value="__NEW__">+ Add new custom chapter...</option>
                   </select>
                 ) : (
                   <input
                     type="text"
-                    placeholder="Type chapter name..."
+                    placeholder="Type custom chapter name..."
                     value={chapter}
                     onChange={e => setChapter(e.target.value)}
                     className="w-full p-2 border border-slate-300 rounded-lg text-slate-900 bg-white font-medium focus:outline-hidden focus:ring-2 focus:ring-slate-900"
