@@ -20,17 +20,206 @@ interface CreateQuestionPageProps {
   onBackToQuestionBank: () => void;
 }
 
+export const SUBJECT_CHAPTERS_MAP: Record<string, string[]> = {
+  Physics: [
+    'Units and Measurements',
+    'Motion in a Straight Line',
+    'Motion in a Plane',
+    'Laws of Motion',
+    'Work, Energy and Power',
+    'System of Particles and Rotational Motion',
+    'Gravitation',
+    'Mechanical Properties of Solids',
+    'Mechanical Properties of Fluids',
+    'Thermal Properties of Matter',
+    'Thermodynamics',
+    'Kinetic Theory',
+    'Oscillations',
+    'Waves',
+    'Electric Charges and Fields',
+    'Electrostatic Potential and Capacitance',
+    'Current Electricity',
+    'Moving Charges and Magnetism',
+    'Magnetism and Matter',
+    'Electromagnetic Induction',
+    'Alternating Current',
+    'Electromagnetic Waves',
+    'Ray Optics and Optical Instruments',
+    'Wave Optics',
+    'Dual Nature of Radiation and Matter',
+    'Atoms',
+    'Nuclei',
+    'Semiconductor Electronics'
+  ],
+  Chemistry: [
+    'Some Basic Concepts of Chemistry',
+    'Structure of Atom',
+    'Classification of Elements and Periodicity in Properties',
+    'Chemical Bonding and Molecular Structure',
+    'Thermodynamics',
+    'Equilibrium',
+    'Redox Reactions',
+    'Organic Chemistry: Some Basic Principles and Techniques',
+    'Hydrocarbons',
+    'Solutions',
+    'Electrochemistry',
+    'Chemical Kinetics',
+    'The d- and f-Block Elements',
+    'Coordination Compounds',
+    'Haloalkanes and Haloarenes',
+    'Alcohols, Phenols and Ethers',
+    'Aldehydes, Ketones and Carboxylic Acids',
+    'Amines',
+    'Biomolecules'
+  ],
+  Biology: [
+    'The Living World',
+    'Biological Classification',
+    'Plant Kingdom',
+    'Animal Kingdom',
+    'Morphology of Flowering Plants',
+    'Anatomy of Flowering Plants',
+    'Structural Organisation in Animals',
+    'Cell: The Unit of Life',
+    'Biomolecules',
+    'Cell Cycle and Cell Division',
+    'Photosynthesis in Higher Plants',
+    'Respiration in Plants',
+    'Plant Growth and Development',
+    'Breathing and Exchange of Gases',
+    'Body Fluids and Circulation',
+    'Excretory Products and their Elimination',
+    'Locomotion and Movement',
+    'Neural Control and Coordination',
+    'Chemical Coordination and Integration',
+    'Sexual Reproduction in Flowering Plants',
+    'Human Reproduction',
+    'Reproductive Health',
+    'Principles of Inheritance and Variation',
+    'Molecular Basis of Inheritance',
+    'Evolution',
+    'Human Health and Disease',
+    'Microbes in Human Welfare',
+    'Biotechnology: Principles and Processes',
+    'Biotechnology and its Applications',
+    'Organisms and Populations',
+    'Ecosystem',
+    'Biodiversity and Conservation'
+  ],
+  Mathematics: [
+    'Sets, Relations and Functions',
+    'Complex Numbers and Quadratic Equations',
+    'Matrices and Determinants',
+    'Permutations and Combinations',
+    'Mathematical Induction & Binomial Theorem',
+    'Sequences and Series',
+    'Limits, Continuity and Differentiability',
+    'Integral Calculus',
+    'Differential Equations',
+    'Coordinate Geometry & Straight Lines',
+    'Conic Sections & Circles',
+    'Three Dimensional Geometry',
+    'Vector Algebra',
+    'Statistics and Probability',
+    'Trigonometry'
+  ]
+};
+
+export const getStandardChaptersForSubject = (subName?: string): string[] => {
+  if (!subName) return SUBJECT_CHAPTERS_MAP['Physics'];
+  const norm = subName.trim().toLowerCase();
+  if (norm.includes('phys')) return SUBJECT_CHAPTERS_MAP['Physics'];
+  if (norm.includes('chem')) return SUBJECT_CHAPTERS_MAP['Chemistry'];
+  if (norm.includes('bio')) return SUBJECT_CHAPTERS_MAP['Biology'];
+  if (norm.includes('math')) return SUBJECT_CHAPTERS_MAP['Mathematics'];
+  const match = Object.keys(SUBJECT_CHAPTERS_MAP).find(k => k.toLowerCase() === norm);
+  return match ? SUBJECT_CHAPTERS_MAP[match] : SUBJECT_CHAPTERS_MAP['Physics'];
+};
+
+export const resolveChaptersForSubject = (subName: string, dbChs: any[] = [], dbSubs: any[] = []): string[] => {
+  if (!subName) return getStandardChaptersForSubject('Physics');
+  const normSub = subName.trim().toLowerCase();
+  const standardList = getStandardChaptersForSubject(subName);
+
+  // Exclude chapters strictly specific to other standard subjects
+  const otherSubjectsChapters = new Set<string>();
+  Object.entries(SUBJECT_CHAPTERS_MAP).forEach(([sKey, sList]) => {
+    if (!sKey.toLowerCase().includes(normSub) && !normSub.includes(sKey.toLowerCase())) {
+      sList.forEach(ch => {
+        if (!standardList.some(st => st.toLowerCase() === ch.toLowerCase())) {
+          otherSubjectsChapters.add(ch.toLowerCase());
+        }
+      });
+    }
+  });
+
+  const selectedSub = dbSubs.find(s => (s.name || '').toLowerCase() === normSub || normSub.includes((s.name || '').toLowerCase()));
+  const selectedSubId = selectedSub?.id ? String(selectedSub.id).toLowerCase() : '';
+
+  const dbMatches = (dbChs || []).filter((c: any) => {
+    const cSubName = (
+      typeof c.subject === 'string' ? c.subject : (c.subjects?.name || c.subject_name || '')
+    ).trim().toLowerCase();
+    const cSubId = (c.subjectId || c.subject_id || '').toString().trim().toLowerCase();
+
+    const matchesName = cSubName && (cSubName === normSub || cSubName.includes(normSub) || normSub.includes(cSubName));
+    const matchesId = selectedSubId && cSubId && selectedSubId === cSubId;
+    if (!matchesName && !matchesId) return false;
+
+    const chTitle = (c.title || c.name || c.chapter_name || '').trim();
+    if (!chTitle) return false;
+    if (otherSubjectsChapters.has(chTitle.toLowerCase())) return false;
+    return true;
+  }).map((c: any) => (c.title || c.name || c.chapter_name || '').trim()).filter(Boolean);
+
+  const merged = Array.from(new Set([...standardList, ...dbMatches]));
+  return merged.length > 0 ? merged : standardList;
+};
+
 export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
   initialQuestion,
   onBackToQuestionBank
 }) => {
   const user = getUserProfile();
   const userSubject = user.assigned_subject || 'All';
-  const effectiveSubject = userSubject !== 'All' ? userSubject : (initialQuestion?.subject || 'Biology');
+  const defaultSubject = userSubject !== 'All' ? userSubject : (initialQuestion?.subject || 'Physics');
 
   // Database Subjects & Chapters
   const [dbSubjects, setDbSubjects] = useState<any[]>([]);
   const [dbChapters, setDbChapters] = useState<any[]>([]);
+
+  // Metadata state
+  const [subject, setSubject] = useState<string>(
+    initialQuestion?.subject || defaultSubject
+  );
+
+  const availableChapters = React.useMemo(() => {
+    return resolveChaptersForSubject(subject, dbChapters, dbSubjects);
+  }, [dbChapters, dbSubjects, subject]);
+
+  const [chapter, setChapter] = useState<string>(() => {
+    if (initialQuestion?.chapter) return initialQuestion.chapter;
+    const initialList = resolveChaptersForSubject(initialQuestion?.subject || defaultSubject, [], []);
+    return initialList[0] || 'Units and Measurements';
+  });
+
+  const [isCustomChapter, setIsCustomChapter] = useState(false);
+  const [difficulty, setDifficulty] = useState<QuestionDifficulty>(initialQuestion?.difficulty || 'Medium');
+  const [marks, setMarks] = useState<number>(initialQuestion?.marks || 4);
+  const [negativeMarks, setNegativeMarks] = useState<number>(initialQuestion?.negativeMarks !== undefined ? initialQuestion.negativeMarks : 1);
+
+  // Question Code manual override state
+  const [customQuestionCode, setCustomQuestionCode] = useState<string>(() => {
+    const existing = initialQuestion?.questionCode || (initialQuestion as any)?.question_code;
+    if (existing) return existing;
+    const initSub = initialQuestion?.subject || defaultSubject;
+    const initChap = initialQuestion?.chapter || resolveChaptersForSubject(initSub, [], [])[0];
+    return formatQuestionCode({ subject: initSub, chapter: initChap, id: initialQuestion?.id });
+  });
+
+  const [isManualQuestionCode, setIsManualQuestionCode] = useState<boolean>(
+    Boolean(initialQuestion?.questionCode || initialQuestion?.question_code)
+  );
 
   // Load backend subjects & chapters
   React.useEffect(() => {
@@ -50,213 +239,45 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
     }
     if (dbSubjects.length > 0) return dbSubjects;
     return [
-      { name: 'Biology', code: 'BIO' },
       { name: 'Physics', code: 'PHY' },
       { name: 'Chemistry', code: 'CHE' },
+      { name: 'Biology', code: 'BIO' },
       { name: 'Mathematics', code: 'MAT' }
     ];
   }, [dbSubjects, userSubject]);
 
-  // Metadata state
-  const [subject, setSubject] = useState(
-    userSubject !== 'All' ? userSubject : (initialQuestion?.subject || 'Biology')
-  );
-  const [chapter, setChapter] = useState(initialQuestion?.chapter || '');
-  const [isCustomChapter, setIsCustomChapter] = useState(false);
-  const [difficulty, setDifficulty] = useState<QuestionDifficulty>(initialQuestion?.difficulty || 'Medium');
-  const [marks, setMarks] = useState<number>(initialQuestion?.marks || 4);
-  const [negativeMarks, setNegativeMarks] = useState<number>(initialQuestion?.negativeMarks || 1);
-
-  // Question Code manual override state
-  const [customQuestionCode, setCustomQuestionCode] = useState<string>(
-    initialQuestion?.questionCode || initialQuestion?.question_code || ''
-  );
-  const [isManualQuestionCode, setIsManualQuestionCode] = useState<boolean>(
-    Boolean(initialQuestion?.questionCode || initialQuestion?.question_code)
-  );
-
   // Force faculty userSubject if restricted
   React.useEffect(() => {
-    if (userSubject !== 'All') {
+    if (userSubject !== 'All' && subject !== userSubject) {
       setSubject(userSubject);
     }
-  }, [userSubject]);
+  }, [userSubject, subject]);
+
+  // Auto-correct chapter when subject changes or chapters load
+  React.useEffect(() => {
+    if (!isCustomChapter && availableChapters.length > 0) {
+      const exists = availableChapters.some(c => c.toLowerCase() === (chapter || '').toLowerCase());
+      if (!exists) {
+        const nextCh = availableChapters[0];
+        setChapter(nextCh);
+        if (!isManualQuestionCode) {
+          setCustomQuestionCode(formatQuestionCode({ subject, chapter: nextCh, id: initialQuestion?.id }));
+        }
+      }
+    }
+  }, [subject, availableChapters, isCustomChapter, isManualQuestionCode, chapter, initialQuestion?.id]);
 
   // Sync Question Code with subject/chapter when not manually edited
   React.useEffect(() => {
     if (!isManualQuestionCode) {
       setCustomQuestionCode(formatQuestionCode({ subject, chapter, id: initialQuestion?.id }));
     }
-  }, [subject, chapter, isManualQuestionCode]);
-
-  const SUBJECT_CHAPTERS_MAP: Record<string, string[]> = {
-    Biology: [
-      'The Living World',
-      'Biological Classification',
-      'Plant Kingdom',
-      'Animal Kingdom',
-      'Morphology of Flowering Plants',
-      'Anatomy of Flowering Plants',
-      'Structural Organisation in Animals',
-      'Cell: The Unit of Life',
-      'Biomolecules',
-      'Cell Cycle and Cell Division',
-      'Photosynthesis in Higher Plants',
-      'Respiration in Plants',
-      'Plant Growth and Development',
-      'Breathing and Exchange of Gases',
-      'Body Fluids and Circulation',
-      'Excretory Products and their Elimination',
-      'Locomotion and Movement',
-      'Neural Control and Coordination',
-      'Chemical Coordination and Integration',
-      'Sexual Reproduction in Flowering Plants',
-      'Human Reproduction',
-      'Reproductive Health',
-      'Principles of Inheritance and Variation',
-      'Molecular Basis of Inheritance',
-      'Evolution',
-      'Human Health and Disease',
-      'Microbes in Human Welfare',
-      'Biotechnology: Principles and Processes',
-      'Biotechnology and its Applications',
-      'Organisms and Populations',
-      'Ecosystem',
-      'Biodiversity and Conservation'
-    ],
-    Physics: [
-      'Units and Measurements',
-      'Motion in a Straight Line',
-      'Motion in a Plane',
-      'Laws of Motion',
-      'Work, Energy and Power',
-      'System of Particles and Rotational Motion',
-      'Gravitation',
-      'Mechanical Properties of Solids',
-      'Mechanical Properties of Fluids',
-      'Thermal Properties of Matter',
-      'Thermodynamics',
-      'Kinetic Theory',
-      'Oscillations',
-      'Waves',
-      'Electric Charges and Fields',
-      'Electrostatic Potential and Capacitance',
-      'Current Electricity',
-      'Moving Charges and Magnetism',
-      'Magnetism and Matter',
-      'Electromagnetic Induction',
-      'Alternating Current',
-      'Electromagnetic Waves',
-      'Ray Optics and Optical Instruments',
-      'Wave Optics',
-      'Dual Nature of Radiation and Matter',
-      'Atoms',
-      'Nuclei',
-      'Semiconductor Electronics'
-    ],
-    Chemistry: [
-      'Some Basic Concepts of Chemistry',
-      'Structure of Atom',
-      'Classification of Elements and Periodicity in Properties',
-      'Chemical Bonding and Molecular Structure',
-      'Thermodynamics',
-      'Equilibrium',
-      'Redox Reactions',
-      'Organic Chemistry: Some Basic Principles and Techniques',
-      'Hydrocarbons',
-      'Solutions',
-      'Electrochemistry',
-      'Chemical Kinetics',
-      'The d- and f-Block Elements',
-      'Coordination Compounds',
-      'Haloalkanes and Haloarenes',
-      'Alcohols, Phenols and Ethers',
-      'Aldehydes, Ketones and Carboxylic Acids',
-      'Amines',
-      'Biomolecules'
-    ],
-    Mathematics: [
-      'Sets, Relations and Functions',
-      'Complex Numbers and Quadratic Equations',
-      'Matrices and Determinants',
-      'Permutations and Combinations',
-      'Mathematical Induction & Binomial Theorem',
-      'Sequences and Series',
-      'Limits, Continuity and Differentiability',
-      'Integral Calculus',
-      'Differential Equations',
-      'Coordinate Geometry & Straight Lines',
-      'Conic Sections & Circles',
-      'Three Dimensional Geometry',
-      'Vector Algebra',
-      'Statistics and Probability',
-      'Trigonometry'
-    ]
-  };
-
-  // Helper to resolve chapters strictly for any given subject name
-  const getChaptersForSubject = (subName: string): string[] => {
-    if (!subName) return [];
-    const normSub = subName.trim().toLowerCase();
-
-    // Standard list for target subject
-    const standardList = SUBJECT_CHAPTERS_MAP[subName] || SUBJECT_CHAPTERS_MAP[
-      Object.keys(SUBJECT_CHAPTERS_MAP).find(k => k.toLowerCase() === normSub) || ''
-    ] || [];
-
-    // Standard chapters from OTHER subjects (to prevent cross-subject leaks)
-    const otherSubjectsStandardChapters = new Set<string>();
-    Object.entries(SUBJECT_CHAPTERS_MAP).forEach(([sKey, sList]) => {
-      if (sKey.toLowerCase() !== normSub) {
-        sList.forEach(ch => otherSubjectsStandardChapters.add(ch.toLowerCase()));
-      }
-    });
-
-    const selectedSub = dbSubjects.find(s => s.name.toLowerCase() === normSub);
-    const selectedSubId = selectedSub?.id ? String(selectedSub.id).toLowerCase() : '';
-
-    const dbMatches = dbChapters.filter((c: any) => {
-      const cSubName = (
-        typeof c.subject === 'string' ? c.subject : (c.subjects?.name || c.subject_name || '')
-      ).trim().toLowerCase();
-      const cSubId = (c.subjectId || c.subject_id || '').toString().trim().toLowerCase();
-
-      // Check if DB chapter explicitly belongs to this subject
-      const matchesName = cSubName && cSubName === normSub;
-      const matchesId = selectedSubId && cSubId && selectedSubId === cSubId;
-      if (!matchesName && !matchesId) return false;
-
-      // Exclude DB chapter if its title belongs to another subject's standard curriculum
-      const chName = (c.title || c.name || c.chapter_name || '').trim();
-      if (otherSubjectsStandardChapters.has(chName.toLowerCase()) && !standardList.some(s => s.toLowerCase() === chName.toLowerCase())) {
-        return false;
-      }
-      return true;
-    }).map((c: any) => (c.title || c.name || c.chapter_name || '').trim()).filter(Boolean);
-
-    return Array.from(new Set([...standardList, ...dbMatches]));
-  };
-
-  // Available chapters for current subject
-  const availableChapters = React.useMemo(() => {
-    return getChaptersForSubject(subject);
-  }, [dbChapters, dbSubjects, subject]);
-
-  // Automatically sync chapter when subject changes if current chapter is invalid for selected subject
-  React.useEffect(() => {
-    if (availableChapters.length > 0) {
-      const exists = availableChapters.some(c => c.toLowerCase() === (chapter || '').toLowerCase());
-      if (!exists) {
-        setChapter(availableChapters[0]);
-        setIsCustomChapter(false);
-      }
-    }
-  }, [subject, availableChapters]);
+  }, [subject, chapter, isManualQuestionCode, initialQuestion?.id]);
 
   // Content Blocks
   const [blocks, setBlocks] = useState<ContentBlock[]>([
-    { id: 'blk-1', type: 'text', text: initialQuestion?.rawText || 'Identify the structure shown below.' },
-    { id: 'blk-2', type: 'image', imageUrl: initialQuestion?.imageUrl }
+    { id: 'blk-1', type: 'text', text: initialQuestion?.rawText || '' },
+    ...(initialQuestion?.imageUrl ? [{ id: 'blk-2', type: 'image' as const, imageUrl: initialQuestion.imageUrl }] : [])
   ]);
 
   // MCQ Options
@@ -264,17 +285,16 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
     initialQuestion?.options && initialQuestion.options.length > 0
       ? initialQuestion.options
       : [
-          { id: 'opt-1', key: 'A', rawText: 'Nucleus', isCorrect: false, content: [] },
-          { id: 'opt-2', key: 'B', rawText: 'Mitochondria', isCorrect: true, content: [] },
-          { id: 'opt-3', key: 'C', rawText: 'Ribosome', isCorrect: false, content: [] },
-          { id: 'opt-4', key: 'D', rawText: 'Golgi apparatus', isCorrect: false, content: [] }
+          { id: 'opt-1', key: 'A', rawText: '', isCorrect: true, content: [] },
+          { id: 'opt-2', key: 'B', rawText: '', isCorrect: false, content: [] },
+          { id: 'opt-3', key: 'C', rawText: '', isCorrect: false, content: [] },
+          { id: 'opt-4', key: 'D', rawText: '', isCorrect: false, content: [] }
         ]
   );
 
   // Solution
   const [solutionText, setSolutionText] = useState(
-    initialQuestion?.explanationText ||
-      'The correct answer is B because mitochondria are responsible for cellular respiration and ATP production.'
+    initialQuestion?.explanationText || ''
   );
   const [isSolutionExpanded, setIsSolutionExpanded] = useState(true);
 
@@ -288,11 +308,24 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
   // Synchronize or Reset form fields whenever initialQuestion changes
   React.useEffect(() => {
     if (initialQuestion && (initialQuestion.id || initialQuestion.rawText)) {
-      setSubject(initialQuestion.subject || 'Biology');
-      setChapter(initialQuestion.chapter || 'Cell Structure and Function');
+      const targetSub = initialQuestion.subject || (userSubject !== 'All' ? userSubject : 'Physics');
+      setSubject(targetSub);
+      const subChs = resolveChaptersForSubject(targetSub, dbChapters, dbSubjects);
+      setChapter(initialQuestion.chapter || subChs[0] || '');
+      setIsCustomChapter(false);
       setDifficulty(initialQuestion.difficulty || 'Medium');
       setMarks(initialQuestion.marks || 4);
-      setNegativeMarks(initialQuestion.negativeMarks || 1);
+      setNegativeMarks(initialQuestion.negativeMarks !== undefined ? initialQuestion.negativeMarks : 1);
+      
+      const qCode = initialQuestion.questionCode || initialQuestion.question_code || '';
+      if (qCode) {
+        setCustomQuestionCode(qCode);
+        setIsManualQuestionCode(true);
+      } else {
+        setIsManualQuestionCode(false);
+        setCustomQuestionCode(formatQuestionCode({ subject: targetSub, chapter: initialQuestion.chapter || subChs[0], id: initialQuestion.id }));
+      }
+      
       const questionStatement = initialQuestion.rawText || (Array.isArray(initialQuestion.content) ? initialQuestion.content.map((b: any) => b.text || b.html || '').join(' ') : '');
       const contentArr = Array.isArray(initialQuestion.content) ? (initialQuestion.content as any[]) : [];
       const initialSvg = initialQuestion.diagramSvg || (initialQuestion as any)?.diagram_svg || contentArr.find(b => b.type === 'diagram' || b.diagramSvg || b.svg)?.diagramSvg || contentArr.find(b => b.type === 'diagram' || b.diagramSvg || b.svg)?.svg;
@@ -338,12 +371,18 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
       setSolutionText(initialQuestion.explanationText || '');
     } else {
       // Fresh reset for NEW question creation
-      setSubject('Biology');
-      setChapter('');
+      const targetSub = userSubject !== 'All' ? userSubject : 'Physics';
+      setSubject(targetSub);
+      const subChs = resolveChaptersForSubject(targetSub, dbChapters, dbSubjects);
+      const targetCh = subChs[0] || 'Units and Measurements';
+      setChapter(targetCh);
+      setIsCustomChapter(false);
+      setIsManualQuestionCode(false);
+      setCustomQuestionCode(formatQuestionCode({ subject: targetSub, chapter: targetCh }));
       setDifficulty('Medium');
       setMarks(4);
       setNegativeMarks(1);
-      setBlocks([{ id: 'blk-1', type: 'text', text: '' }]);
+      setBlocks([{ id: `blk-${Date.now()}`, type: 'text', text: '' }]);
       setOptions([
         { id: 'opt-1', key: 'A', rawText: '', isCorrect: true, content: [] },
         { id: 'opt-2', key: 'B', rawText: '', isCorrect: false, content: [] },
@@ -454,7 +493,18 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
   };
 
   const resetFormToBlank = () => {
-    setBlocks([{ id: 'blk-1', type: 'text', text: '' }]);
+    const targetSub = userSubject !== 'All' ? userSubject : 'Physics';
+    setSubject(targetSub);
+    const subChs = resolveChaptersForSubject(targetSub, dbChapters, dbSubjects);
+    const targetCh = subChs[0] || 'Units and Measurements';
+    setChapter(targetCh);
+    setIsCustomChapter(false);
+    setIsManualQuestionCode(false);
+    setCustomQuestionCode(formatQuestionCode({ subject: targetSub, chapter: targetCh }));
+    setDifficulty('Medium');
+    setMarks(4);
+    setNegativeMarks(1);
+    setBlocks([{ id: `blk-${Date.now()}`, type: 'text', text: '' }]);
     setOptions([
       { id: 'opt-1', key: 'A', rawText: '', isCorrect: true, content: [] },
       { id: 'opt-2', key: 'B', rawText: '', isCorrect: false, content: [] },
@@ -474,7 +524,7 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
   };
 
   const previewQuestionObj: Question = {
-    id: initialQuestion?.id || 'BIO-CELL-0016',
+    id: initialQuestion?.id || customQuestionCode || 'PHY-UNI-0001',
     questionNumber: 1,
     questionType: 'MCQ_SINGLE',
     rawText: blocks.filter(b => b.type === 'text').map(b => b.text).join(' '),
@@ -588,9 +638,11 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
                   const newSub = e.target.value;
                   setSubject(newSub);
                   setIsCustomChapter(false);
-                  const subChs = getChaptersForSubject(newSub);
-                  if (subChs.length > 0) {
-                    setChapter(subChs[0]);
+                  const subChs = resolveChaptersForSubject(newSub, dbChapters, dbSubjects);
+                  const firstCh = subChs[0] || '';
+                  setChapter(firstCh);
+                  if (!isManualQuestionCode) {
+                    setCustomQuestionCode(formatQuestionCode({ subject: newSub, chapter: firstCh, id: initialQuestion?.id }));
                   }
                 }}
                 disabled={userSubject !== 'All'}

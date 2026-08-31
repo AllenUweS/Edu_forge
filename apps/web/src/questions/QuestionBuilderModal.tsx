@@ -7,6 +7,7 @@ import { RichTextEditor } from '../components/RichTextEditor.js';
 import { api } from '../services/api.js';
 import { getUserProfile } from '../utils/userProfile.js';
 import { formatQuestionCode } from '../utils/questionCode.js';
+import { resolveChaptersForSubject } from '../pages/CreateQuestionPage.js';
 import {
   HelpCircle, X, Check, Plus, Trash2, Sigma, Sparkles,
   Image as ImageIcon, Palette, Upload, Loader2
@@ -187,17 +188,7 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
 
   const availableChapters = React.useMemo(() => {
     if (!subject) return [];
-    const selectedSub = dbSubjects.find(s => s.name.toLowerCase() === subject.toLowerCase());
-    const selectedSubId = selectedSub?.id ? String(selectedSub.id).toLowerCase() : '';
-
-    const dbMatches = dbChapters.filter((c: any) => {
-      const cSubId = c.subjectId || c.subject_id ? String(c.subjectId || c.subject_id).toLowerCase() : '';
-      const cSubName = (c.subject || c.subjects?.name || '').toLowerCase();
-      return (selectedSubId && cSubId === selectedSubId) || (cSubName && cSubName === subject.toLowerCase());
-    }).map((c: any) => c.title || c.name || (c as any).chapter_name).filter(Boolean);
-
-    const standardList = chapterSuggestionsBySubject[subject] || chapterSuggestionsBySubject['Physics'] || [];
-    return Array.from(new Set([...dbMatches, ...standardList]));
+    return resolveChaptersForSubject(subject, dbChapters, dbSubjects);
   }, [dbChapters, dbSubjects, subject]);
 
   useEffect(() => {
