@@ -339,9 +339,10 @@ export const QuestionBankPage: React.FC<QuestionBankPageProps> = ({
                 setSelectedSubject(e.target.value);
                 setSelectedChapterFilter('all');
               }}
-              className="w-full py-2.5 px-3 text-xs border border-slate-300 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-teal-600 bg-white text-slate-900 font-semibold cursor-pointer"
+              disabled={userSubject !== 'All'}
+              className="w-full py-2.5 px-3 text-xs border border-slate-300 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-teal-600 bg-white text-slate-900 font-semibold cursor-pointer disabled:bg-slate-100 disabled:cursor-not-allowed"
             >
-              <option value="all">All Subjects</option>
+              {userSubject === 'All' && <option value="all">All Subjects</option>}
               {subjects.map(s => (
                 <option key={s.id || s.name} value={s.name}>
                   {s.name} ({s.code || s.name.substring(0, 3)})
