@@ -29,6 +29,8 @@ export interface QuestionOption {
 
 export interface Question {
   id: string;
+  questionCode?: string;
+  question_code?: string;
   questionNumber?: number | string;
   questionType: QuestionType;
   content: DocumentBlock[];

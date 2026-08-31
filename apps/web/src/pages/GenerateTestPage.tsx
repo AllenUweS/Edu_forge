@@ -222,7 +222,8 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
    * Returns a list of stored chapters for a given subject from the Supabase database.
    */
   const getAvailableChaptersForSubject = (subjectName: string) => {
-    if (!subjectName || subjectName === 'all') {
+    const effectiveSubject = (!subjectName || subjectName === 'all') && userSubject !== 'All' ? userSubject : subjectName;
+    if (!effectiveSubject || effectiveSubject === 'all') {
       const stored = chapters.map(c => c.name || c.title || (c as any).chapter_name).filter(Boolean);
       if (stored.length > 0) return Array.from(new Set(stored));
       return Object.values(SUBJECT_CHAPTERS_MAP).flat();
@@ -230,8 +231,8 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
     const stored = chapters
       .filter(c => {
         const cSub = (c.subject || c.subjects?.name || '').toLowerCase();
-        if (cSub === subjectName.toLowerCase()) return true;
-        const matchingSub = subjects.find(s => s.name.toLowerCase() === subjectName.toLowerCase());
+        if (cSub === effectiveSubject.toLowerCase() || cSub.includes(effectiveSubject.toLowerCase())) return true;
+        const matchingSub = subjects.find(s => s.name.toLowerCase() === effectiveSubject.toLowerCase());
         if (matchingSub && (c.subject_id === matchingSub.id || c.subjectId === matchingSub.id)) return true;
         return false;
       })
@@ -239,7 +240,7 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
       .filter(Boolean);
 
     if (stored.length > 0) return Array.from(new Set(stored));
-    return SUBJECT_CHAPTERS_MAP[subjectName] || [];
+    return SUBJECT_CHAPTERS_MAP[effectiveSubject] || [];
   };
 
   /**

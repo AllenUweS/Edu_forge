@@ -5,6 +5,7 @@ import { Search, Plus, Trash2, Edit3, Eye, Filter, BookOpen, Layers } from 'luci
 import { StudentPreviewDrawer } from '../components/StudentPreviewDrawer.js';
 import { formatQuestionCode } from '../utils/questionCode.js';
 import { MathTextRenderer } from '../equation/MathTextRenderer.js';
+import { getUserProfile } from '../utils/userProfile.js';
 
 interface QuestionBankPageProps {
   onBackToDashboard?: () => void;
@@ -23,9 +24,12 @@ export const QuestionBankPage: React.FC<QuestionBankPageProps> = ({
   const [chapters, setChapters] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const user = getUserProfile();
+  const userSubject = user.assigned_subject || 'All';
+
   // Filters
   const [search, setSearch] = useState('');
-  const [selectedSubject, setSelectedSubject] = useState<string>('all');
+  const [selectedSubject, setSelectedSubject] = useState<string>(userSubject !== 'All' ? userSubject : 'all');
   const [selectedChapterFilter, setSelectedChapterFilter] = useState<string>('all');
   const [difficultyFilter, setDifficultyFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -34,15 +38,6 @@ export const QuestionBankPage: React.FC<QuestionBankPageProps> = ({
   // Fast Preview Drawer State
   const [previewQuestion, setPreviewQuestion] = useState<Question | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-
-  const userSubject = (() => {
-    try {
-      const u = JSON.parse(localStorage.getItem('eduforge_user') || '{}');
-      return u.assigned_subject || 'All';
-    } catch {
-      return 'All';
-    }
-  })();
 
   useEffect(() => {
     loadMetadataAndQuestions();
@@ -185,13 +180,14 @@ export const QuestionBankPage: React.FC<QuestionBankPageProps> = ({
     return clean || 'Question statement text';
   };
 
-  // Available chapters filtered by selected subject
+  // Available chapters filtered by selected subject or faculty assigned subject
   const availableChapters = chapters.filter(c => {
-    if (selectedSubject === 'all') return true;
-    const subName = (c.subject_name || c.subject || '').toLowerCase();
+    const effectiveSubject = userSubject !== 'All' ? userSubject : selectedSubject;
+    if (effectiveSubject === 'all') return true;
+    const subName = (c.subject_name || c.subject || c.subjects?.name || '').toLowerCase();
     const subId = (c.subject_id || c.subjectId || '').toLowerCase();
-    const targetSubLower = selectedSubject.toLowerCase();
-    return subName === targetSubLower || subName.includes(targetSubLower) || subId === targetSubLower;
+    const targetSubLower = effectiveSubject.toLowerCase();
+    return subName === targetSubLower || subName.includes(targetSubLower) || targetSubLower.includes(subName) || subId === targetSubLower;
   });
 
   const filteredList = questions.filter(q => {

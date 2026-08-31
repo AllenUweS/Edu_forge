@@ -25,7 +25,8 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
   onBackToQuestionBank
 }) => {
   const user = getUserProfile();
-  const userSubject = user.assigned_subject;
+  const userSubject = user.assigned_subject || 'All';
+  const effectiveSubject = userSubject !== 'All' ? userSubject : (initialQuestion?.subject || 'Biology');
 
   // Database Subjects & Chapters
   const [dbSubjects, setDbSubjects] = useState<any[]>([]);
@@ -58,14 +59,18 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
   }, [dbSubjects, userSubject]);
 
   // Metadata state
-  const [subject, setSubject] = useState(
-    initialQuestion?.subject || (userSubject !== 'All' ? userSubject : 'Biology')
-  );
+  const [subject, setSubject] = useState(effectiveSubject);
   const [chapter, setChapter] = useState(initialQuestion?.chapter || '');
   const [isCustomChapter, setIsCustomChapter] = useState(false);
   const [difficulty, setDifficulty] = useState<QuestionDifficulty>(initialQuestion?.difficulty || 'Medium');
   const [marks, setMarks] = useState<number>(initialQuestion?.marks || 4);
   const [negativeMarks, setNegativeMarks] = useState<number>(initialQuestion?.negativeMarks || 1);
+
+  React.useEffect(() => {
+    if (userSubject !== 'All' && subject !== userSubject) {
+      setSubject(userSubject);
+    }
+  }, [userSubject]);
 
   const SUBJECT_CHAPTERS_MAP: Record<string, string[]> = {
     Biology: [
@@ -348,8 +353,8 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
       .join(' ');
 
     const correctOpt = options.find(o => o.isCorrect);
-
-    const dynamicCode = formatQuestionCode({ subject, chapter, id: initialQuestion?.id });
+    const subToUse = userSubject !== 'All' ? userSubject : subject;
+    const dynamicCode = formatQuestionCode({ subject: subToUse, chapter, id: initialQuestion?.id });
 
     const questionData: Partial<Question> = {
       ...(initialQuestion?.id ? { id: initialQuestion.id } : {}),
@@ -358,7 +363,7 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
       questionType: 'MCQ_SINGLE',
       rawText: rawStatement,
       content: blocks as any,
-      subject,
+      subject: subToUse,
       chapter,
       difficulty,
       marks,

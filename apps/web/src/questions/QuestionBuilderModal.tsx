@@ -5,6 +5,8 @@ import { MathTypeEditor } from '../equation/MathTypeEditor.js';
 import { DiagramStudioModal } from './DiagramStudioModal.js';
 import { RichTextEditor } from '../components/RichTextEditor.js';
 import { api } from '../services/api.js';
+import { getUserProfile } from '../utils/userProfile.js';
+import { formatQuestionCode } from '../utils/questionCode.js';
 import {
   HelpCircle, X, Check, Plus, Trash2, Sigma, Sparkles,
   Image as ImageIcon, Palette, Upload, Loader2
@@ -157,11 +159,21 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
     return '';
   };
 
-  const [subject, setSubject] = useState(initialQuestion?.subject || 'Physics');
+  const user = getUserProfile();
+  const userSubject = user.assigned_subject || 'All';
+  const effectiveSubject = userSubject !== 'All' ? userSubject : (initialQuestion?.subject || 'Physics');
+
+  const [subject, setSubject] = useState(effectiveSubject);
   const [chapter, setChapter] = useState(initialQuestion?.chapter || '');
   const [isCustomChapter, setIsCustomChapter] = useState(false);
   const [dbChapters, setDbChapters] = useState<any[]>([]);
   const [dbSubjects, setDbSubjects] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (userSubject !== 'All' && subject !== userSubject) {
+      setSubject(userSubject);
+    }
+  }, [userSubject]);
 
   useEffect(() => {
     api.getSubjects().then(subs => {
@@ -447,9 +459,12 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
   const handleSave = () => {
     const correctOpt = options.find(o => o.isCorrect);
     const tags = tagsInput.split(',').map(t => t.trim()).filter(Boolean);
+    const subToUse = userSubject !== 'All' ? userSubject : subject;
+    const dynamicCode = formatQuestionCode({ subject: subToUse, chapter, id: initialQuestion?.id });
 
     const question: Question = {
       id: initialQuestion?.id || `q-${Date.now()}`,
+      questionCode: dynamicCode,
       questionNumber,
       questionType: 'MCQ_SINGLE',
       rawText,
@@ -468,7 +483,7 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
       correctAnswer: correctOpt?.key || 'a',
       marks,
       negativeMarks,
-      subject,
+      subject: subToUse,
       chapter,
       topic,
       difficulty,

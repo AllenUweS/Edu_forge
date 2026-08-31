@@ -35,17 +35,11 @@ const KNOWN_CHAPTER_CODES: Record<string, string> = {
 };
 
 /**
- * Format dynamic question code based on subject and chapter
+ * Format dynamic question code based strictly on subject and chosen chapter
  * Example: BIO-ANI-0071, PHY-UNI-0042, CHE-BAS-0045, MAT-ALG-8812
  */
 export const formatQuestionCode = (q?: Partial<Question> | any | null): string => {
   if (!q) return 'BIO-LIV-0001';
-
-  // If question already has a valid format question code
-  const existingCode = q.questionCode || q.question_code || (typeof q.id === 'string' && /^[A-Z]{3}-[A-Z]{3}-\d+/i.test(q.id) ? q.id : null);
-  if (existingCode && /^[A-Z]{3}-[A-Z]{3}-\d+/i.test(existingCode)) {
-    return existingCode.toUpperCase();
-  }
 
   const sub = (q.subject || 'Biology').trim();
   const chap = (q.chapter || 'The Living World').trim();
@@ -79,9 +73,14 @@ export const formatQuestionCode = (q?: Partial<Question> | any | null): string =
     }
   }
 
-  const rawNum = typeof q.id === 'string' ? q.id.replace(/\D/g, '') : '';
-  const numPart = rawNum ? rawNum.slice(-4) : String(Math.floor(Math.random() * 9000) + 1000);
-  const paddedNum = numPart.padStart(4, '0');
+  // Extract sequence number from existing questionCode or id
+  const existingCode = String(q.questionCode || q.question_code || (typeof q.id === 'string' ? q.id : '') || '');
+  const matchNum = existingCode.match(/(\d{1,4})$/);
+  const numPart = matchNum
+    ? matchNum[1].padStart(4, '0')
+    : (typeof q.id === 'string' && q.id.replace(/\D/g, '')
+        ? q.id.replace(/\D/g, '').slice(-4).padStart(4, '0')
+        : String(Math.floor(Math.random() * 9000) + 1000));
 
-  return `${subCode}-${chapCode}-${paddedNum}`;
+  return `${subCode}-${chapCode}-${numPart}`;
 };
