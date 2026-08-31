@@ -44,6 +44,10 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
   }, []);
 
   const allowedSubjects = React.useMemo(() => {
+    if (userSubject !== 'All') {
+      const match = dbSubjects.find(s => s.name.toLowerCase() === userSubject.toLowerCase());
+      return match ? [match] : [{ name: userSubject, code: userSubject.substring(0, 3).toUpperCase() }];
+    }
     if (dbSubjects.length > 0) return dbSubjects;
     return [
       { name: 'Biology', code: 'BIO' },
@@ -51,7 +55,7 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
       { name: 'Chemistry', code: 'CHE' },
       { name: 'Mathematics', code: 'MAT' }
     ];
-  }, [dbSubjects]);
+  }, [dbSubjects, userSubject]);
 
   // Metadata state
   const [subject, setSubject] = useState(
