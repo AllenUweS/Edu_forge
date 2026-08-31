@@ -228,7 +228,13 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
       return Object.values(SUBJECT_CHAPTERS_MAP).flat();
     }
     const stored = chapters
-      .filter(c => (c.subject || '').toLowerCase() === subjectName.toLowerCase())
+      .filter(c => {
+        const cSub = (c.subject || c.subjects?.name || '').toLowerCase();
+        if (cSub === subjectName.toLowerCase()) return true;
+        const matchingSub = subjects.find(s => s.name.toLowerCase() === subjectName.toLowerCase());
+        if (matchingSub && (c.subject_id === matchingSub.id || c.subjectId === matchingSub.id)) return true;
+        return false;
+      })
       .map(c => c.name || c.title || (c as any).chapter_name)
       .filter(Boolean);
 
@@ -455,8 +461,13 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
         const matched = availableSubs.find(s => s.toLowerCase() === subToUse?.toLowerCase());
         if (matched) {
           setSelectedSubjectFilter(matched);
-          setSelectedChapterFilter('all');
         }
+      }
+
+      if ((targetSec as any).chapter) {
+        setSelectedChapterFilter((targetSec as any).chapter);
+      } else {
+        setSelectedChapterFilter('all');
       }
     }
   };
@@ -1364,7 +1375,7 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                         <div>
                           <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1">
                             Section Name
@@ -1391,6 +1402,7 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                               const newSub = e.target.value;
                               const updated = [...testSections];
                               (updated[idx] as any).subject = newSub;
+                              (updated[idx] as any).chapter = 'all';
                               const secLetter = String.fromCharCode(65 + idx);
                               updated[idx].name = `Section ${secLetter} — ${newSub}`;
                               setTestSections(updated);
@@ -1404,6 +1416,30 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
                           >
                             {getAvailableSubjectNames().map(s => (
                               <option key={s} value={s}>{s}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1">
+                            Section Chapter
+                          </label>
+                          <select
+                            value={(sec as any).chapter || 'all'}
+                            onChange={e => {
+                              const newChap = e.target.value;
+                              const updated = [...testSections];
+                              (updated[idx] as any).chapter = newChap;
+                              setTestSections(updated);
+
+                              if (targetSectionId === sec.id) {
+                                setSelectedChapterFilter(newChap);
+                              }
+                            }}
+                            className="w-full text-xs font-bold p-2 border border-slate-300 rounded-lg text-slate-900 bg-white cursor-pointer"
+                          >
+                            <option value="all">All Chapters</option>
+                            {getAvailableChaptersForSubject((sec as any).subject || (sec.name.split('—')[1] || '').trim() || selectedSubject).map((chapTitle, cIdx) => (
+                              <option key={cIdx} value={chapTitle}>{chapTitle}</option>
                             ))}
                           </select>
                         </div>
