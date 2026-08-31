@@ -177,47 +177,6 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
   // ==========================================
   // Subject to Chapters / Topics Mapping
   // ==========================================
-  const SUBJECT_CHAPTERS_MAP: Record<string, string[]> = {
-    Biology: [
-      'Cell Structure and Function',
-      'Biological Classification',
-      'The Living World',
-      'Animal Kingdom',
-      'Plant Kingdom',
-      'Human Physiology',
-      'Genetics & Inheritance',
-      'Molecular Basis of Inheritance'
-    ],
-    Physics: [
-      'Units and Measurements',
-      'Motion in a Plane',
-      'Kinematics & Motion',
-      'Laws of Motion',
-      'Work, Energy & Power',
-      'Electrostatics & Current',
-      'Optics & Wave Optics',
-      'Thermodynamics & Heat'
-    ],
-    Chemistry: [
-      'Some Basic Concepts of Chemistry',
-      'Thermodynamics',
-      'Atomic Structure & Bonding',
-      'Organic Reaction Mechanisms',
-      'Chemical Kinetics',
-      'Periodic Table & Periodicity',
-      'Solutions & Electrochemistry',
-      'Thermodynamics in Chemistry'
-    ],
-    Mathematics: [
-      'Algebra & Matrices',
-      'Calculus & Differentiation',
-      'Trigonometric Functions',
-      'Vectors & 3D Geometry',
-      'Probability & Statistics',
-      'Coordinate Geometry'
-    ]
-  };
-
   /**
    * Returns a list of stored chapters for a given subject from the Supabase database.
    */
@@ -225,8 +184,7 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
     const effectiveSubject = (!subjectName || subjectName === 'all') && userSubject !== 'All' ? userSubject : subjectName;
     if (!effectiveSubject || effectiveSubject === 'all') {
       const stored = chapters.map(c => c.name || c.title || (c as any).chapter_name).filter(Boolean);
-      if (stored.length > 0) return Array.from(new Set(stored));
-      return Object.values(SUBJECT_CHAPTERS_MAP).flat();
+      return Array.from(new Set(stored));
     }
     const stored = chapters
       .filter(c => {
@@ -239,8 +197,7 @@ export const GenerateTestPage: React.FC<GenerateTestPageProps> = ({
       .map(c => c.name || c.title || (c as any).chapter_name)
       .filter(Boolean);
 
-    if (stored.length > 0) return Array.from(new Set(stored));
-    return SUBJECT_CHAPTERS_MAP[effectiveSubject] || [];
+    return Array.from(new Set(stored));
   };
 
   /**

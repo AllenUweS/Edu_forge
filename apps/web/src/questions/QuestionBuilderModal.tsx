@@ -7,7 +7,7 @@ import { RichTextEditor } from '../components/RichTextEditor.js';
 import { api } from '../services/api.js';
 import { getUserProfile } from '../utils/userProfile.js';
 import { formatQuestionCode } from '../utils/questionCode.js';
-import { resolveChaptersForSubject } from '../pages/CreateQuestionPage.js';
+import { getDatabaseChaptersForSubject } from '../pages/CreateQuestionPage.js';
 import {
   HelpCircle, X, Check, Plus, Trash2, Sigma, Sparkles,
   Image as ImageIcon, Palette, Upload, Loader2
@@ -24,111 +24,6 @@ type MathTypeTarget =
   | { field: 'statement' }
   | { field: 'option'; index: number; key: string }
   | { field: 'explanation' };
-
-const chapterSuggestionsBySubject: Record<string, string[]> = {
-  Physics: [
-    'Units and Measurements',
-    'Motion in a Straight Line',
-    'Motion in a Plane',
-    'Laws of Motion',
-    'Work, Energy and Power',
-    'System of Particles and Rotational Motion',
-    'Gravitation',
-    'Mechanical Properties of Solids',
-    'Mechanical Properties of Fluids',
-    'Thermal Properties of Matter',
-    'Thermodynamics',
-    'Kinetic Theory',
-    'Oscillations',
-    'Waves',
-    'Electric Charges and Fields',
-    'Electrostatic Potential and Capacitance',
-    'Current Electricity',
-    'Moving Charges and Magnetism',
-    'Magnetism and Matter',
-    'Electromagnetic Induction',
-    'Alternating Current',
-    'Electromagnetic Waves',
-    'Ray Optics and Optical Instruments',
-    'Wave Optics',
-    'Dual Nature of Radiation and Matter',
-    'Atoms',
-    'Nuclei',
-    'Semiconductor Electronics'
-  ],
-  Chemistry: [
-    'Some Basic Concepts of Chemistry',
-    'Structure of Atom',
-    'Classification of Elements and Periodicity in Properties',
-    'Chemical Bonding and Molecular Structure',
-    'Thermodynamics',
-    'Equilibrium',
-    'Redox Reactions',
-    'Organic Chemistry: Some Basic Principles and Techniques',
-    'Hydrocarbons',
-    'Solutions',
-    'Electrochemistry',
-    'Chemical Kinetics',
-    'The d- and f-Block Elements',
-    'Coordination Compounds',
-    'Haloalkanes and Haloarenes',
-    'Alcohols, Phenols and Ethers',
-    'Aldehydes, Ketones and Carboxylic Acids',
-    'Amines',
-    'Biomolecules'
-  ],
-  Biology: [
-    'The Living World',
-    'Biological Classification',
-    'Plant Kingdom',
-    'Animal Kingdom',
-    'Morphology of Flowering Plants',
-    'Anatomy of Flowering Plants',
-    'Structural Organisation in Animals',
-    'Cell: The Unit of Life',
-    'Biomolecules',
-    'Cell Cycle and Cell Division',
-    'Photosynthesis in Higher Plants',
-    'Respiration in Plants',
-    'Plant Growth and Development',
-    'Breathing and Exchange of Gases',
-    'Body Fluids and Circulation',
-    'Excretory Products and their Elimination',
-    'Locomotion and Movement',
-    'Neural Control and Coordination',
-    'Chemical Coordination and Integration',
-    'Sexual Reproduction in Flowering Plants',
-    'Human Reproduction',
-    'Reproductive Health',
-    'Principles of Inheritance and Variation',
-    'Molecular Basis of Inheritance',
-    'Evolution',
-    'Human Health and Disease',
-    'Microbes in Human Welfare',
-    'Biotechnology: Principles and Processes',
-    'Biotechnology and its Applications',
-    'Organisms and Populations',
-    'Ecosystem',
-    'Biodiversity and Conservation'
-  ],
-  Mathematics: [
-    'Sets, Relations and Functions',
-    'Complex Numbers and Quadratic Equations',
-    'Matrices and Determinants',
-    'Permutations and Combinations',
-    'Mathematical Induction & Binomial Theorem',
-    'Sequences and Series',
-    'Limits, Continuity and Differentiability',
-    'Integral Calculus',
-    'Differential Equations',
-    'Coordinate Geometry & Straight Lines',
-    'Conic Sections & Circles',
-    'Three Dimensional Geometry',
-    'Vector Algebra',
-    'Statistics and Probability',
-    'Trigonometry'
-  ]
-};
 
 const topicSuggestionsByChapter: Record<string, string[]> = {
   'Kinematics & Motion': ['Projectile Motion', 'Uniform Circular Motion', 'Relative Velocity', 'Newton Laws of Motion'],
@@ -174,7 +69,7 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
     if (userSubject !== 'All' && subject !== userSubject) {
       setSubject(userSubject);
     }
-  }, [userSubject]);
+  }, [userSubject, subject]);
 
   useEffect(() => {
     api.getSubjects().then(subs => {
@@ -188,18 +83,18 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
 
   const availableChapters = React.useMemo(() => {
     if (!subject) return [];
-    return resolveChaptersForSubject(subject, dbChapters, dbSubjects);
+    return getDatabaseChaptersForSubject(subject, dbChapters, dbSubjects);
   }, [dbChapters, dbSubjects, subject]);
 
   useEffect(() => {
-    if (availableChapters.length > 0) {
-      const exists = availableChapters.some(c => c.toLowerCase() === (chapter || '').toLowerCase());
+    if (!isCustomChapter && availableChapters.length > 0) {
+      const exists = availableChapters.some(c => c.title.toLowerCase() === (chapter || '').toLowerCase());
       if (!exists) {
-        setChapter(availableChapters[0]);
+        setChapter(availableChapters[0].title);
         setIsCustomChapter(false);
       }
     }
-  }, [subject, availableChapters]);
+  }, [subject, availableChapters, isCustomChapter, chapter]);
 
   // Question Code manual override state
   const [customQuestionCode, setCustomQuestionCode] = useState<string>(
@@ -211,9 +106,10 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
 
   useEffect(() => {
     if (!isManualQuestionCode) {
-      setCustomQuestionCode(formatQuestionCode({ subject, chapter, id: initialQuestion?.id }));
+      const chObj = availableChapters.find(c => c.title.toLowerCase() === (chapter || '').toLowerCase());
+      setCustomQuestionCode(formatQuestionCode({ subject, chapter, chapterCode: chObj?.code, id: initialQuestion?.id }));
     }
-  }, [subject, chapter, isManualQuestionCode]);
+  }, [subject, chapter, isManualQuestionCode, availableChapters, initialQuestion?.id]);
 
   const [topic, setTopic] = useState(initialQuestion?.topic || '');
   const [difficulty, setDifficulty] = useState<QuestionDifficulty>(initialQuestion?.difficulty || 'Medium');
@@ -664,7 +560,7 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
                     onClick={() => {
                       setIsCustomChapter(!isCustomChapter);
                       if (!isCustomChapter) setChapter('');
-                      else if (availableChapters.length > 0) setChapter(availableChapters[0]);
+                      else if (availableChapters.length > 0) setChapter(availableChapters[0].title);
                     }}
                     className="text-[10px] text-teal-700 font-bold hover:underline cursor-pointer"
                   >
@@ -685,12 +581,15 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
                     }}
                     className="w-full text-sm font-semibold p-2 border border-slate-300 rounded-lg text-black bg-white focus:outline-hidden focus:ring-2 focus:ring-sky-500 shadow-2xs cursor-pointer"
                   >
-                    <option value="">-- Select Chapter from List --</option>
-                    {availableChapters.map(chItem => (
-                      <option key={chItem} value={chItem}>
-                        {chItem}
-                      </option>
-                    ))}
+                    {availableChapters.length === 0 ? (
+                      <option value="">No chapters in database for {subject}</option>
+                    ) : (
+                      availableChapters.map(ch => (
+                        <option key={ch.id || ch.title} value={ch.title}>
+                          {ch.title} {ch.code ? `(${ch.code})` : ''}
+                        </option>
+                      ))
+                    )}
                     <option value="__NEW__">+ Add Custom Chapter...</option>
                   </select>
                 ) : (

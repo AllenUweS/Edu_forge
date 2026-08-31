@@ -20,160 +20,49 @@ interface CreateQuestionPageProps {
   onBackToQuestionBank: () => void;
 }
 
-export const SUBJECT_CHAPTERS_MAP: Record<string, string[]> = {
-  Physics: [
-    'Units and Measurements',
-    'Motion in a Straight Line',
-    'Motion in a Plane',
-    'Laws of Motion',
-    'Work, Energy and Power',
-    'System of Particles and Rotational Motion',
-    'Gravitation',
-    'Mechanical Properties of Solids',
-    'Mechanical Properties of Fluids',
-    'Thermal Properties of Matter',
-    'Thermodynamics',
-    'Kinetic Theory',
-    'Oscillations',
-    'Waves',
-    'Electric Charges and Fields',
-    'Electrostatic Potential and Capacitance',
-    'Current Electricity',
-    'Moving Charges and Magnetism',
-    'Magnetism and Matter',
-    'Electromagnetic Induction',
-    'Alternating Current',
-    'Electromagnetic Waves',
-    'Ray Optics and Optical Instruments',
-    'Wave Optics',
-    'Dual Nature of Radiation and Matter',
-    'Atoms',
-    'Nuclei',
-    'Semiconductor Electronics'
-  ],
-  Chemistry: [
-    'Some Basic Concepts of Chemistry',
-    'Structure of Atom',
-    'Classification of Elements and Periodicity in Properties',
-    'Chemical Bonding and Molecular Structure',
-    'Thermodynamics',
-    'Equilibrium',
-    'Redox Reactions',
-    'Organic Chemistry: Some Basic Principles and Techniques',
-    'Hydrocarbons',
-    'Solutions',
-    'Electrochemistry',
-    'Chemical Kinetics',
-    'The d- and f-Block Elements',
-    'Coordination Compounds',
-    'Haloalkanes and Haloarenes',
-    'Alcohols, Phenols and Ethers',
-    'Aldehydes, Ketones and Carboxylic Acids',
-    'Amines',
-    'Biomolecules'
-  ],
-  Biology: [
-    'The Living World',
-    'Biological Classification',
-    'Plant Kingdom',
-    'Animal Kingdom',
-    'Morphology of Flowering Plants',
-    'Anatomy of Flowering Plants',
-    'Structural Organisation in Animals',
-    'Cell: The Unit of Life',
-    'Biomolecules',
-    'Cell Cycle and Cell Division',
-    'Photosynthesis in Higher Plants',
-    'Respiration in Plants',
-    'Plant Growth and Development',
-    'Breathing and Exchange of Gases',
-    'Body Fluids and Circulation',
-    'Excretory Products and their Elimination',
-    'Locomotion and Movement',
-    'Neural Control and Coordination',
-    'Chemical Coordination and Integration',
-    'Sexual Reproduction in Flowering Plants',
-    'Human Reproduction',
-    'Reproductive Health',
-    'Principles of Inheritance and Variation',
-    'Molecular Basis of Inheritance',
-    'Evolution',
-    'Human Health and Disease',
-    'Microbes in Human Welfare',
-    'Biotechnology: Principles and Processes',
-    'Biotechnology and its Applications',
-    'Organisms and Populations',
-    'Ecosystem',
-    'Biodiversity and Conservation'
-  ],
-  Mathematics: [
-    'Sets, Relations and Functions',
-    'Complex Numbers and Quadratic Equations',
-    'Matrices and Determinants',
-    'Permutations and Combinations',
-    'Mathematical Induction & Binomial Theorem',
-    'Sequences and Series',
-    'Limits, Continuity and Differentiability',
-    'Integral Calculus',
-    'Differential Equations',
-    'Coordinate Geometry & Straight Lines',
-    'Conic Sections & Circles',
-    'Three Dimensional Geometry',
-    'Vector Algebra',
-    'Statistics and Probability',
-    'Trigonometry'
-  ]
-};
+export interface ChapterOptionItem {
+  id: string;
+  title: string;
+  code?: string;
+  subject: string;
+}
 
-export const getStandardChaptersForSubject = (subName?: string): string[] => {
-  if (!subName) return SUBJECT_CHAPTERS_MAP['Physics'];
-  const norm = subName.trim().toLowerCase();
-  if (norm.includes('phys')) return SUBJECT_CHAPTERS_MAP['Physics'];
-  if (norm.includes('chem')) return SUBJECT_CHAPTERS_MAP['Chemistry'];
-  if (norm.includes('bio')) return SUBJECT_CHAPTERS_MAP['Biology'];
-  if (norm.includes('math')) return SUBJECT_CHAPTERS_MAP['Mathematics'];
-  const match = Object.keys(SUBJECT_CHAPTERS_MAP).find(k => k.toLowerCase() === norm);
-  return match ? SUBJECT_CHAPTERS_MAP[match] : SUBJECT_CHAPTERS_MAP['Physics'];
-};
-
-export const resolveChaptersForSubject = (subName: string, dbChs: any[] = [], dbSubs: any[] = []): string[] => {
-  if (!subName) return getStandardChaptersForSubject('Physics');
+/**
+ * Filter chapters from Supabase database strictly by the selected subject
+ */
+export const getDatabaseChaptersForSubject = (
+  subName: string,
+  dbChs: any[] = [],
+  dbSubs: any[] = []
+): ChapterOptionItem[] => {
+  if (!subName || !Array.isArray(dbChs) || dbChs.length === 0) return [];
   const normSub = subName.trim().toLowerCase();
-  const standardList = getStandardChaptersForSubject(subName);
 
-  // Exclude chapters strictly specific to other standard subjects
-  const otherSubjectsChapters = new Set<string>();
-  Object.entries(SUBJECT_CHAPTERS_MAP).forEach(([sKey, sList]) => {
-    if (!sKey.toLowerCase().includes(normSub) && !normSub.includes(sKey.toLowerCase())) {
-      sList.forEach(ch => {
-        if (!standardList.some(st => st.toLowerCase() === ch.toLowerCase())) {
-          otherSubjectsChapters.add(ch.toLowerCase());
-        }
-      });
-    }
-  });
-
-  const selectedSub = dbSubs.find(s => (s.name || '').toLowerCase() === normSub || normSub.includes((s.name || '').toLowerCase()));
+  const selectedSub = (dbSubs || []).find(
+    s => (s.name || '').toLowerCase() === normSub ||
+         (s.code || '').toLowerCase() === normSub ||
+         normSub.includes((s.name || '').toLowerCase()) ||
+         (s.name || '').toLowerCase().includes(normSub)
+  );
   const selectedSubId = selectedSub?.id ? String(selectedSub.id).toLowerCase() : '';
 
-  const dbMatches = (dbChs || []).filter((c: any) => {
+  const filtered = dbChs.filter((c: any) => {
     const cSubName = (
       typeof c.subject === 'string' ? c.subject : (c.subjects?.name || c.subject_name || '')
     ).trim().toLowerCase();
     const cSubId = (c.subjectId || c.subject_id || '').toString().trim().toLowerCase();
 
-    const matchesName = cSubName && (cSubName === normSub || cSubName.includes(normSub) || normSub.includes(cSubName));
-    const matchesId = selectedSubId && cSubId && selectedSubId === cSubId;
-    if (!matchesName && !matchesId) return false;
+    if (selectedSubId && cSubId && selectedSubId === cSubId) return true;
+    if (cSubName && (cSubName === normSub || cSubName.includes(normSub) || normSub.includes(cSubName))) return true;
+    return false;
+  });
 
-    const chTitle = (c.title || c.name || c.chapter_name || '').trim();
-    if (!chTitle) return false;
-    if (otherSubjectsChapters.has(chTitle.toLowerCase())) return false;
-    return true;
-  }).map((c: any) => (c.title || c.name || c.chapter_name || '').trim()).filter(Boolean);
-
-  const merged = Array.from(new Set([...standardList, ...dbMatches]));
-  return merged.length > 0 ? merged : standardList;
+  return filtered.map((c: any) => ({
+    id: String(c.id || ''),
+    title: (c.title || c.name || c.chapter_name || '').trim(),
+    code: c.code || c.chapter_code || '',
+    subject: c.subject || c.subjects?.name || subName
+  })).filter(c => Boolean(c.title));
 };
 
 export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
@@ -194,15 +83,10 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
   );
 
   const availableChapters = React.useMemo(() => {
-    return resolveChaptersForSubject(subject, dbChapters, dbSubjects);
+    return getDatabaseChaptersForSubject(subject, dbChapters, dbSubjects);
   }, [dbChapters, dbSubjects, subject]);
 
-  const [chapter, setChapter] = useState<string>(() => {
-    if (initialQuestion?.chapter) return initialQuestion.chapter;
-    const initialList = resolveChaptersForSubject(initialQuestion?.subject || defaultSubject, [], []);
-    return initialList[0] || 'Units and Measurements';
-  });
-
+  const [chapter, setChapter] = useState<string>(initialQuestion?.chapter || '');
   const [isCustomChapter, setIsCustomChapter] = useState(false);
   const [difficulty, setDifficulty] = useState<QuestionDifficulty>(initialQuestion?.difficulty || 'Medium');
   const [marks, setMarks] = useState<number>(initialQuestion?.marks || 4);
@@ -213,7 +97,7 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
     const existing = initialQuestion?.questionCode || (initialQuestion as any)?.question_code;
     if (existing) return existing;
     const initSub = initialQuestion?.subject || defaultSubject;
-    const initChap = initialQuestion?.chapter || resolveChaptersForSubject(initSub, [], [])[0];
+    const initChap = initialQuestion?.chapter || '';
     return formatQuestionCode({ subject: initSub, chapter: initChap, id: initialQuestion?.id });
   });
 
@@ -221,7 +105,7 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
     Boolean(initialQuestion?.questionCode || initialQuestion?.question_code)
   );
 
-  // Load backend subjects & chapters
+  // Load backend subjects & chapters from Supabase database
   React.useEffect(() => {
     api.getSubjects().then(subs => {
       if (subs && Array.isArray(subs)) setDbSubjects(subs);
@@ -253,15 +137,15 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
     }
   }, [userSubject, subject]);
 
-  // Auto-correct chapter when subject changes or chapters load
+  // Auto-correct chapter when subject changes or database chapters load
   React.useEffect(() => {
     if (!isCustomChapter && availableChapters.length > 0) {
-      const exists = availableChapters.some(c => c.toLowerCase() === (chapter || '').toLowerCase());
+      const exists = availableChapters.some(c => c.title.toLowerCase() === (chapter || '').toLowerCase());
       if (!exists) {
         const nextCh = availableChapters[0];
-        setChapter(nextCh);
+        setChapter(nextCh.title);
         if (!isManualQuestionCode) {
-          setCustomQuestionCode(formatQuestionCode({ subject, chapter: nextCh, id: initialQuestion?.id }));
+          setCustomQuestionCode(formatQuestionCode({ subject, chapter: nextCh.title, chapterCode: nextCh.code, id: initialQuestion?.id }));
         }
       }
     }
@@ -270,9 +154,10 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
   // Sync Question Code with subject/chapter when not manually edited
   React.useEffect(() => {
     if (!isManualQuestionCode) {
-      setCustomQuestionCode(formatQuestionCode({ subject, chapter, id: initialQuestion?.id }));
+      const chObj = availableChapters.find(c => c.title.toLowerCase() === (chapter || '').toLowerCase());
+      setCustomQuestionCode(formatQuestionCode({ subject, chapter, chapterCode: chObj?.code, id: initialQuestion?.id }));
     }
-  }, [subject, chapter, isManualQuestionCode, initialQuestion?.id]);
+  }, [subject, chapter, isManualQuestionCode, availableChapters, initialQuestion?.id]);
 
   // Content Blocks
   const [blocks, setBlocks] = useState<ContentBlock[]>([
@@ -310,8 +195,8 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
     if (initialQuestion && (initialQuestion.id || initialQuestion.rawText)) {
       const targetSub = initialQuestion.subject || (userSubject !== 'All' ? userSubject : 'Physics');
       setSubject(targetSub);
-      const subChs = resolveChaptersForSubject(targetSub, dbChapters, dbSubjects);
-      setChapter(initialQuestion.chapter || subChs[0] || '');
+      const subChs = getDatabaseChaptersForSubject(targetSub, dbChapters, dbSubjects);
+      setChapter(initialQuestion.chapter || subChs[0]?.title || '');
       setIsCustomChapter(false);
       setDifficulty(initialQuestion.difficulty || 'Medium');
       setMarks(initialQuestion.marks || 4);
@@ -323,7 +208,7 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
         setIsManualQuestionCode(true);
       } else {
         setIsManualQuestionCode(false);
-        setCustomQuestionCode(formatQuestionCode({ subject: targetSub, chapter: initialQuestion.chapter || subChs[0], id: initialQuestion.id }));
+        setCustomQuestionCode(formatQuestionCode({ subject: targetSub, chapter: initialQuestion.chapter || subChs[0]?.title, id: initialQuestion.id }));
       }
       
       const questionStatement = initialQuestion.rawText || (Array.isArray(initialQuestion.content) ? initialQuestion.content.map((b: any) => b.text || b.html || '').join(' ') : '');
@@ -373,8 +258,8 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
       // Fresh reset for NEW question creation
       const targetSub = userSubject !== 'All' ? userSubject : 'Physics';
       setSubject(targetSub);
-      const subChs = resolveChaptersForSubject(targetSub, dbChapters, dbSubjects);
-      const targetCh = subChs[0] || 'Units and Measurements';
+      const subChs = getDatabaseChaptersForSubject(targetSub, dbChapters, dbSubjects);
+      const targetCh = subChs[0]?.title || '';
       setChapter(targetCh);
       setIsCustomChapter(false);
       setIsManualQuestionCode(false);
@@ -392,7 +277,7 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
       setSolutionText('');
       setInternalNote('');
     }
-  }, [initialQuestion]);
+  }, [initialQuestion, dbChapters, dbSubjects]);
 
   // Block management
   const addTextBlock = () => {
@@ -472,6 +357,29 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
     } as any;
 
     try {
+      const subToUse = userSubject !== 'All' ? userSubject : subject;
+      const selectedSub = dbSubjects.find(s => (s.name || '').toLowerCase() === subToUse.toLowerCase());
+      const selectedSubId = selectedSub?.id || subToUse;
+
+      // If custom chapter was typed and doesn't exist in dbChapters, save it to database
+      if (isCustomChapter && chapter && chapter.trim()) {
+        const existingCh = dbChapters.find(c => (c.title || c.name || '').toLowerCase() === chapter.trim().toLowerCase());
+        if (!existingCh) {
+          try {
+            await api.createChapter(selectedSubId, {
+              title: chapter.trim(),
+              subject: subToUse,
+              name: chapter.trim()
+            });
+            // Refresh database chapters in state
+            const updatedChs = await api.getChapters();
+            if (Array.isArray(updatedChs)) setDbChapters(updatedChs);
+          } catch (e) {
+            console.warn('Could not auto-persist custom chapter to db:', e);
+          }
+        }
+      }
+
       if (initialQuestion?.id) {
         await api.updateQuestion(initialQuestion.id, questionData as Question);
         alert('Question updated successfully!');
@@ -495,8 +403,8 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
   const resetFormToBlank = () => {
     const targetSub = userSubject !== 'All' ? userSubject : 'Physics';
     setSubject(targetSub);
-    const subChs = resolveChaptersForSubject(targetSub, dbChapters, dbSubjects);
-    const targetCh = subChs[0] || 'Units and Measurements';
+    const subChs = getDatabaseChaptersForSubject(targetSub, dbChapters, dbSubjects);
+    const targetCh = subChs[0]?.title || '';
     setChapter(targetCh);
     setIsCustomChapter(false);
     setIsManualQuestionCode(false);
@@ -638,11 +546,11 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
                   const newSub = e.target.value;
                   setSubject(newSub);
                   setIsCustomChapter(false);
-                  const subChs = resolveChaptersForSubject(newSub, dbChapters, dbSubjects);
-                  const firstCh = subChs[0] || '';
+                  const subChs = getDatabaseChaptersForSubject(newSub, dbChapters, dbSubjects);
+                  const firstCh = subChs[0]?.title || '';
                   setChapter(firstCh);
                   if (!isManualQuestionCode) {
-                    setCustomQuestionCode(formatQuestionCode({ subject: newSub, chapter: firstCh, id: initialQuestion?.id }));
+                    setCustomQuestionCode(formatQuestionCode({ subject: newSub, chapter: firstCh, chapterCode: subChs[0]?.code, id: initialQuestion?.id }));
                   }
                 }}
                 disabled={userSubject !== 'All'}
@@ -666,7 +574,7 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
                   onClick={() => {
                     setIsCustomChapter(!isCustomChapter);
                     if (!isCustomChapter) setChapter('');
-                    else if (availableChapters.length > 0) setChapter(availableChapters[0]);
+                    else if (availableChapters.length > 0) setChapter(availableChapters[0].title);
                   }}
                   className="text-[10px] text-teal-700 font-bold hover:underline cursor-pointer"
                 >
@@ -682,16 +590,25 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
                       setIsCustomChapter(true);
                       setChapter('');
                     } else {
-                      setChapter(e.target.value);
+                      const newCh = e.target.value;
+                      setChapter(newCh);
+                      if (!isManualQuestionCode) {
+                        const chObj = availableChapters.find(c => c.title === newCh || c.id === newCh);
+                        setCustomQuestionCode(formatQuestionCode({ subject, chapter: newCh, chapterCode: chObj?.code, id: initialQuestion?.id }));
+                      }
                     }
                   }}
                   className="w-full p-2 border border-slate-300 rounded-lg text-slate-900 bg-white font-medium focus:outline-hidden focus:ring-2 focus:ring-slate-900 cursor-pointer"
                 >
-                  {availableChapters.map(chTitle => (
-                    <option key={chTitle} value={chTitle}>
-                      {chTitle}
-                    </option>
-                  ))}
+                  {availableChapters.length === 0 ? (
+                    <option value="">No chapters in database for {subject}</option>
+                  ) : (
+                    availableChapters.map(ch => (
+                      <option key={ch.id || ch.title} value={ch.title}>
+                        {ch.title} {ch.code ? `(${ch.code})` : ''}
+                      </option>
+                    ))
+                  )}
                   <option value="__NEW__">+ Add new custom chapter...</option>
                 </select>
               ) : (
@@ -699,7 +616,13 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
                   type="text"
                   placeholder="Type custom chapter name..."
                   value={chapter}
-                  onChange={e => setChapter(e.target.value)}
+                  onChange={e => {
+                    const val = e.target.value;
+                    setChapter(val);
+                    if (!isManualQuestionCode) {
+                      setCustomQuestionCode(formatQuestionCode({ subject, chapter: val, id: initialQuestion?.id }));
+                    }
+                  }}
                   className="w-full p-2 border border-slate-300 rounded-lg text-slate-900 bg-white font-medium focus:outline-hidden focus:ring-2 focus:ring-slate-900"
                 />
               )}
