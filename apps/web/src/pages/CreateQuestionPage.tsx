@@ -44,30 +44,28 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
   }, []);
 
   const allowedSubjects = React.useMemo(() => {
-    if (userSubject === 'None') return [];
-    if (userSubject === 'All') {
-      if (dbSubjects.length > 0) return dbSubjects;
-      return [
-        { name: 'Biology', code: 'BIO' },
-        { name: 'Physics', code: 'PHY' },
-        { name: 'Chemistry', code: 'CHE' },
-        { name: 'Mathematics', code: 'MAT' }
-      ];
-    }
-    const match = dbSubjects.find(s => s.name.toLowerCase() === userSubject.toLowerCase());
-    return match ? [match] : [{ name: userSubject, code: userSubject.substring(0, 3).toUpperCase() }];
-  }, [dbSubjects, userSubject]);
+    if (dbSubjects.length > 0) return dbSubjects;
+    return [
+      { name: 'Biology', code: 'BIO' },
+      { name: 'Physics', code: 'PHY' },
+      { name: 'Chemistry', code: 'CHE' },
+      { name: 'Mathematics', code: 'MAT' }
+    ];
+  }, [dbSubjects]);
 
   // Metadata state
-  const [subject, setSubject] = useState(effectiveSubject);
+  const [subject, setSubject] = useState(
+    userSubject !== 'All' ? userSubject : (initialQuestion?.subject || 'Biology')
+  );
   const [chapter, setChapter] = useState(initialQuestion?.chapter || '');
   const [isCustomChapter, setIsCustomChapter] = useState(false);
   const [difficulty, setDifficulty] = useState<QuestionDifficulty>(initialQuestion?.difficulty || 'Medium');
   const [marks, setMarks] = useState<number>(initialQuestion?.marks || 4);
   const [negativeMarks, setNegativeMarks] = useState<number>(initialQuestion?.negativeMarks || 1);
 
+  // Force faculty userSubject if restricted
   React.useEffect(() => {
-    if (userSubject !== 'All' && subject !== userSubject) {
+    if (userSubject !== 'All') {
       setSubject(userSubject);
     }
   }, [userSubject]);
@@ -177,27 +175,32 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
     ]
   };
 
-  // Available chapters for the selected subject (combines DB chapters + standard curriculum)
-  const availableChapters = React.useMemo(() => {
-    if (!subject) return [];
-    const selectedSub = dbSubjects.find(s => s.name.toLowerCase() === subject.toLowerCase());
+  // Helper to resolve chapters for any given subject name
+  const getChaptersForSubject = (subName: string): string[] => {
+    if (!subName) return [];
+    const selectedSub = dbSubjects.find(s => s.name.toLowerCase() === subName.toLowerCase());
     const selectedSubId = selectedSub?.id ? String(selectedSub.id).toLowerCase() : '';
 
     const dbMatches = dbChapters.filter((c: any) => {
       const cSubId = c.subjectId || c.subject_id ? String(c.subjectId || c.subject_id).toLowerCase() : '';
       const cSubName = (c.subject || c.subjects?.name || '').toLowerCase();
-      return (selectedSubId && cSubId === selectedSubId) || (cSubName && cSubName === subject.toLowerCase());
+      return (selectedSubId && cSubId === selectedSubId) || (cSubName && cSubName === subName.toLowerCase());
     }).map((c: any) => c.title || c.name || (c as any).chapter_name).filter(Boolean);
 
-    const standardList = SUBJECT_CHAPTERS_MAP[subject] || [];
+    const standardList = SUBJECT_CHAPTERS_MAP[subName] || [];
     return Array.from(new Set([...dbMatches, ...standardList]));
+  };
+
+  // Available chapters for current subject
+  const availableChapters = React.useMemo(() => {
+    return getChaptersForSubject(subject);
   }, [dbChapters, dbSubjects, subject]);
 
-  // Automatically select first chapter when subject changes if not custom
+  // Automatically sync chapter when subject changes if current chapter is invalid for selected subject
   React.useEffect(() => {
     if (availableChapters.length > 0) {
       const exists = availableChapters.some(c => c.toLowerCase() === (chapter || '').toLowerCase());
-      if (!exists && !initialQuestion?.chapter) {
+      if (!exists) {
         setChapter(availableChapters[0]);
         setIsCustomChapter(false);
       }
@@ -513,8 +516,13 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
               <select
                 value={subject}
                 onChange={e => {
-                  setSubject(e.target.value);
+                  const newSub = e.target.value;
+                  setSubject(newSub);
                   setIsCustomChapter(false);
+                  const subChs = getChaptersForSubject(newSub);
+                  if (subChs.length > 0) {
+                    setChapter(subChs[0]);
+                  }
                 }}
                 disabled={userSubject !== 'All'}
                 className="w-full p-2 border border-slate-300 rounded-lg text-slate-900 bg-white font-medium focus:outline-hidden focus:ring-2 focus:ring-slate-900 disabled:bg-slate-100 disabled:cursor-not-allowed"

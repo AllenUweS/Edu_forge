@@ -200,6 +200,16 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
     return Array.from(new Set([...dbMatches, ...standardList]));
   }, [dbChapters, dbSubjects, subject]);
 
+  useEffect(() => {
+    if (availableChapters.length > 0) {
+      const exists = availableChapters.some(c => c.toLowerCase() === (chapter || '').toLowerCase());
+      if (!exists) {
+        setChapter(availableChapters[0]);
+        setIsCustomChapter(false);
+      }
+    }
+  }, [subject, availableChapters]);
+
   const [topic, setTopic] = useState(initialQuestion?.topic || '');
   const [difficulty, setDifficulty] = useState<QuestionDifficulty>(initialQuestion?.difficulty || 'Medium');
   const [marks, setMarks] = useState<number>(initialQuestion?.marks || 4);
