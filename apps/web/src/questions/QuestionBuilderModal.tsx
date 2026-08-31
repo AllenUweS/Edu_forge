@@ -210,6 +210,20 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
     }
   }, [subject, availableChapters]);
 
+  // Question Code manual override state
+  const [customQuestionCode, setCustomQuestionCode] = useState<string>(
+    initialQuestion?.questionCode || initialQuestion?.question_code || ''
+  );
+  const [isManualQuestionCode, setIsManualQuestionCode] = useState<boolean>(
+    Boolean(initialQuestion?.questionCode || initialQuestion?.question_code)
+  );
+
+  useEffect(() => {
+    if (!isManualQuestionCode) {
+      setCustomQuestionCode(formatQuestionCode({ subject, chapter, id: initialQuestion?.id }));
+    }
+  }, [subject, chapter, isManualQuestionCode]);
+
   const [topic, setTopic] = useState(initialQuestion?.topic || '');
   const [difficulty, setDifficulty] = useState<QuestionDifficulty>(initialQuestion?.difficulty || 'Medium');
   const [marks, setMarks] = useState<number>(initialQuestion?.marks || 4);
@@ -471,10 +485,12 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
     const tags = tagsInput.split(',').map(t => t.trim()).filter(Boolean);
     const subToUse = userSubject !== 'All' ? userSubject : subject;
     const dynamicCode = formatQuestionCode({ subject: subToUse, chapter, id: initialQuestion?.id });
+    const finalCode = (customQuestionCode || dynamicCode).trim();
 
     const question: Question = {
       id: initialQuestion?.id || `q-${Date.now()}`,
-      questionCode: dynamicCode,
+      questionCode: finalCode,
+      question_code: finalCode,
       questionNumber,
       questionType: 'MCQ_SINGLE',
       rawText,
@@ -544,7 +560,37 @@ export const QuestionBuilderModal: React.FC<QuestionBuilderModalProps> = ({
           <div className="p-6 overflow-y-auto space-y-5">
             
             {/* Metadata Row 1 */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-black">
+                    Question Code
+                  </label>
+                  {isManualQuestionCode && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsManualQuestionCode(false);
+                        setCustomQuestionCode(formatQuestionCode({ subject, chapter, id: initialQuestion?.id }));
+                      }}
+                      className="text-[10px] text-teal-700 font-bold hover:underline cursor-pointer"
+                    >
+                      Reset Auto
+                    </button>
+                  )}
+                </div>
+                <input
+                  type="text"
+                  value={customQuestionCode}
+                  onChange={e => {
+                    setCustomQuestionCode(e.target.value);
+                    setIsManualQuestionCode(true);
+                  }}
+                  placeholder="e.g. PHY-UNI-0001"
+                  className="w-full text-sm font-mono font-bold p-2 border border-slate-300 rounded-lg text-black bg-white focus:outline-hidden focus:ring-2 focus:ring-sky-500 shadow-2xs"
+                />
+              </div>
+
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1">
                   Q. No.

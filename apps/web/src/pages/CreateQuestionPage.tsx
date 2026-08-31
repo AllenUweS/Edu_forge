@@ -63,12 +63,27 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
   const [marks, setMarks] = useState<number>(initialQuestion?.marks || 4);
   const [negativeMarks, setNegativeMarks] = useState<number>(initialQuestion?.negativeMarks || 1);
 
+  // Question Code manual override state
+  const [customQuestionCode, setCustomQuestionCode] = useState<string>(
+    initialQuestion?.questionCode || initialQuestion?.question_code || ''
+  );
+  const [isManualQuestionCode, setIsManualQuestionCode] = useState<boolean>(
+    Boolean(initialQuestion?.questionCode || initialQuestion?.question_code)
+  );
+
   // Force faculty userSubject if restricted
   React.useEffect(() => {
     if (userSubject !== 'All') {
       setSubject(userSubject);
     }
   }, [userSubject]);
+
+  // Sync Question Code with subject/chapter when not manually edited
+  React.useEffect(() => {
+    if (!isManualQuestionCode) {
+      setCustomQuestionCode(formatQuestionCode({ subject, chapter, id: initialQuestion?.id }));
+    }
+  }, [subject, chapter, isManualQuestionCode]);
 
   const SUBJECT_CHAPTERS_MAP: Record<string, string[]> = {
     Biology: [
@@ -385,10 +400,12 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
     const correctOpt = options.find(o => o.isCorrect);
     const subToUse = userSubject !== 'All' ? userSubject : subject;
     const dynamicCode = formatQuestionCode({ subject: subToUse, chapter, id: initialQuestion?.id });
+    const finalCode = (customQuestionCode || dynamicCode).trim();
 
     const questionData: Partial<Question> = {
       ...(initialQuestion?.id ? { id: initialQuestion.id } : {}),
-      questionCode: dynamicCode,
+      questionCode: finalCode,
+      question_code: finalCode,
       questionNumber: 1,
       questionType: 'MCQ_SINGLE',
       rawText: rawStatement,
@@ -522,18 +539,39 @@ export const CreateQuestionPage: React.FC<CreateQuestionPageProps> = ({
             <div className="flex items-center gap-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase">Question Code:</span>
               <span className="font-mono font-bold text-xs bg-teal-50 text-teal-800 border border-teal-200 px-2.5 py-0.5 rounded-md">
-                {formatQuestionCode({ subject, chapter, id: initialQuestion?.id })}
+                {customQuestionCode || formatQuestionCode({ subject, chapter, id: initialQuestion?.id })}
               </span>
             </div>
           </div>
           <div className="p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
             <div>
-              <label className="block font-bold text-[11px] text-slate-500 uppercase mb-1">
-                Question Code
-              </label>
-              <div className="w-full p-2 border border-slate-200 rounded-lg text-teal-900 bg-slate-50 font-mono font-bold text-xs truncate">
-                {formatQuestionCode({ subject, chapter, id: initialQuestion?.id })}
+              <div className="flex items-center justify-between mb-1">
+                <label className="block font-bold text-[11px] text-slate-500 uppercase">
+                  Question Code
+                </label>
+                {isManualQuestionCode && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsManualQuestionCode(false);
+                      setCustomQuestionCode(formatQuestionCode({ subject, chapter, id: initialQuestion?.id }));
+                    }}
+                    className="text-[10px] text-teal-700 font-bold hover:underline cursor-pointer"
+                  >
+                    Reset Auto
+                  </button>
+                )}
               </div>
+              <input
+                type="text"
+                value={customQuestionCode}
+                onChange={e => {
+                  setCustomQuestionCode(e.target.value);
+                  setIsManualQuestionCode(true);
+                }}
+                placeholder="e.g. PHY-UNI-0001"
+                className="w-full p-2 border border-slate-300 rounded-lg text-teal-900 bg-white font-mono font-bold text-xs focus:outline-hidden focus:ring-2 focus:ring-slate-900"
+              />
             </div>
 
             <div>
