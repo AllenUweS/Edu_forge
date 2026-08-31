@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, X, Upload, Edit3, Trash2, Image as ImageIcon, Check, Folder, Search } from 'lucide-react';
+import { Upload, Edit3, Trash2, Image as ImageIcon, Check, Search, X } from 'lucide-react';
 import { api } from '../services/api.js';
-import { getUserProfile } from '../utils/userProfile.js';
 
 interface MediaAsset {
   id: string;
@@ -14,21 +13,13 @@ interface MediaAsset {
 
 export const MediaLibraryPage: React.FC = () => {
   const [assets, setAssets] = useState<MediaAsset[]>([]);
-  const [subjects, setSubjects] = useState<any[]>([]);
-  const [selectedFolder, setSelectedFolder] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const user = getUserProfile();
 
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingAsset, setEditingAsset] = useState<MediaAsset | null>(null);
   const [editName, setEditName] = useState('');
   const [editLabel, setEditLabel] = useState('');
-
-  // Upload modal subject target
-  const [uploadSubject, setUploadSubject] = useState<string>(
-    user.role === 'faculty' && user.assigned_subject !== 'All' ? user.assigned_subject : 'Biology'
-  );
 
   // Selected file state for upload modal
   const [selectedFiles, setSelectedFiles] = useState<{ file: File; url: string }[]>([]);
@@ -37,25 +28,8 @@ export const MediaLibraryPage: React.FC = () => {
 
   const loadData = async () => {
     try {
-      const [mediaItems, subList] = await Promise.all([
-        api.getMedia(),
-        api.getSubjects()
-      ]);
-
-      setSubjects(subList || []);
-
-      let list = mediaItems || [];
-      if (user.role === 'faculty' && user.assigned_subject && user.assigned_subject !== 'All') {
-        const subLower = user.assigned_subject.toLowerCase();
-        list = list.filter((a: any) => 
-          (a.name || '').toLowerCase().includes(subLower) || 
-          (a.url || '').toLowerCase().includes(subLower) ||
-          (a.storagePath || '').toLowerCase().includes(subLower) ||
-          (a.filename || '').toLowerCase().includes(subLower)
-        );
-        setSelectedFolder(user.assigned_subject);
-      }
-      setAssets(list);
+      const mediaItems = await api.getMedia();
+      setAssets(mediaItems || []);
     } catch (err) {
       console.error('Failed to load media assets:', err);
     }
@@ -98,22 +72,20 @@ export const MediaLibraryPage: React.FC = () => {
 
   const handleFileSelect = (files: FileList | null) => {
     if (!files || files.length === 0) return;
-
-    const newSelected: { file: File; url: string }[] = [];
+    const newItems: { file: File; url: string }[] = [];
     Array.from(files).forEach(file => {
-      if (file.type.startsWith('image/')) {
-        const url = URL.createObjectURL(file);
-        newSelected.push({ file, url });
-      }
+      const url = URL.createObjectURL(file);
+      newItems.push({ file, url });
     });
-
-    setSelectedFiles(prev => [...prev, ...newSelected]);
+    setSelectedFiles(prev => [...prev, ...newItems]);
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    handleFileSelect(e.dataTransfer.files);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFileSelect(e.dataTransfer.files);
+    }
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -121,7 +93,7 @@ export const MediaLibraryPage: React.FC = () => {
     e.stopPropagation();
   };
 
-  // Perform upload dumped according to selected subject folder in Supabase bucket
+  // Perform upload to Supabase bucket
   const handleUploadSubmit = async () => {
     if (selectedFiles.length === 0) {
       alert('Please select at least one image file to upload.');
@@ -130,12 +102,8 @@ export const MediaLibraryPage: React.FC = () => {
 
     setIsUploading(true);
     try {
-      const targetSub = user.role === 'faculty' && user.assigned_subject !== 'All' 
-        ? user.assigned_subject 
-        : uploadSubject;
-
       for (const item of selectedFiles) {
-        await api.uploadAsset(item.file, targetSub);
+        await api.uploadAsset(item.file, 'general');
       }
       setSelectedFiles([]);
       setIsUploadOpen(false);
@@ -147,7 +115,7 @@ export const MediaLibraryPage: React.FC = () => {
     }
   };
 
-  // Filter assets by selected folder and search query
+  // Filter assets by search query
   const filteredAssets = assets.filter(a => {
     const q = searchQuery.toLowerCase().trim();
     if (q) {
@@ -156,21 +124,6 @@ export const MediaLibraryPage: React.FC = () => {
                             (a.storagePath || '').toLowerCase().includes(q);
       if (!matchesSearch) return false;
     }
-
-    if (user.role === 'admin' && selectedFolder !== 'All') {
-      const subLower = selectedFolder.toLowerCase();
-      const pathLower = (a.storagePath || '').toLowerCase();
-      const nameLower = (a.name || '').toLowerCase();
-      const urlLower = (a.url || '').toLowerCase();
-      return pathLower.startsWith(subLower + '/') ||
-             pathLower.includes(subLower) ||
-             nameLower.includes(subLower) ||
-             urlLower.includes(subLower) ||
-             (subLower === 'biology' && (nameLower.includes('bio') || pathLower.includes('bio'))) ||
-             (subLower === 'physics' && (nameLower.includes('phy') || pathLower.includes('phy'))) ||
-             (subLower === 'chemistry' && (nameLower.includes('che') || pathLower.includes('che')));
-    }
-
     return true;
   });
 
@@ -183,66 +136,36 @@ export const MediaLibraryPage: React.FC = () => {
             Media & Asset Library
           </h1>
           <p className="text-xs text-slate-500 font-medium mt-0.5">
-            Subject-segregated diagram storage ({filteredAssets.length} image assets accessible).
+            Manage diagrams, question illustrations, and figure images ({filteredAssets.length} image assets accessible).
           </p>
         </div>
         <button
           type="button"
           onClick={() => {
             setSelectedFiles([]);
-            setUploadSubject(user.role === 'faculty' && user.assigned_subject !== 'All' ? user.assigned_subject : 'Biology');
             setIsUploadOpen(true);
           }}
           className="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold rounded-xl flex items-center gap-2 shadow-sm hover:shadow-md transition-all active:scale-[0.98] cursor-pointer"
         >
-          <Upload className="w-3.5 h-3.5" /> Upload Subject Images
+          <Upload className="w-3.5 h-3.5" /> Upload Images
         </button>
       </div>
 
-      {/* Subject Folder Filter Tabs (for Admin) or Scoped View (for Faculty) */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-2.5 rounded-2xl border border-slate-200 shadow-2xs">
-        <div className="flex items-center gap-1.5 overflow-x-auto">
-          {user.role === 'admin' && (
-            <button
-              type="button"
-              onClick={() => setSelectedFolder('All')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                selectedFolder === 'All'
-                  ? 'bg-teal-700 text-white shadow-xs'
-                  : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              <Folder className="w-3.5 h-3.5" /> All Subjects
-            </button>
-          )}
-
-          {(user.role === 'admin' ? subjects : subjects.filter(s => s.name.toLowerCase() === user.assigned_subject.toLowerCase())).map(sub => (
-            <button
-              key={sub.id || sub.name}
-              type="button"
-              onClick={() => setSelectedFolder(sub.name)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                selectedFolder === sub.name
-                  ? 'bg-teal-700 text-white shadow-xs'
-                  : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              <Folder className="w-3.5 h-3.5" /> {sub.name}
-            </button>
-          ))}
-        </div>
-
-        {/* Search Filter */}
-        <div className="relative w-64">
-          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+      {/* Search Bar Row */}
+      <div className="flex items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs">
+        <div className="relative w-full max-w-md">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-2.5" />
           <input
             type="text"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Search images or diagrams..."
-            className="w-full pl-8 pr-3 py-1.5 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 bg-slate-50 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-teal-600"
+            placeholder="Search images, formulas, or diagrams..."
+            className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 bg-slate-50 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-teal-600"
           />
         </div>
+        <span className="text-xs font-bold text-slate-500 pr-2">
+          {filteredAssets.length} Image{filteredAssets.length !== 1 ? 's' : ''}
+        </span>
       </div>
 
       {/* Grid of Images */}
@@ -251,9 +174,9 @@ export const MediaLibraryPage: React.FC = () => {
           <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 mx-auto flex items-center justify-center">
             <ImageIcon className="w-6 h-6" />
           </div>
-          <h3 className="text-sm font-bold text-slate-700">No media assets in this folder</h3>
+          <h3 className="text-sm font-bold text-slate-700">No media assets found</h3>
           <p className="text-xs text-slate-500 max-w-sm mx-auto">
-            Upload images for this subject to automatically dump them into the dedicated subject folder in Supabase Storage.
+            Upload images and diagrams to store them in Supabase Storage and easily attach them to questions.
           </p>
         </div>
       ) : (
@@ -310,12 +233,12 @@ export const MediaLibraryPage: React.FC = () => {
         </div>
       )}
 
-      {/* Upload Modal with Subject Dump Folder Selection */}
+      {/* Upload Modal */}
       {isUploadOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
           <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 font-bold text-sm text-slate-900">
-              <span>Upload Subject Images & Diagrams</span>
+              <span>Upload Images & Diagrams</span>
               <button
                 type="button"
                 onClick={() => setIsUploadOpen(false)}
@@ -323,37 +246,6 @@ export const MediaLibraryPage: React.FC = () => {
               >
                 <X className="w-4 h-4" />
               </button>
-            </div>
-
-            {/* Target Subject Bucket Folder */}
-            <div>
-              <label className="block text-[11px] font-extrabold uppercase text-slate-500 mb-1 tracking-wide">
-                Target Subject Dump Folder
-              </label>
-              <select
-                disabled={user.role === 'faculty' && user.assigned_subject !== 'All'}
-                value={uploadSubject}
-                onChange={e => setUploadSubject(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-xl text-slate-900 bg-white focus:outline-hidden focus:ring-2 focus:ring-teal-600 font-bold text-xs"
-              >
-                {subjects.length > 0 ? (
-                  subjects.map(s => (
-                    <option key={s.id || s.name} value={s.name}>
-                      📁 {s.name} (/question-assets/{s.name.toLowerCase()}/)
-                    </option>
-                  ))
-                ) : (
-                  <>
-                    <option value="Biology">📁 Biology (/question-assets/biology/)</option>
-                    <option value="Physics">📁 Physics (/question-assets/physics/)</option>
-                    <option value="Chemistry">📁 Chemistry (/question-assets/chemistry/)</option>
-                    <option value="Mathematics">📁 Mathematics (/question-assets/mathematics/)</option>
-                  </>
-                )}
-              </select>
-              <p className="text-[10px] text-slate-500 mt-1">
-                * All uploaded files will be stored in Supabase Storage under this specific subject folder.
-              </p>
             </div>
 
             {/* Drag & Drop Area */}
@@ -432,10 +324,10 @@ export const MediaLibraryPage: React.FC = () => {
                 className="px-5 py-2 bg-teal-700 hover:bg-teal-800 disabled:opacity-50 text-white font-bold rounded-lg shadow-sm hover:shadow-md transition-all active:scale-[0.98] cursor-pointer flex items-center gap-1.5"
               >
                 {isUploading ? (
-                  <span>Uploading to {uploadSubject}...</span>
+                  <span>Uploading...</span>
                 ) : (
                   <>
-                    <Check className="w-3.5 h-3.5" /> Upload to {uploadSubject}
+                    <Check className="w-3.5 h-3.5" /> Upload Images
                   </>
                 )}
               </button>

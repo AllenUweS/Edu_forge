@@ -19,9 +19,7 @@ const API_BASE_URL = getApiBaseUrl();
 export const assetsApi = {
   async getMedia(subject?: string): Promise<any[]> {
     try {
-      const user = getUserProfile();
-      const targetSub = subject || (user.role === 'faculty' ? user.assigned_subject : undefined);
-      const queryParam = targetSub && targetSub !== 'All' ? `?subject=${encodeURIComponent(targetSub)}` : '';
+      const queryParam = subject && subject !== 'All' ? `?subject=${encodeURIComponent(subject)}` : '';
       
       const rawList = await fetchApi<any[]>(`/api/assets${queryParam}`);
       if (!Array.isArray(rawList)) return [];
